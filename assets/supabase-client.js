@@ -4,7 +4,7 @@
    see SETUP.md. Until then, every page falls back to the
    bundled data below so the site still works out of the box.
    ========================================================= */
-const SUPABASE_URL = "https://yiiijduxagjkmbzrhoaj.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://yiiijduxagjkmbzrhoaj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpaWlqZHV4YWdqa21ienJob2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4Nzk2NzAsImV4cCI6MjA5OTQ1NTY3MH0.XIyRRrc-lh6mJqjGWZkflTYUFTZQwopPKeAm88Aze88";
 
 function fnUrl(name){ return `${SUPABASE_URL}/functions/v1/${name}`; }
