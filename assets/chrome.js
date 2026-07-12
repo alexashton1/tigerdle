@@ -1,6 +1,23 @@
 /* Shared site chrome: header nav + footer + subscribe widget + toast helper.
    Include after supabase-client.js. Call renderChrome('home'|'play'|'blog') at top of <body>. */
 
+/* Original shield badge — not the Hull City AFC crest, a standalone mark
+   in the club's colours. Swap this <svg> out for a real crest file if/when
+   you want to use official artwork instead. */
+const BADGE_SVG = `
+<svg class="badge-svg" viewBox="0 0 64 76" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <clipPath id="shieldClip"><path d="M32 2 L59 11 L59 39 C59 58 47 69 32 74 C17 69 5 58 5 39 L5 11 Z"/></clipPath>
+  </defs>
+  <path d="M32 2 L59 11 L59 39 C59 58 47 69 32 74 C17 69 5 58 5 39 L5 11 Z" fill="#f5a300"/>
+  <g clip-path="url(#shieldClip)">
+    <rect x="-10" y="44" width="90" height="8" fill="#14110d" transform="rotate(-18 32 40)"/>
+    <rect x="-10" y="60" width="90" height="8" fill="#14110d" transform="rotate(-18 32 40)"/>
+  </g>
+  <text x="32" y="30" text-anchor="middle" font-family="Anton, sans-serif" font-size="24" fill="#14110d">T</text>
+  <path d="M32 2 L59 11 L59 39 C59 58 47 69 32 74 C17 69 5 58 5 39 L5 11 Z" fill="none" stroke="#14110d" stroke-width="2"/>
+</svg>`;
+
 function renderChrome(current){
   const header = document.getElementById('site-header');
   if(header){
@@ -9,7 +26,8 @@ function renderChrome(current){
       <div class="wrap">
         <div class="brandrow" style="padding-top:16px;">
           <a class="brand" href="index.html">
-            <span class="logo">🐯 TIGERDLE</span>
+            ${BADGE_SVG}
+            <span class="logo">TIGERDLE</span>
           </a>
           <nav class="site-nav">
             <a href="index.html" ${current==='home'?'class="current"':''}>Home</a>

@@ -45,7 +45,8 @@ a{ color:var(--amber-soft); }
 .site-header{ padding:22px 0 16px; border-bottom:1px solid var(--line); }
 .brandrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; }
-.brand .logo{ font-family:var(--display); font-size:26px; color:var(--paper); text-shadow:2px 2px 0 var(--amber); }
+.badge-svg{ width:30px; height:36px; flex-shrink:0; }
+.brand .logo{ font-family:var(--display); font-size:23px; color:var(--paper); letter-spacing:.02em; }
 .site-nav{ display:flex; gap:6px; flex-wrap:wrap; }
 .site-nav a{
   font-family:var(--mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em;
@@ -54,19 +55,33 @@ a{ color:var(--amber-soft); }
 .site-nav a:hover, .site-nav a.current{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
 
 .kicker{ font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--amber-soft); margin-bottom:6px; }
-h1.title{ font-family:var(--display); font-weight:400; font-size:clamp(36px,9vw,58px); letter-spacing:.02em; margin:10px 0 0; line-height:.95; text-shadow:3px 3px 0 var(--amber); }
+h1.title{ font-family:var(--display); font-weight:400; font-size:clamp(36px,9vw,58px); letter-spacing:.02em; margin:10px 0 0; line-height:.95; text-shadow:2px 2px 0 var(--amber-deep); }
 .tagline{ font-size:13.5px; color:var(--paper-dim); margin-top:10px; }
 
 /* ---- hub cards (index page) ---- */
-.cardgrid{ display:grid; gap:14px; margin-top:26px; }
+.cardgrid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin:26px auto 0; max-width:340px; }
 .card{
   display:block; text-decoration:none; color:var(--paper);
-  background:var(--ink-2); border:1px solid var(--line); border-radius:var(--radius);
-  padding:18px; transition:border-color .15s ease, transform .15s ease;
+  background:var(--ink-2); border:1px solid var(--line); border-radius:14px;
+  padding:18px; transition:border-color .15s ease, transform .15s ease, background .15s ease;
 }
-.card:hover{ border-color:var(--amber-deep); transform:translateY(-1px); }
+.card:hover{ border-color:var(--amber-deep); transform:translateY(-2px); background:var(--ink-3); }
 .card .ct{ font-family:var(--display); font-size:22px; color:var(--amber); }
 .card .cd{ font-size:13px; color:var(--paper-dim); margin-top:4px; line-height:1.5; }
+.game-card{
+  aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:5px; padding:10px;
+}
+.game-card .icon{ font-size:24px; line-height:1; }
+.game-card .ct{
+  flex-direction:column; gap:0; font-family:var(--display); font-weight:400;
+  font-size:13.5px; color:var(--paper); letter-spacing:.01em;
+}
+.game-card .cd{
+  font-size:9px; color:var(--paper-dim); font-family:var(--mono); text-transform:uppercase;
+  letter-spacing:.05em; margin-top:0;
+}
+@media (max-width:420px){ .game-card .icon{ font-size:20px; } .game-card .ct{ font-size:12px; } }
 
 /* ---- subscribe box (footer widget) ---- */
 .subscribe-box{
