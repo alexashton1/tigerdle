@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — TIGERDLE</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div id="site-header"></div>
+<div class="wrap">
+
+  <div id="gate" class="gatebox">
+    <div class="kicker">Admin only</div>
+    <h1 class="title" style="font-size:32px;">Enter passphrase</h1>
+    <p class="tagline" style="margin-bottom:18px;">This page isn't linked anywhere on the public site. The passphrase is checked on the server, not just in this page.</p>
+    <input type="password" id="pass-input" placeholder="Passphrase" autocomplete="off">
+    <button id="pass-submit">Enter</button>
+    <div class="subscribe-msg" id="gate-msg"></div>
+  </div>
+
+  <div id="admin-area" style="display:none;">
+    <span class="admin-badge">🐯 ADMIN</span>
+    <h1 class="title" style="font-size:32px; text-align:left;">Manage TIGERDLE</h1>
+
+    <div class="formcard">
+      <h3>Subscribers</h3>
+      <div id="sub-count" class="meta" style="font-family:var(--mono); color:var(--paper-dim);">Loading…</div>
+    </div>
+
+    <!-- Add / edit signing -->
+    <div class="formcard">
+      <h3>Add a signing</h3>
+      <div class="field-row">
+        <div class="field"><label>First name</label><input type="text" id="p-first"></div>
+        <div class="field"><label>Last name</label><input type="text" id="p-last"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Position</label>
+          <select id="p-pos"><option value="GK">Goalkeeper</option><option value="DF">Defender</option><option value="MF">Midfielder</option><option value="FW">Forward</option></select>
+        </div>
+        <div class="field"><label>Age (optional)</label><input type="number" id="p-age" min="15" max="45"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Nationality</label><input type="text" id="p-nat" placeholder="Unknown if unsure"></div>
+        <div class="field"><label>Era / status</label><input type="text" id="p-era" value="Current Squad"></div>
+      </div>
+      <button class="primary-btn" id="p-submit">Add signing</button>
+      <div class="subscribe-msg" id="p-msg"></div>
+    </div>
+    <div class="formcard">
+      <h3>Current player pool</h3>
+      <div class="admin-list" id="p-list"></div>
+    </div>
+
+    <!-- New blog post -->
+    <div class="formcard">
+      <h3>Write a post</h3>
+      <div class="field"><label>Title</label><input type="text" id="b-title"></div>
+      <div class="field"><label>Slug</label><input type="text" id="b-slug" placeholder="auto-generated from title"></div>
+      <div class="field"><label>Excerpt</label><input type="text" id="b-excerpt" placeholder="One line for the blog list &amp; email"></div>
+      <div class="field"><label>Body (Markdown)</label><textarea id="b-body" placeholder="## Heading&#10;&#10;Write here..."></textarea></div>
+      <div class="checkfield"><input type="checkbox" id="b-publish"> <label for="b-publish" style="margin:0;">Publish now &amp; email subscribers</label></div>
+      <button class="primary-btn" id="b-submit">Save post</button>
+      <div class="subscribe-msg" id="b-msg"></div>
+    </div>
+    <div class="formcard">
+      <h3>Posts</h3>
+      <div class="admin-list" id="b-list"></div>
+    </div>
+
+    <!-- Goal puzzle -->
+    <div class="formcard">
+      <h3>Add a "Guess the Opponent" puzzle</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">Use a photo you own the rights to — your own matchday shot, not a press or club photo.</p>
+      <div class="field"><label>Goal photo</label><input type="file" id="g-file" accept="image/*"></div>
+      <div class="field-row">
+        <div class="field"><label>Opponent club</label><input type="text" id="g-opp" list="opponent-list-admin"></div>
+        <div class="field"><label>Competition</label><input type="text" id="g-comp" placeholder="Championship, FA Cup…"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Match date</label><input type="date" id="g-mdate"></div>
+        <div class="field"><label>Show on site date (optional)</label><input type="date" id="g-pdate"></div>
+      </div>
+      <datalist id="opponent-list-admin"></datalist>
+      <button class="primary-btn" id="g-submit">Add puzzle</button>
+      <div class="subscribe-msg" id="g-msg"></div>
+    </div>
+    <div class="formcard">
+      <h3>Goal puzzles</h3>
+      <div class="admin-list" id="g-list"></div>
+    </div>
+  </div>
+
+</div>
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('home');
+OPPONENT_CLUBS.forEach(c=>{ const opt=document.createElement("option"); opt.value=c; document.getElementById('opponent-list-admin').appendChild(opt); });
+
+let PASSPHRASE = sessionStorage.getItem('tigerdle_admin_pass') || '';
+
+async function callAdmin(action, payload){
+  const res = await fetch(fnUrl('admin-action'), {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ passphrase: PASSPHRASE, action, payload })
+  });
+  const json = await res.json().catch(()=>({ok:false, error:'Bad response from server'}));
+  if(res.status === 401){ sessionStorage.removeItem('tigerdle_admin_pass'); showGate('Wrong passphrase.'); throw new Error('unauthorized'); }
+  if(!json.ok) throw new Error(json.error || 'Something went wrong');
+  return json.data;
+}
+
+function showGate(msg){
+  document.getElementById('gate').style.display = 'block';
+  document.getElementById('admin-area').style.display = 'none';
+  document.getElementById('gate-msg').textContent = msg || '';
+}
+function showAdmin(){
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('admin-area').style.display = 'block';
+  refreshAll();
+}
+
+document.getElementById('pass-submit').addEventListener('click', tryEnter);
+document.getElementById('pass-input').addEventListener('keydown', e=>{ if(e.key==='Enter') tryEnter(); });
+async function tryEnter(){
+  const val = document.getElementById('pass-input').value;
+  if(!val) return;
+  PASSPHRASE = val;
+  document.getElementById('gate-msg').textContent = 'Checking…';
+  try{
+    await callAdmin('ping', {});
+    sessionStorage.setItem('tigerdle_admin_pass', PASSPHRASE);
+    showAdmin();
+  }catch(e){
+    document.getElementById('gate-msg').textContent = 'Wrong passphrase, or admin function not deployed yet — see SETUP.md.';
+  }
+}
+if(PASSPHRASE) tryEnter(); else showGate('');
+
+async function refreshAll(){
+  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals();
+}
+
+/* ---- Subscriber count ---- */
+async function refreshStats(){
+  try{ const data = await callAdmin('stats', {});
+    document.getElementById('sub-count').textContent = `${data.subscriberCount} subscriber${data.subscriberCount===1?'':'s'}`;
+  }catch(e){ document.getElementById('sub-count').textContent = 'Could not load.'; }
+}
+
+/* ---- Players ---- */
+async function refreshPlayers(){
+  try{
+    const { data } = await sb.from('players').select('*').order('last_name');
+    const list = document.getElementById('p-list');
+    if(!data || !data.length){ list.innerHTML = '<div class="meta">No players yet.</div>'; return; }
+    list.innerHTML = data.map(p=>`
+      <div class="admin-row">
+        <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.active?'':' · inactive'}</span></div>
+        <button class="ghost-btn" data-id="${p.id}" data-active="${p.active}">${p.active?'Deactivate':'Reactivate'}</button>
+      </div>`).join('');
+    list.querySelectorAll('button').forEach(b=>b.addEventListener('click', async ()=>{
+      try{ await callAdmin('update_player', { id:b.dataset.id, active: b.dataset.active !== 'true' }); refreshPlayers(); }
+      catch(e){ toast(e.message); }
+    }));
+  }catch(e){ document.getElementById('p-list').innerHTML = '<div class="meta">Could not load.</div>'; }
+}
+document.getElementById('p-submit').addEventListener('click', async ()=>{
+  const payload = {
+    first_name: document.getElementById('p-first').value.trim(),
+    last_name: document.getElementById('p-last').value.trim(),
+    position: document.getElementById('p-pos').value,
+    age: document.getElementById('p-age').value ? Number(document.getElementById('p-age').value) : null,
+    nationality: document.getElementById('p-nat').value.trim() || 'Unknown',
+    era: document.getElementById('p-era').value.trim() || 'Current Squad',
+    active: true
+  };
+  if(!payload.first_name || !payload.last_name){ document.getElementById('p-msg').textContent = 'First and last name are required.'; return; }
+  document.getElementById('p-msg').textContent = 'Saving…';
+  try{
+    await callAdmin('add_player', payload);
+    document.getElementById('p-msg').textContent = 'Added.';
+    ['p-first','p-last','p-age','p-nat'].forEach(id=>document.getElementById(id).value='');
+    refreshPlayers();
+  }catch(e){ document.getElementById('p-msg').textContent = e.message; }
+});
+
+/* ---- Posts ---- */
+document.getElementById('b-title').addEventListener('input', e=>{
+  const slugEl = document.getElementById('b-slug');
+  if(!slugEl.dataset.touched) slugEl.value = e.target.value.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+});
+document.getElementById('b-slug').addEventListener('input', e=>{ e.target.dataset.touched = '1'; });
+
+async function refreshPosts(){
+  try{
+    const { data } = await sb.from('posts').select('*').order('created_at', {ascending:false});
+    const list = document.getElementById('b-list');
+    if(!data || !data.length){ list.innerHTML = '<div class="meta">No posts yet.</div>'; return; }
+    list.innerHTML = data.map(p=>`
+      <div class="admin-row">
+        <div>${p.title} <span class="meta">${p.published ? 'published' : 'draft'}</span></div>
+        <div style="display:flex; gap:6px;">
+          ${!p.published ? `<button class="ghost-btn" data-action="publish" data-id="${p.id}">Publish &amp; email</button>` : ''}
+          <button class="ghost-btn" data-action="delete" data-id="${p.id}">Delete</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('button').forEach(b=>b.addEventListener('click', async ()=>{
+      try{
+        if(b.dataset.action==='publish') await callAdmin('publish_post', { id:b.dataset.id });
+        else await callAdmin('delete_post', { id:b.dataset.id });
+        refreshPosts();
+      }catch(e){ toast(e.message); }
+    }));
+  }catch(e){ document.getElementById('b-list').innerHTML = '<div class="meta">Could not load.</div>'; }
+}
+document.getElementById('b-submit').addEventListener('click', async ()=>{
+  const payload = {
+    title: document.getElementById('b-title').value.trim(),
+    slug: document.getElementById('b-slug').value.trim(),
+    excerpt: document.getElementById('b-excerpt').value.trim(),
+    body_md: document.getElementById('b-body').value,
+    published: document.getElementById('b-publish').checked
+  };
+  if(!payload.title || !payload.slug){ document.getElementById('b-msg').textContent = 'Title and slug are required.'; return; }
+  document.getElementById('b-msg').textContent = payload.published ? 'Saving & emailing subscribers…' : 'Saving…';
+  try{
+    await callAdmin('add_post', payload);
+    document.getElementById('b-msg').textContent = payload.published ? 'Published and emailed.' : 'Saved as draft.';
+    ['b-title','b-slug','b-excerpt','b-body'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('b-slug').dataset.touched = '';
+    document.getElementById('b-publish').checked = false;
+    refreshPosts();
+  }catch(e){ document.getElementById('b-msg').textContent = e.message; }
+});
+
+/* ---- Goal puzzles ---- */
+function fileToResizedBase64(file, maxDim=1200, quality=0.82){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = ()=>{ img.onload = ()=>{
+      let w=img.width, h=img.height;
+      if(w>h && w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; }
+      else if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; }
+      const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    }; img.onerror = reject; img.src = reader.result; };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function refreshGoals(){
+  try{
+    const { data } = await sb.from('goals').select('*').order('created_at', {ascending:false});
+    const list = document.getElementById('g-list');
+    if(!data || !data.length){ list.innerHTML = '<div class="meta">No goal puzzles yet.</div>'; return; }
+    list.innerHTML = data.map(g=>`
+      <div class="admin-row">
+        <div>vs ${g.opponent} <span class="meta">${g.competition||''} ${g.match_date||''}</span></div>
+        <button class="ghost-btn" data-id="${g.id}">Delete</button>
+      </div>`).join('');
+    list.querySelectorAll('button').forEach(b=>b.addEventListener('click', async ()=>{
+      try{ await callAdmin('delete_goal', { id:b.dataset.id }); refreshGoals(); }
+      catch(e){ toast(e.message); }
+    }));
+  }catch(e){ document.getElementById('g-list').innerHTML = '<div class="meta">Could not load.</div>'; }
+}
+document.getElementById('g-submit').addEventListener('click', async ()=>{
+  const fileInput = document.getElementById('g-file');
+  const opponent = document.getElementById('g-opp').value.trim();
+  if(!fileInput.files[0] || !opponent){ document.getElementById('g-msg').textContent = 'A photo and opponent name are required.'; return; }
+  document.getElementById('g-msg').textContent = 'Uploading…';
+  try{
+    const base64 = await fileToResizedBase64(fileInput.files[0]);
+    await callAdmin('add_goal', {
+      image_base64: base64,
+      opponent,
+      competition: document.getElementById('g-comp').value.trim(),
+      match_date: document.getElementById('g-mdate').value || null,
+      puzzle_date: document.getElementById('g-pdate').value || null
+    });
+    document.getElementById('g-msg').textContent = 'Added.';
+    fileInput.value=''; document.getElementById('g-opp').value=''; document.getElementById('g-comp').value='';
+    document.getElementById('g-mdate').value=''; document.getElementById('g-pdate').value='';
+    refreshGoals();
+  }catch(e){ document.getElementById('g-msg').textContent = e.message; }
+});
+</script>
+</body>
+</html>

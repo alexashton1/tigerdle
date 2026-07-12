@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post — TIGERDLE</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div id="site-header"></div>
+<div class="wrap">
+  <div id="post-root">
+    <div class="empty-state">Loading…</div>
+  </div>
+</div>
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('blog');
+
+(async function(){
+  const root = document.getElementById('post-root');
+  const slug = new URLSearchParams(location.search).get('slug');
+  if(!slug){ root.innerHTML = `<div class="empty-state">No post specified.</div>`; return; }
+  try{
+    const { data, error } = await sb.from('posts').select('*').eq('slug', slug).eq('published', true).single();
+    if(error || !data){ root.innerHTML = `<div class="empty-state">Post not found.</div>`; return; }
+    document.title = data.title + ' — TIGERDLE';
+    root.innerHTML = `
+      <div class="post-meta" style="margin-top:24px;">${new Date(data.published_at).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</div>
+      <h1 class="title" style="font-size:clamp(28px,7vw,42px); text-align:left;">${escapeHtml(data.title)}</h1>
+      <div class="post-body">${window.marked ? marked.parse(data.body_md||'') : (data.body_md||'').replace(/\n/g,'<br>')}</div>
+      <p><a href="blog.html">← Back to all posts</a></p>`;
+  }catch(e){
+    root.innerHTML = `<div class="empty-state">Couldn't load this post.</div>`;
+  }
+})();
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>

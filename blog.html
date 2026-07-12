@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — TIGERDLE</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div id="site-header"></div>
+<div class="wrap">
+  <header style="padding:24px 0 6px; text-align:center;">
+    <div class="kicker">Notes from the amber &amp; black</div>
+    <h1 class="title" style="font-size:clamp(30px,7vw,44px);">The Blog</h1>
+  </header>
+  <div class="postlist" id="postlist"></div>
+</div>
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('blog');
+
+(async function(){
+  const listEl = document.getElementById('postlist');
+  try{
+    const { data, error } = await sb.from('posts').select('*').eq('published', true).order('published_at', {ascending:false});
+    if(error || !data || !data.length){
+      listEl.innerHTML = `<div class="empty-state">No posts yet — check back soon, or subscribe below to get the first one.</div>`;
+      return;
+    }
+    listEl.innerHTML = data.map(p=>`
+      <a class="postcard" href="post.html?slug=${encodeURIComponent(p.slug)}">
+        <div class="pdate">${new Date(p.published_at).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}</div>
+        <h2>${escapeHtml(p.title)}</h2>
+        <p>${escapeHtml(p.excerpt||'')}</p>
+      </a>`).join('');
+  }catch(e){
+    listEl.innerHTML = `<div class="empty-state">Couldn't load posts right now.</div>`;
+  }
+})();
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>

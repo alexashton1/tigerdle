@@ -1,0 +1,151 @@
+/* =========================================================
+   TIGERDLE — shared design system
+   ========================================================= */
+:root{
+  --ink:#14110d;
+  --ink-2:#1c1811;
+  --ink-3:#221d15;
+  --paper:#f2ead9;
+  --paper-dim:#c9c0ac;
+  --amber:#f5a300;
+  --amber-deep:#c67f00;
+  --amber-soft:#ffcf6b;
+  --present:#8a6d1f;
+  --absent:#332e26;
+  --absent-2:#443e33;
+  --maroon:#6e1f2a;
+  --maroon-soft:#8a2c39;
+  --line:#3a352a;
+  --good:#5f8f52;
+  --bad:#a8483f;
+  --radius:10px;
+  --display: 'Anton', 'Arial Narrow', sans-serif;
+  --body: 'Inter', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(245,163,0,0.08), transparent 60%),
+    var(--ink);
+  color:var(--paper);
+  font-family:var(--body);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+a{ color:var(--amber-soft); }
+.stripe-bar{
+  height:10px; width:100%;
+  background: repeating-linear-gradient(-35deg, var(--amber) 0px, var(--amber) 22px, var(--ink) 22px, var(--ink) 44px);
+}
+.wrap{ max-width:680px; margin:0 auto; padding:0 18px 60px; }
+
+/* ---- site header / nav ---- */
+.site-header{ padding:22px 0 16px; border-bottom:1px solid var(--line); }
+.brandrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; }
+.brand .logo{ font-family:var(--display); font-size:26px; color:var(--paper); text-shadow:2px 2px 0 var(--amber); }
+.site-nav{ display:flex; gap:6px; flex-wrap:wrap; }
+.site-nav a{
+  font-family:var(--mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--paper-dim); text-decoration:none; padding:8px 12px; border-radius:999px; border:1px solid var(--line);
+}
+.site-nav a:hover, .site-nav a.current{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
+
+.kicker{ font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--amber-soft); margin-bottom:6px; }
+h1.title{ font-family:var(--display); font-weight:400; font-size:clamp(36px,9vw,58px); letter-spacing:.02em; margin:10px 0 0; line-height:.95; text-shadow:3px 3px 0 var(--amber); }
+.tagline{ font-size:13.5px; color:var(--paper-dim); margin-top:10px; }
+
+/* ---- hub cards (index page) ---- */
+.cardgrid{ display:grid; gap:14px; margin-top:26px; }
+.card{
+  display:block; text-decoration:none; color:var(--paper);
+  background:var(--ink-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:18px; transition:border-color .15s ease, transform .15s ease;
+}
+.card:hover{ border-color:var(--amber-deep); transform:translateY(-1px); }
+.card .ct{ font-family:var(--display); font-size:22px; color:var(--amber); }
+.card .cd{ font-size:13px; color:var(--paper-dim); margin-top:4px; line-height:1.5; }
+
+/* ---- subscribe box (footer widget) ---- */
+.subscribe-box{
+  margin-top:34px; padding:20px; background:var(--ink-2); border:1px solid var(--maroon-soft);
+  border-radius:var(--radius);
+}
+.subscribe-box h3{ font-family:var(--display); font-weight:400; font-size:20px; color:var(--paper); margin:0 0 4px; }
+.subscribe-box p{ font-size:12.5px; color:var(--paper-dim); margin:0 0 12px; }
+.subscribe-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.subscribe-row input[type=email]{
+  flex:1; min-width:180px; background:var(--ink); border:1px solid var(--line); color:var(--paper);
+  font-family:var(--body); font-size:14px; padding:11px 13px; border-radius:8px; outline:none;
+}
+.subscribe-row input[type=email]:focus{ border-color:var(--amber); }
+.subscribe-row button{
+  background:var(--amber); color:var(--ink); border:none; font-family:var(--mono); font-weight:700;
+  font-size:12px; text-transform:uppercase; padding:0 18px; border-radius:8px; cursor:pointer;
+}
+.subscribe-msg{ font-family:var(--mono); font-size:12px; color:var(--amber-soft); margin-top:8px; min-height:16px; }
+
+/* ---- generic status/result cards ---- */
+.status-msg{ text-align:center; font-family:var(--mono); font-size:13px; color:var(--amber-soft); min-height:20px; margin:10px 0; }
+.resultcard{ background:var(--ink-2); border:1px solid var(--amber-deep); border-radius:var(--radius); padding:16px; text-align:center; margin-top:14px; }
+.resultcard .rtitle{ font-family:var(--display); font-size:22px; color:var(--amber); margin-bottom:4px;}
+.resultcard .rsub{ font-size:13px; color:var(--paper-dim); margin-bottom:12px; }
+.sharebtn{ font-family:var(--mono); font-size:12.5px; background:var(--amber); color:var(--ink); border:none; padding:10px 18px; border-radius:999px; font-weight:700; cursor:pointer; letter-spacing:.04em; }
+.sharebtn:active{ transform:scale(0.97); }
+
+.toast{
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+  background:var(--paper); color:var(--ink); font-family:var(--mono); font-size:12.5px; font-weight:700;
+  padding:10px 18px; border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; z-index:50;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
+
+footer.sitefoot{ text-align:center; font-family:var(--mono); font-size:10.5px; color:#665f50; margin-top:28px; }
+
+/* ---- blog ---- */
+.postlist{ display:flex; flex-direction:column; gap:14px; margin-top:22px; }
+.postcard{ display:block; text-decoration:none; color:var(--paper); background:var(--ink-2); border:1px solid var(--line); border-radius:var(--radius); padding:16px; }
+.postcard:hover{ border-color:var(--amber-deep); }
+.postcard .pdate{ font-family:var(--mono); font-size:10.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; }
+.postcard h2{ font-family:var(--display); font-weight:400; font-size:22px; margin:6px 0 4px; color:var(--paper); }
+.postcard p{ font-size:13px; color:var(--paper-dim); margin:0; line-height:1.5; }
+.empty-state{ text-align:center; color:var(--paper-dim); font-size:13px; padding:40px 10px; font-family:var(--mono); }
+
+.post-body{ margin-top:22px; font-size:15.5px; line-height:1.75; }
+.post-body h2{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:24px; margin-top:28px; }
+.post-body h3{ font-family:var(--display); font-weight:400; color:var(--amber-soft); font-size:19px; }
+.post-body p{ margin:0 0 16px; }
+.post-body a{ color:var(--amber); }
+.post-body blockquote{ border-left:3px solid var(--maroon-soft); margin:0 0 16px; padding:2px 16px; color:var(--paper-dim); font-style:italic; }
+.post-body code{ background:var(--ink-2); padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:13.5px; }
+.post-body img{ max-width:100%; border-radius:8px; }
+.post-meta{ font-family:var(--mono); font-size:11px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; }
+
+/* ---- admin ---- */
+.gatebox{ max-width:340px; margin:60px auto; text-align:center; }
+.gatebox input{ width:100%; background:var(--ink-2); border:1px solid var(--line); color:var(--paper); font-family:var(--mono); font-size:15px; padding:12px 14px; border-radius:8px; text-align:center; margin-bottom:10px; }
+.gatebox button{ width:100%; background:var(--amber); color:var(--ink); border:none; font-family:var(--mono); font-weight:700; text-transform:uppercase; padding:12px; border-radius:8px; cursor:pointer; }
+.admin-badge{ display:inline-block; font-family:var(--mono); font-size:10px; background:var(--maroon); color:var(--paper); padding:3px 9px; border-radius:999px; letter-spacing:.08em; margin-bottom:10px; }
+.formcard{ background:var(--ink-2); border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin-bottom:20px; }
+.formcard h3{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:19px; margin:0 0 12px; }
+.field{ margin-bottom:12px; }
+.field label{ display:block; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:5px; }
+.field input, .field select, .field textarea{
+  width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper);
+  font-family:var(--body); font-size:14px; padding:10px 12px; border-radius:7px; outline:none;
+}
+.field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--amber); }
+.field textarea{ min-height:140px; font-family:var(--mono); font-size:13px; resize:vertical; }
+.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.checkfield{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--paper-dim); margin-bottom:12px; }
+.primary-btn{ background:var(--amber); color:var(--ink); border:none; font-family:var(--mono); font-weight:700; text-transform:uppercase; font-size:12.5px; padding:11px 20px; border-radius:8px; cursor:pointer; }
+.primary-btn:disabled{ background:var(--absent-2); color:#7a7365; cursor:not-allowed; }
+.ghost-btn{ background:transparent; color:var(--paper-dim); border:1px solid var(--line); font-family:var(--mono); font-size:11.5px; padding:8px 14px; border-radius:8px; cursor:pointer; }
+.admin-list{ display:flex; flex-direction:column; gap:6px; }
+.admin-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--ink); border:1px solid var(--line); border-radius:7px; padding:9px 12px; font-size:13px; }
+.admin-row .meta{ color:var(--paper-dim); font-size:11.5px; font-family:var(--mono); }
+
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
