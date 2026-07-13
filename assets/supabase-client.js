@@ -141,7 +141,7 @@ function pickForDate(pool, salt, date){
   const idx = (raw + shuffled.length) % shuffled.length;
   return shuffled[idx];
 }
-function pickDaily(pool, salt){ return pickForDate(pool, salt, new Date()); }}
+function pickDaily(pool, salt){ return pickForDate(pool, salt, new Date()); }
 function stripAccents(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 
 function loadState(key, fallback){
