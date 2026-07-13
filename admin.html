@@ -46,9 +46,22 @@
       <div class="subscribe-msg" id="bulk-msg"></div>
     </div>
 
+    <!-- Bulk update existing players -->
+    <div class="formcard">
+      <h3>Bulk fix existing players</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        Same format, but this <b>updates</b> players already in the pool instead of adding new ones — matched by first + last name.
+        Leave any column blank to leave that field unchanged. Use this to fix missing ages, correct eras, or update nationalities in bulk.<br>
+        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Ahmed,Elmohamady,,,2012-2017,</code> only changes the era, leaves everything else as-is.
+      </p>
+      <div class="field"><textarea id="bulk-update" placeholder="Ahmed,Elmohamady,,,2012-2017,&#10;Sam,Clucas,,,2015-2017,29"></textarea></div>
+      <button class="primary-btn" id="bulk-update-submit">Update all</button>
+      <div class="subscribe-msg" id="bulk-update-msg"></div>
+    </div>
+
     <!-- Add / edit signing -->
     <div class="formcard">
-      <h3>Add a signing</h3>
+      <h3 id="p-form-heading">Add a signing</h3>
       <div class="field-row">
         <div class="field"><label>First name</label><input type="text" id="p-first"></div>
         <div class="field"><label>Last name</label><input type="text" id="p-last"></div>
@@ -57,13 +70,31 @@
         <div class="field"><label>Position</label>
           <select id="p-pos"><option value="GK">Goalkeeper</option><option value="DF">Defender</option><option value="MF">Midfielder</option><option value="FW">Forward</option></select>
         </div>
-        <div class="field"><label>Age (optional)</label><input type="number" id="p-age" min="15" max="45"></div>
+        <div class="field"><label>Age</label>
+          <select id="p-age"><option value="">Unknown</option></select>
+          <input type="number" id="p-age-other" placeholder="Type age" style="display:none; margin-top:6px;">
+        </div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Nationality</label><input type="text" id="p-nat" placeholder="Unknown if unsure"></div>
-        <div class="field"><label>Era / status</label><input type="text" id="p-era" value="Current Squad"></div>
+        <div class="field">
+          <label>Nationality</label>
+          <select id="p-nat"></select>
+          <input type="text" id="p-nat-other" placeholder="Type nationality" style="display:none; margin-top:6px;">
+        </div>
+        <div class="field">
+          <label>Era / status</label>
+          <select id="p-era-preset" style="margin-bottom:6px;">
+            <option value="">Quick-fill…</option>
+            <option value="Current Squad">Current Squad</option>
+            <option value="Former Hull Player">Former Hull Player</option>
+            <option value="Club Legend">Club Legend</option>
+            <option value="Loan Player">Loan Player</option>
+          </select>
+          <input type="text" id="p-era" value="Current Squad" placeholder="e.g. 2012-2017, or pick a quick-fill above">
+        </div>
       </div>
       <button class="primary-btn" id="p-submit">Add signing</button>
+      <button class="ghost-btn" id="p-cancel-edit" style="display:none;">Cancel edit</button>
       <div class="subscribe-msg" id="p-msg"></div>
     </div>
     <div class="formcard">
@@ -77,13 +108,16 @@
     </div>
 
     <div class="formcard">
-      <h3>Duplicate players</h3>
+      <h3>Duplicate &amp; missing data</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
         New signings (single or bulk) are checked against existing names automatically, so duplicates shouldn't get in going forward.
-        This scans for any that are already there — same first + last name, regardless of era or position.
       </p>
-      <button class="ghost-btn" id="dup-scan">Scan for duplicates</button>
+      <div style="display:flex; gap:8px; margin-bottom:4px;">
+        <button class="ghost-btn" id="dup-scan">Scan for duplicates</button>
+        <button class="ghost-btn" id="missing-scan">Scan for missing data</button>
+      </div>
       <div id="dup-results" style="margin-top:12px;"></div>
+      <div id="missing-results" style="margin-top:12px;"></div>
     </div>
 
     <!-- New blog post -->
@@ -141,6 +175,71 @@
 <script>
 renderChrome('home');
 OPPONENT_CLUBS.forEach(c=>{ const opt=document.createElement("option"); opt.value=c; document.getElementById('opponent-list-admin').appendChild(opt); });
+
+/* ---- Age / nationality / era dropdowns ---- */
+const NATIONALITIES = ["England","Wales","Scotland","Northern Ireland","Republic of Ireland","Croatia","Nigeria",
+  "Bosnia & Herzegovina","Canada","Algeria","Japan","Belgium","Turkey","Brazil","Poland","Netherlands","France",
+  "DR Congo","Australia","Italy","Switzerland","Germany","USA","Gabon","Uruguay","Ivory Coast","Norway","Colombia",
+  "Ghana","Iran","Egypt","Honduras","Portugal","Spain","Greece","Guinea","Jamaica","Hungary"];
+
+(function populateDropdowns(){
+  const ageSel = document.getElementById('p-age');
+  for(let a=15; a<=45; a++){ const opt=document.createElement('option'); opt.value=a; opt.textContent=a; ageSel.appendChild(opt); }
+  const ageOther = document.createElement('option'); ageOther.value='__other__'; ageOther.textContent='Other (type below)'; ageSel.appendChild(ageOther);
+
+  const natSel = document.getElementById('p-nat');
+  const blank = document.createElement('option'); blank.value=''; blank.textContent='Select…'; natSel.appendChild(blank);
+  NATIONALITIES.forEach(n=>{ const opt=document.createElement('option'); opt.value=n; opt.textContent=n; natSel.appendChild(opt); });
+  const unknown = document.createElement('option'); unknown.value='Unknown'; unknown.textContent='Unknown'; natSel.appendChild(unknown);
+  const other = document.createElement('option'); other.value='__other__'; other.textContent='Other (type below)'; natSel.appendChild(other);
+})();
+
+function setNatField(value){
+  const sel = document.getElementById('p-nat');
+  const otherInput = document.getElementById('p-nat-other');
+  if(value && NATIONALITIES.includes(value)){
+    sel.value = value; otherInput.style.display = 'none'; otherInput.value = '';
+  } else if(value){
+    sel.value = '__other__'; otherInput.style.display = 'block'; otherInput.value = value;
+  } else {
+    sel.value = ''; otherInput.style.display = 'none'; otherInput.value = '';
+  }
+}
+function getNatValue(){
+  const sel = document.getElementById('p-nat');
+  if(sel.value === '__other__') return document.getElementById('p-nat-other').value.trim();
+  return sel.value;
+}
+document.getElementById('p-nat').addEventListener('change', ()=>{
+  document.getElementById('p-nat-other').style.display = document.getElementById('p-nat').value === '__other__' ? 'block' : 'none';
+});
+document.getElementById('p-era-preset').addEventListener('change', function(){
+  if(this.value) document.getElementById('p-era').value = this.value;
+  this.value = '';
+});
+
+function setAgeField(value){
+  const sel = document.getElementById('p-age');
+  const otherInput = document.getElementById('p-age-other');
+  if(value && value >= 15 && value <= 45){
+    sel.value = value; otherInput.style.display = 'none'; otherInput.value = '';
+  } else if(value){
+    sel.value = '__other__'; otherInput.style.display = 'block'; otherInput.value = value;
+  } else {
+    sel.value = ''; otherInput.style.display = 'none'; otherInput.value = '';
+  }
+}
+function getAgeValue(){
+  const sel = document.getElementById('p-age');
+  if(sel.value === '__other__'){
+    const v = document.getElementById('p-age-other').value;
+    return v ? Number(v) : null;
+  }
+  return sel.value ? Number(sel.value) : null;
+}
+document.getElementById('p-age').addEventListener('change', ()=>{
+  document.getElementById('p-age-other').style.display = document.getElementById('p-age').value === '__other__' ? 'block' : 'none';
+});
 
 let PASSPHRASE = sessionStorage.getItem('tigerdle_admin_pass') || '';
 
@@ -252,6 +351,25 @@ async function refreshPlayers(){
   }catch(e){ document.getElementById('p-list').innerHTML = '<div class="meta">Could not load.</div>'; }
 }
 
+let editingPlayerId = null;
+
+function startEditPlayer(id){
+  const p = allPlayersCache.find(pp=>pp.id===id);
+  if(!p) return;
+  editingPlayerId = p.id;
+  document.getElementById('p-first').value = p.first_name;
+  document.getElementById('p-last').value = p.last_name;
+  document.getElementById('p-pos').value = p.position;
+  setAgeField(p.age);
+  setNatField(p.nationality);
+  document.getElementById('p-era').value = p.era || '';
+  document.getElementById('p-form-heading').textContent = `Editing ${p.first_name} ${p.last_name}`;
+  document.getElementById('p-submit').textContent = 'Save changes';
+  document.getElementById('p-cancel-edit').style.display = 'inline-block';
+  document.getElementById('p-msg').textContent = '';
+  document.getElementById('p-first').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
 function renderPlayerList(){
   const list = document.getElementById('p-list');
   const query = (document.getElementById('p-search').value || '').trim().toLowerCase();
@@ -262,14 +380,32 @@ function renderPlayerList(){
   if(!filtered.length){ list.innerHTML = `<div class="meta">No matches for "${query}".</div>`; return; }
   list.innerHTML = filtered.map(p=>`
     <div class="admin-row">
-      <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.active?'':' · inactive'}</span></div>
-      <button class="ghost-btn" data-id="${p.id}" data-active="${p.active}">${p.active?'Deactivate':'Reactivate'}</button>
+      <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.nationality ? ' · '+p.nationality : ''}${p.age ? ' · age '+p.age : ' · age unknown'}${p.active?'':' · inactive'}</span></div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="ghost-btn" data-edit="${p.id}">Edit</button>
+        <button class="ghost-btn" data-id="${p.id}" data-active="${p.active}">${p.active?'Deactivate':'Reactivate'}</button>
+      </div>
     </div>`).join('');
-  list.querySelectorAll('button').forEach(b=>b.addEventListener('click', async ()=>{
+  list.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click', async ()=>{
     try{ await callAdmin('update_player', { id:b.dataset.id, active: b.dataset.active !== 'true' }); refreshPlayers(); }
     catch(e){ toast(e.message); }
   }));
+  list.querySelectorAll('button[data-edit]').forEach(b=>b.addEventListener('click', ()=>startEditPlayer(b.dataset.edit)));
 }
+
+function exitEditMode(){
+  editingPlayerId = null;
+  document.getElementById('p-form-heading').textContent = 'Add a signing';
+  document.getElementById('p-submit').textContent = 'Add signing';
+  document.getElementById('p-cancel-edit').style.display = 'none';
+  document.getElementById('p-first').value = '';
+  document.getElementById('p-last').value = '';
+  document.getElementById('p-age').value = '';
+  setAgeField('');
+  setNatField('');
+  document.getElementById('p-era').value = 'Current Squad';
+}
+document.getElementById('p-cancel-edit').addEventListener('click', exitEditMode);
 
 function updateToggleLabel(){
   const btn = document.getElementById('p-toggle');
@@ -295,19 +431,49 @@ document.getElementById('p-submit').addEventListener('click', async ()=>{
     first_name: document.getElementById('p-first').value.trim(),
     last_name: document.getElementById('p-last').value.trim(),
     position: document.getElementById('p-pos').value,
-    age: document.getElementById('p-age').value ? Number(document.getElementById('p-age').value) : null,
-    nationality: document.getElementById('p-nat').value.trim() || 'Unknown',
+    age: getAgeValue(),
+    nationality: getNatValue() || 'Unknown',
     era: document.getElementById('p-era').value.trim() || 'Current Squad',
-    active: true
   };
   if(!payload.first_name || !payload.last_name){ document.getElementById('p-msg').textContent = 'First and last name are required.'; return; }
-  document.getElementById('p-msg').textContent = 'Saving…';
+  document.getElementById('p-msg').textContent = editingPlayerId ? 'Saving changes…' : 'Saving…';
   try{
-    await callAdmin('add_player', payload);
-    document.getElementById('p-msg').textContent = 'Added.';
-    ['p-first','p-last','p-age','p-nat'].forEach(id=>document.getElementById(id).value='');
+    if(editingPlayerId){
+      await callAdmin('update_player', { id: editingPlayerId, ...payload });
+      document.getElementById('p-msg').textContent = 'Updated.';
+      exitEditMode();
+    } else {
+      await callAdmin('add_player', { ...payload, active: true });
+      document.getElementById('p-msg').textContent = 'Added.';
+      document.getElementById('p-first').value = '';
+      document.getElementById('p-last').value = '';
+      document.getElementById('p-age').value = '';
+      setAgeField('');
+      setNatField('');
+    }
     refreshPlayers();
   }catch(e){ document.getElementById('p-msg').textContent = e.message; }
+});
+
+/* ---- Bulk fix existing players ---- */
+document.getElementById('bulk-update-submit').addEventListener('click', async ()=>{
+  const raw = document.getElementById('bulk-update').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
+  if(!lines.length){ document.getElementById('bulk-update-msg').textContent = 'Paste at least one line first.'; return; }
+  const updates = lines.map(line=>{
+    const [first_name, last_name, position, nationality, era, age] = line.split(',').map(p=>p.trim());
+    return { first_name, last_name, position: position || undefined, nationality: nationality || undefined, era: era || undefined, age: age || undefined };
+  }).filter(u=>u.first_name && u.last_name);
+  if(!updates.length){ document.getElementById('bulk-update-msg').textContent = 'No valid lines found — check the format.'; return; }
+  document.getElementById('bulk-update-msg').textContent = `Updating ${updates.length} player(s)…`;
+  try{
+    const data = await callAdmin('bulk_update_players', { updates });
+    let msg = `Updated ${data.updated} player(s).`;
+    if(data.notFound && data.notFound.length) msg += ` Not found: ${data.notFound.join(', ')}.`;
+    document.getElementById('bulk-update-msg').textContent = msg;
+    document.getElementById('bulk-update').value = '';
+    refreshPlayers(); refreshSchedule();
+  }catch(e){ document.getElementById('bulk-update-msg').textContent = e.message; }
 });
 
 /* ---- Duplicate players ---- */
@@ -354,6 +520,36 @@ document.getElementById('dup-scan').addEventListener('click', async ()=>{
       }catch(e){ document.getElementById('dup-msg').textContent = e.message; }
     });
   }catch(e){ el.innerHTML = `<div class="meta">${e.message}</div>`; }
+});
+
+/* ---- Missing data ---- */
+document.getElementById('missing-scan').addEventListener('click', ()=>{
+  const el = document.getElementById('missing-results');
+  const issues = allPlayersCache.map(p=>{
+    const missing = [];
+    if(!p.age) missing.push('age');
+    if(!p.nationality || p.nationality === 'Unknown') missing.push('nationality');
+    if(!p.era || p.era === 'Former Hull Player' || p.era === 'Hull City Player') missing.push('specific era');
+    return { p, missing };
+  }).filter(x => x.missing.length);
+
+  if(!issues.length){
+    el.innerHTML = '<div class="meta">Nothing missing — every player has age, nationality and a specific era.</div>';
+    return;
+  }
+  el.innerHTML = `
+    <p style="font-size:12.5px; color:var(--paper-dim);">
+      ${issues.length} player(s) missing at least one field. "Specific era" flags generic placeholders
+      like "Former Hull Player" that could use a real date range — not necessarily wrong, just rough.
+    </p>
+    <div class="admin-list">
+      ${issues.map(({p, missing})=>`
+        <div class="admin-row">
+          <div>${p.first_name} ${p.last_name} <span class="meta">missing: ${missing.join(', ')}</span></div>
+          <button class="ghost-btn" data-edit="${p.id}">Edit</button>
+        </div>`).join('')}
+    </div>`;
+  el.querySelectorAll('button[data-edit]').forEach(b=>b.addEventListener('click', ()=>startEditPlayer(b.dataset.edit)));
 });
 
 /* ---- Posts ---- */
