@@ -81,6 +81,39 @@ Deno.serve(async (req) => {
         return json({ ok: true, data });
       }
 
+      case "bulk_add_players": {
+        const p = payload || {};
+        const list = Array.isArray(p.players) ? p.players : [];
+        if (!list.length) return json({ ok: false, error: "No players provided" }, 400);
+
+        const rows = [];
+        const errors: string[] = [];
+        for (const [i, row] of list.entries()) {
+          if (!row.first_name || !row.last_name || !row.position) {
+            errors.push(`Row ${i + 1}: missing first name, last name, or position`);
+            continue;
+          }
+          if (!["GK", "DF", "MF", "FW"].includes(row.position)) {
+            errors.push(`Row ${i + 1}: invalid position "${row.position}"`);
+            continue;
+          }
+          rows.push({
+            first_name: row.first_name,
+            last_name: row.last_name,
+            position: row.position,
+            nationality: row.nationality || "Unknown",
+            era: row.era || "Current Squad",
+            age: row.age ?? null,
+            active: true,
+          });
+        }
+        if (!rows.length) return json({ ok: false, error: `No valid rows. ${errors.join("; ")}` }, 400);
+
+        const { data, error } = await supabase.from("players").insert(rows).select();
+        if (error) throw error;
+        return json({ ok: true, data: { inserted: data.length, skipped: errors } });
+      }
+
       case "update_player": {
         const p = payload || {};
         if (!p.id) return json({ ok: false, error: "id is required" }, 400);
