@@ -74,6 +74,13 @@
       <div class="admin-list" id="b-list"></div>
     </div>
 
+    <!-- Schedule viewer -->
+    <div class="formcard">
+      <h3>Upcoming &amp; recent puzzles</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">Each answer cycles through the full pool once before repeating — TIGERDLE and Guess the Opponent repeat sooner since their pools are smaller. Add more players or goal photos to stretch the gap.</p>
+      <div id="schedule-view" class="admin-list"><div class="meta">Loading…</div></div>
+    </div>
+
     <!-- Goal puzzle -->
     <div class="formcard">
       <h3>Add a "Guess the Opponent" puzzle</h3>
@@ -150,7 +157,7 @@ async function tryEnter(){
 if(PASSPHRASE) tryEnter(); else showGate('');
 
 async function refreshAll(){
-  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals();
+  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule();
 }
 
 /* ---- Subscriber count ---- */
@@ -246,7 +253,49 @@ document.getElementById('b-submit').addEventListener('click', async ()=>{
   }catch(e){ document.getElementById('b-msg').textContent = e.message; }
 });
 
-/* ---- Goal puzzles ---- */
+/* ---- Schedule viewer ---- */
+const POS_LABEL_ADMIN = {GK:"Goalkeeper", DF:"Defender", MF:"Midfielder", FW:"Forward"};
+async function refreshSchedule(){
+  const el = document.getElementById('schedule-view');
+  try{
+    let players = FALLBACK_PLAYERS;
+    const { data } = await sb.from('players').select('*').eq('active', true);
+    if(data && data.length) players = data.map(r=>({first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era, age:r.age}));
+    const surname5 = players.filter(p => stripAccents(p.last).replace(/[^A-Za-z]/g,"").length === 5);
+
+    const { data: goals } = await sb.from('goals').select('*');
+    const goalPool = goals || [];
+
+    const rows = [];
+    for(let offset = -7; offset <= 14; offset++){
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      const label = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+      const isToday = offset === 0;
+      const s5 = surname5.length ? stripAccents(pickForDate(surname5, "surname5", d).last).toUpperCase() : "—";
+      const gt = players.length ? pickForDate(players, "guesstiger", d) : null;
+      const mt = players.length ? pickForDate(players, "mysterytiger", d) : null;
+      let opp = "—";
+      if(goalPool.length){
+        const dk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+        const pinned = goalPool.find(g => g.puzzle_date === dk);
+        opp = pinned ? pinned.opponent : pickForDate(goalPool, "guessopponent", d).opponent;
+      }
+      rows.push({label, isToday, offset, s5, gt: gt ? `${gt.first} ${gt.last}` : "—", mt: mt ? `${mt.first} ${mt.last}` : "—", opp});
+    }
+
+    el.innerHTML = rows.map(r => `
+      <div class="admin-row" style="${r.isToday ? 'border-color:var(--amber-deep);' : ''} ${r.offset<0 ? 'opacity:.55;' : ''}">
+        <div>
+          <span class="meta" style="color:${r.isToday ? 'var(--amber-soft)' : 'var(--paper-dim)'};">${r.label}${r.isToday ? ' · TODAY' : r.offset<0 ? ' · past' : ''}</span><br>
+          <span style="font-size:12px;">TIGERDLE: <b>${r.s5}</b> · Tiger: <b>${r.gt}</b> · Mystery: <b>${r.mt}</b> · Opponent: <b>${r.opp}</b></span>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML = '<div class="meta">Could not load schedule.</div>';
+  }
+}
+
 function fileToResizedBase64(file, maxDim=1200, quality=0.82){
   return new Promise((resolve, reject)=>{
     const img = new Image();

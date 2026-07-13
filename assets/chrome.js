@@ -24,7 +24,7 @@ function renderChrome(current){
     header.innerHTML = `
       <div class="stripe-bar"></div>
       <div class="wrap">
-        <div class="brandrow" style="padding-top:16px;">
+        <div class="brandrow">
           <a class="brand" href="index.html">
             ${BADGE_SVG}
             <span class="logo">TIGERDLE</span>
@@ -50,7 +50,12 @@ function renderChrome(current){
           </div>
           <div class="subscribe-msg" id="sub-msg"></div>
         </div>
-        <footer class="sitefoot">TIGERDLE · built for the amber &amp; black · not affiliated with Hull City AFC</footer>
+        <footer class="sitefoot">
+          TIGERDLE · built for the amber &amp; black · not affiliated with Hull City AFC
+          ${typeof TIP_JAR_URL !== 'undefined' && TIP_JAR_URL && !TIP_JAR_URL.includes('YOUR-USERNAME')
+            ? `<br><a class="tipjar-link" href="${TIP_JAR_URL}" target="_blank" rel="noopener">☕ Buy me a coffee</a>`
+            : ''}
+        </footer>
       </div>`;
     document.getElementById('sub-btn').addEventListener('click', subscribeSubmit);
     document.getElementById('sub-email').addEventListener('keydown', e=>{ if(e.key==='Enter') subscribeSubmit(); });

@@ -121,10 +121,27 @@ function hashStr(str){
   for(let i=0;i<str.length;i++){ h = ((h*33) ^ str.charCodeAt(i)) >>> 0; }
   return h >>> 0;
 }
-function pickDaily(pool, salt){
-  const idx = hashStr(dateKey()+"::"+salt) % pool.length;
-  return pool[idx];
+const SCHEDULE_EPOCH = new Date('2026-01-01T00:00:00');
+
+function daysSince(epoch, date){
+  const a = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const b = Date.UTC(epoch.getFullYear(), epoch.getMonth(), epoch.getDate());
+  return Math.floor((a - b) / 86400000);
 }
+function seededShuffle(pool, salt){
+  const arr = pool.slice();
+  let s = hashStr(salt) || 1;
+  function rnd(){ s = (s * 1103515245 + 12345) >>> 0; return s; }
+  for(let i = arr.length - 1; i > 0; i--){ const j = rnd() % (i + 1); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+function pickForDate(pool, salt, date){
+  const shuffled = seededShuffle(pool, salt);
+  const raw = daysSince(SCHEDULE_EPOCH, date) % shuffled.length;
+  const idx = (raw + shuffled.length) % shuffled.length;
+  return shuffled[idx];
+}
+function pickDaily(pool, salt){ return pickForDate(pool, salt, new Date()); }}
 function stripAccents(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 
 function loadState(key, fallback){
