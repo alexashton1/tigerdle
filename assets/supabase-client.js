@@ -6,7 +6,7 @@
    ========================================================= */
 const SUPABASE_URL = "https://yiiijduxagjkmbzrhoaj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpaWlqZHV4YWdqa21ienJob2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4Nzk2NzAsImV4cCI6MjA5OTQ1NTY3MH0.XIyRRrc-lh6mJqjGWZkflTYUFTZQwopPKeAm88Aze88";
-const TIP_JAR_URL = "https://ko-fi.com/tigerdle";
+const TIP_JAR_URL = "buymeacoffee.com/tigerdle";
 
 function fnUrl(name){ return `${SUPABASE_URL}/functions/v1/${name}`; }
 
