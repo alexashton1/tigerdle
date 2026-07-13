@@ -33,6 +33,19 @@
       <div id="sub-count" class="meta" style="font-family:var(--mono); color:var(--paper-dim);">Loading…</div>
     </div>
 
+    <!-- Bulk add signings -->
+    <div class="formcard">
+      <h3>Bulk add players</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        One player per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">First,Last,Position,Nationality,Era,Age</code><br>
+        Position must be GK, DF, MF or FW. Nationality, Era and Age are optional — leave blank if unsure.<br>
+        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Jimmy,Bullard,MF,England,Premier League Era,</code>
+      </p>
+      <div class="field"><textarea id="bulk-players" placeholder="Jimmy,Bullard,MF,England,Premier League Era,&#10;Nick,Barmby,MF,England,2000s Local Hero,"></textarea></div>
+      <button class="primary-btn" id="bulk-submit">Add all</button>
+      <div class="subscribe-msg" id="bulk-msg"></div>
+    </div>
+
     <!-- Add / edit signing -->
     <div class="formcard">
       <h3>Add a signing</h3>
@@ -55,6 +68,7 @@
     </div>
     <div class="formcard">
       <h3>Current player pool</h3>
+      <button class="ghost-btn" id="p-export" style="margin-bottom:10px;">Copy list as text</button>
       <div class="admin-list" id="p-list"></div>
     </div>
 
@@ -166,6 +180,49 @@ async function refreshStats(){
     document.getElementById('sub-count').textContent = `${data.subscriberCount} subscriber${data.subscriberCount===1?'':'s'}`;
   }catch(e){ document.getElementById('sub-count').textContent = 'Could not load.'; }
 }
+
+/* ---- Bulk add players ---- */
+document.getElementById('bulk-submit').addEventListener('click', async ()=>{
+  const raw = document.getElementById('bulk-players').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
+  if(!lines.length){ document.getElementById('bulk-msg').textContent = 'Paste at least one player line first.'; return; }
+  const players = [];
+  const badLines = [];
+  lines.forEach((line, i)=>{
+    const parts = line.split(',').map(p=>p.trim());
+    const [first_name, last_name, position, nationality, era, age] = parts;
+    if(!first_name || !last_name || !position){ badLines.push(i+1); return; }
+    players.push({
+      first_name, last_name,
+      position: position.toUpperCase(),
+      nationality: nationality || undefined,
+      era: era || undefined,
+      age: age ? Number(age) : null
+    });
+  });
+  if(!players.length){ document.getElementById('bulk-msg').textContent = 'No valid lines found — check the format.'; return; }
+  document.getElementById('bulk-msg').textContent = `Adding ${players.length} player(s)…`;
+  try{
+    const data = await callAdmin('bulk_add_players', { players });
+    let msg = `Added ${data.inserted} player(s).`;
+    if(badLines.length) msg += ` Skipped line(s) ${badLines.join(', ')} — missing required fields.`;
+    if(data.skipped && data.skipped.length) msg += ` ${data.skipped.length} row(s) rejected server-side, check position values.`;
+    document.getElementById('bulk-msg').textContent = msg;
+    document.getElementById('bulk-players').value = '';
+    refreshPlayers(); refreshSchedule();
+  }catch(e){ document.getElementById('bulk-msg').textContent = e.message; }
+});
+
+/* ---- Export current pool as text ---- */
+document.getElementById('p-export').addEventListener('click', async ()=>{
+  try{
+    const { data } = await sb.from('players').select('*').order('last_name');
+    if(!data || !data.length){ toast('No players to export'); return; }
+    const text = data.map(p => [p.first_name, p.last_name, p.position, p.nationality, p.era, p.age ?? ''].join(',')).join('\n');
+    await navigator.clipboard.writeText(text);
+    toast(`Copied ${data.length} players to clipboard`);
+  }catch(e){ toast('Could not copy — clipboard access blocked?'); }
+});
 
 /* ---- Players ---- */
 async function refreshPlayers(){
