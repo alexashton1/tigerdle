@@ -76,6 +76,16 @@
       <div class="admin-list" id="p-list" style="display:none; max-height:440px; overflow-y:auto; padding-right:4px;"></div>
     </div>
 
+    <div class="formcard">
+      <h3>Duplicate players</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        New signings (single or bulk) are checked against existing names automatically, so duplicates shouldn't get in going forward.
+        This scans for any that are already there — same first + last name, regardless of era or position.
+      </p>
+      <button class="ghost-btn" id="dup-scan">Scan for duplicates</button>
+      <div id="dup-results" style="margin-top:12px;"></div>
+    </div>
+
     <!-- New blog post -->
     <div class="formcard">
       <h3>Write a post</h3>
@@ -209,6 +219,7 @@ document.getElementById('bulk-submit').addEventListener('click', async ()=>{
   try{
     const data = await callAdmin('bulk_add_players', { players });
     let msg = `Added ${data.inserted} player(s).`;
+    if(data.duplicatesSkipped) msg += ` ${data.duplicatesSkipped} already in the pool, skipped.`;
     if(badLines.length) msg += ` Skipped line(s) ${badLines.join(', ')} — missing required fields.`;
     if(data.skipped && data.skipped.length) msg += ` ${data.skipped.length} row(s) rejected server-side, check position values.`;
     document.getElementById('bulk-msg').textContent = msg;
@@ -297,6 +308,52 @@ document.getElementById('p-submit').addEventListener('click', async ()=>{
     ['p-first','p-last','p-age','p-nat'].forEach(id=>document.getElementById(id).value='');
     refreshPlayers();
   }catch(e){ document.getElementById('p-msg').textContent = e.message; }
+});
+
+/* ---- Duplicate players ---- */
+document.getElementById('dup-scan').addEventListener('click', async ()=>{
+  const el = document.getElementById('dup-results');
+  el.innerHTML = '<div class="meta">Scanning…</div>';
+  try{
+    const data = await callAdmin('find_duplicate_players', {});
+    const groups = data.duplicates || [];
+    if(!groups.length){
+      el.innerHTML = '<div class="meta">No duplicates found.</div>';
+      return;
+    }
+    el.innerHTML = `
+      <p style="font-size:12.5px; color:var(--paper-dim);">
+        Found ${groups.length} name(s) with duplicate entries. The oldest entry in each group is pre-selected to <b>keep</b> —
+        everything else is checked for deletion. Review before confirming; this can't be undone.
+      </p>
+      ${groups.map((g, gi) => `
+        <div class="formcard" style="background:var(--ink); margin-bottom:10px;">
+          <h3 style="font-size:15px;">${g[0].first_name} ${g[0].last_name} <span class="meta">(${g.length} entries)</span></h3>
+          ${g.map((row, ri) => `
+            <label class="checkfield" style="align-items:flex-start;">
+              <input type="checkbox" class="dup-check" data-group="${gi}" data-id="${row.id}" ${ri===0 ? '' : 'checked'}>
+              <span>
+                ${row.position} · ${row.era} · ${row.nationality}${row.age ? ' · age ' + row.age : ''}${row.active ? '' : ' · inactive'}
+                <span class="meta" style="display:block;">added ${new Date(row.created_at).toLocaleDateString()}${ri===0 ? ' — oldest, kept by default' : ''}</span>
+              </span>
+            </label>`).join('')}
+        </div>`).join('')}
+      <button class="primary-btn" id="dup-delete">Delete checked duplicates</button>
+      <div class="subscribe-msg" id="dup-msg"></div>
+    `;
+    document.getElementById('dup-delete').addEventListener('click', async ()=>{
+      const ids = [...document.querySelectorAll('.dup-check:checked')].map(cb=>cb.dataset.id);
+      if(!ids.length){ document.getElementById('dup-msg').textContent = 'Nothing checked for deletion.'; return; }
+      if(!confirm(`Delete ${ids.length} duplicate player record(s)? This can't be undone.`)) return;
+      document.getElementById('dup-msg').textContent = 'Deleting…';
+      try{
+        await callAdmin('bulk_delete_players', { ids });
+        document.getElementById('dup-msg').textContent = `Deleted ${ids.length}.`;
+        refreshPlayers(); refreshSchedule();
+        document.getElementById('dup-scan').click();
+      }catch(e){ document.getElementById('dup-msg').textContent = e.message; }
+    });
+  }catch(e){ el.innerHTML = `<div class="meta">${e.message}</div>`; }
 });
 
 /* ---- Posts ---- */
