@@ -68,6 +68,15 @@ Deno.serve(async (req) => {
         if (!p.first_name || !p.last_name || !p.position) {
           return json({ ok: false, error: "first_name, last_name and position are required" }, 400);
         }
+        const { data: existing } = await supabase
+          .from("players")
+          .select("id")
+          .ilike("first_name", p.first_name.trim())
+          .ilike("last_name", p.last_name.trim())
+          .limit(1);
+        if (existing && existing.length) {
+          return json({ ok: false, error: `${p.first_name} ${p.last_name} is already in the player pool.` }, 409);
+        }
         const { data, error } = await supabase.from("players").insert({
           first_name: p.first_name,
           last_name: p.last_name,
@@ -86,8 +95,16 @@ Deno.serve(async (req) => {
         const list = Array.isArray(p.players) ? p.players : [];
         if (!list.length) return json({ ok: false, error: "No players provided" }, 400);
 
+        // Existing DB players, for a case-insensitive name check
+        const { data: existingPlayers } = await supabase.from("players").select("first_name, last_name");
+        const existingKeys = new Set(
+          (existingPlayers || []).map((r: any) => `${r.first_name.trim().toLowerCase()}|${r.last_name.trim().toLowerCase()}`)
+        );
+
         const rows = [];
         const errors: string[] = [];
+        const seenInBatch = new Set<string>();
+        let duplicateCount = 0;
         for (const [i, row] of list.entries()) {
           if (!row.first_name || !row.last_name || !row.position) {
             errors.push(`Row ${i + 1}: missing first name, last name, or position`);
@@ -97,6 +114,12 @@ Deno.serve(async (req) => {
             errors.push(`Row ${i + 1}: invalid position "${row.position}"`);
             continue;
           }
+          const key = `${row.first_name.trim().toLowerCase()}|${row.last_name.trim().toLowerCase()}`;
+          if (existingKeys.has(key) || seenInBatch.has(key)) {
+            duplicateCount++;
+            continue;
+          }
+          seenInBatch.add(key);
           rows.push({
             first_name: row.first_name,
             last_name: row.last_name,
@@ -107,11 +130,66 @@ Deno.serve(async (req) => {
             active: true,
           });
         }
-        if (!rows.length) return json({ ok: false, error: `No valid rows. ${errors.join("; ")}` }, 400);
+        if (!rows.length) {
+          const reason = duplicateCount ? `All ${duplicateCount} row(s) were already in the pool.` : `No valid rows. ${errors.join("; ")}`;
+          return json({ ok: false, error: reason }, 400);
+        }
 
         const { data, error } = await supabase.from("players").insert(rows).select();
         if (error) throw error;
-        return json({ ok: true, data: { inserted: data.length, skipped: errors } });
+        return json({ ok: true, data: { inserted: data.length, skipped: errors, duplicatesSkipped: duplicateCount } });
+      }
+
+      case "find_duplicate_players": {
+        const { data, error } = await supabase.from("players").select("*").order("created_at");
+        if (error) throw error;
+        const groups: Record<string, any[]> = {};
+        for (const row of data || []) {
+          const key = `${row.first_name.trim().toLowerCase()}|${row.last_name.trim().toLowerCase()}`;
+          (groups[key] ||= []).push(row);
+        }
+        const duplicates = Object.values(groups).filter((g) => g.length > 1);
+        return json({ ok: true, data: { duplicates } });
+      }
+
+      case "bulk_delete_players": {
+        const p = payload || {};
+        const ids = Array.isArray(p.ids) ? p.ids : [];
+        if (!ids.length) return json({ ok: false, error: "No ids provided" }, 400);
+        const { error } = await supabase.from("players").delete().in("id", ids);
+        if (error) throw error;
+        return json({ ok: true, data: { deleted: ids.length } });
+      }
+
+      case "bulk_update_players": {
+        const p = payload || {};
+        const list = Array.isArray(p.updates) ? p.updates : [];
+        if (!list.length) return json({ ok: false, error: "No updates provided" }, 400);
+
+        const { data: existingPlayers } = await supabase.from("players").select("id, first_name, last_name");
+        const byName = new Map(
+          (existingPlayers || []).map((r: any) => [`${r.first_name.trim().toLowerCase()}|${r.last_name.trim().toLowerCase()}`, r.id])
+        );
+
+        let updated = 0;
+        const notFound: string[] = [];
+        for (const row of list) {
+          if (!row.first_name || !row.last_name) continue;
+          const key = `${row.first_name.trim().toLowerCase()}|${row.last_name.trim().toLowerCase()}`;
+          const id = byName.get(key);
+          if (!id) { notFound.push(`${row.first_name} ${row.last_name}`); continue; }
+
+          const patch: Record<string, unknown> = {};
+          if (row.position) patch.position = row.position;
+          if (row.nationality) patch.nationality = row.nationality;
+          if (row.era) patch.era = row.era;
+          if (row.age !== undefined && row.age !== null && row.age !== "") patch.age = Number(row.age);
+          if (!Object.keys(patch).length) continue;
+
+          const { error } = await supabase.from("players").update(patch).eq("id", id);
+          if (!error) updated++;
+        }
+        return json({ ok: true, data: { updated, notFound } });
       }
 
       case "update_player": {
