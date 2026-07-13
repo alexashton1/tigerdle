@@ -68,8 +68,12 @@
     </div>
     <div class="formcard">
       <h3>Current player pool</h3>
-      <button class="ghost-btn" id="p-export" style="margin-bottom:10px;">Copy list as text</button>
-      <div class="admin-list" id="p-list"></div>
+      <div class="field"><input type="text" id="p-search" placeholder="Search by name, position, era, nationality…"></div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button class="ghost-btn" id="p-export">Copy list as text</button>
+        <button class="ghost-btn" id="p-toggle">Show list</button>
+      </div>
+      <div class="admin-list" id="p-list" style="display:none; max-height:440px; overflow-y:auto; padding-right:4px;"></div>
     </div>
 
     <!-- New blog post -->
@@ -225,22 +229,56 @@ document.getElementById('p-export').addEventListener('click', async ()=>{
 });
 
 /* ---- Players ---- */
+let allPlayersCache = [];
+let playerListExpanded = false;
+
 async function refreshPlayers(){
   try{
     const { data } = await sb.from('players').select('*').order('last_name');
-    const list = document.getElementById('p-list');
-    if(!data || !data.length){ list.innerHTML = '<div class="meta">No players yet.</div>'; return; }
-    list.innerHTML = data.map(p=>`
-      <div class="admin-row">
-        <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.active?'':' · inactive'}</span></div>
-        <button class="ghost-btn" data-id="${p.id}" data-active="${p.active}">${p.active?'Deactivate':'Reactivate'}</button>
-      </div>`).join('');
-    list.querySelectorAll('button').forEach(b=>b.addEventListener('click', async ()=>{
-      try{ await callAdmin('update_player', { id:b.dataset.id, active: b.dataset.active !== 'true' }); refreshPlayers(); }
-      catch(e){ toast(e.message); }
-    }));
+    allPlayersCache = data || [];
+    renderPlayerList();
+    updateToggleLabel();
   }catch(e){ document.getElementById('p-list').innerHTML = '<div class="meta">Could not load.</div>'; }
 }
+
+function renderPlayerList(){
+  const list = document.getElementById('p-list');
+  const query = (document.getElementById('p-search').value || '').trim().toLowerCase();
+  const filtered = !query ? allPlayersCache : allPlayersCache.filter(p =>
+    `${p.first_name} ${p.last_name} ${p.position} ${p.era} ${p.nationality}`.toLowerCase().includes(query)
+  );
+  if(!allPlayersCache.length){ list.innerHTML = '<div class="meta">No players yet.</div>'; return; }
+  if(!filtered.length){ list.innerHTML = `<div class="meta">No matches for "${query}".</div>`; return; }
+  list.innerHTML = filtered.map(p=>`
+    <div class="admin-row">
+      <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.active?'':' · inactive'}</span></div>
+      <button class="ghost-btn" data-id="${p.id}" data-active="${p.active}">${p.active?'Deactivate':'Reactivate'}</button>
+    </div>`).join('');
+  list.querySelectorAll('button').forEach(b=>b.addEventListener('click', async ()=>{
+    try{ await callAdmin('update_player', { id:b.dataset.id, active: b.dataset.active !== 'true' }); refreshPlayers(); }
+    catch(e){ toast(e.message); }
+  }));
+}
+
+function updateToggleLabel(){
+  const btn = document.getElementById('p-toggle');
+  btn.textContent = playerListExpanded ? `Hide list (${allPlayersCache.length})` : `Show list (${allPlayersCache.length})`;
+}
+
+document.getElementById('p-toggle').addEventListener('click', ()=>{
+  playerListExpanded = !playerListExpanded;
+  document.getElementById('p-list').style.display = playerListExpanded ? 'block' : 'none';
+  updateToggleLabel();
+});
+
+document.getElementById('p-search').addEventListener('input', ()=>{
+  if(!playerListExpanded){
+    playerListExpanded = true;
+    document.getElementById('p-list').style.display = 'block';
+    updateToggleLabel();
+  }
+  renderPlayerList();
+});
 document.getElementById('p-submit').addEventListener('click', async ()=>{
   const payload = {
     first_name: document.getElementById('p-first').value.trim(),
