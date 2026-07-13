@@ -59,6 +59,18 @@
   .key:active{ transform:scale(0.95); }
 
   .guessrow{ display:flex; gap:8px; margin-bottom:14px; }
+  .ac-wrap{ position:relative; flex:1; }
+  .ac-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:30;
+    background:var(--ink-2); border:1px solid var(--line); border-radius:8px;
+    max-height:220px; overflow-y:auto; display:none; box-shadow:0 10px 24px rgba(0,0,0,0.4);
+  }
+  .ac-dropdown.open{ display:block; }
+  .ac-item{ padding:9px 12px; font-size:13.5px; cursor:pointer; border-bottom:1px solid var(--line); }
+  .ac-item:last-child{ border-bottom:none; }
+  .ac-item .ac-sub{ font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin-top:2px; }
+  .ac-item:hover, .ac-item.highlight{ background:var(--amber); color:var(--ink); }
+  .ac-item.highlight .ac-sub, .ac-item:hover .ac-sub{ color:var(--ink); opacity:.75; }
   .guessrow input[type=text]{
     flex:1; background:var(--ink-2); border:1px solid var(--line); color:var(--paper); font-family:var(--body);
     font-size:14.5px; padding:12px 14px; border-radius:8px; outline:none;
@@ -141,7 +153,13 @@
   <!-- MODE 2 -->
   <section class="panel" id="panel-m2">
     <div class="mode-head"><h2>Guess the Tiger</h2><p>One player from Hull's current squad or Tigers folklore. Compare position, era, nationality and age with every guess. 8 attempts.</p></div>
-    <div class="guessrow"><input type="text" id="m2-input" list="player-list" placeholder="Type a player name…" autocomplete="off"><button id="m2-submit">Guess</button></div>
+    <div class="guessrow">
+      <div class="ac-wrap">
+        <input type="text" id="m2-input" placeholder="Type a player name…" autocomplete="off">
+        <div class="ac-dropdown" id="m2-ac"></div>
+      </div>
+      <button id="m2-submit">Guess</button>
+    </div>
     <div class="attempts-left" id="m2-attempts"></div>
     <div class="cmp-header"><div>Player</div><div>Position</div><div>Era</div><div>Nation</div><div>Age</div></div>
     <div class="cmp-table" id="m2-table"></div>
@@ -152,7 +170,13 @@
   <section class="panel" id="panel-m3">
     <div class="mode-head"><h2>Mystery Tiger</h2><p>A clue unlocks with every wrong guess. Name the player before you run out of tries.</p></div>
     <ol class="clue-list" id="clue-list"></ol>
-    <div class="guessrow"><input type="text" id="m3-input" list="player-list" placeholder="Who is it?" autocomplete="off"><button id="m3-submit">Guess</button></div>
+    <div class="guessrow">
+      <div class="ac-wrap">
+        <input type="text" id="m3-input" placeholder="Who is it?" autocomplete="off">
+        <div class="ac-dropdown" id="m3-ac"></div>
+      </div>
+      <button id="m3-submit">Guess</button>
+    </div>
     <div class="m3-history" id="m3-history"></div>
     <div id="m3-result"></div>
   </section>
@@ -161,14 +185,17 @@
   <section class="panel" id="panel-m4">
     <div class="mode-head"><h2>Guess the Opponent</h2><p>A tile of the goal photo reveals with every wrong guess. Name the club Hull scored against.</p></div>
     <div class="goal-wrap" id="goal-wrap"></div>
-    <div class="guessrow"><input type="text" id="m4-input" list="opponent-list" placeholder="Which club?" autocomplete="off"><button id="m4-submit">Guess</button></div>
+    <div class="guessrow">
+      <div class="ac-wrap">
+        <input type="text" id="m4-input" placeholder="Which club?" autocomplete="off">
+        <div class="ac-dropdown" id="m4-ac"></div>
+      </div>
+      <button id="m4-submit">Guess</button>
+    </div>
     <div class="attempts-left" id="m4-attempts"></div>
     <div class="m3-history" id="m4-history"></div>
     <div id="m4-result"></div>
   </section>
-
-  <datalist id="player-list"></datalist>
-  <datalist id="opponent-list"></datalist>
 
   <div class="statsbar" id="statsbar"></div>
 </div>
@@ -244,15 +271,72 @@ async function loadGoals(){
   }catch(e){ return []; }
 }
 
+/* Custom autocomplete dropdown — native <datalist> silently doesn't work
+   on iOS Safari, so this replaces it with something that works everywhere.
+   items: array of {value, label, sub?}. onSelect(item) fires on pick. */
+function attachAutocomplete(inputEl, dropdownEl, items, opts){
+  opts = opts || {};
+  const maxResults = opts.maxResults || 7;
+  let filtered = [];
+  let highlighted = -1;
+
+  function render(){
+    if(!filtered.length){ dropdownEl.classList.remove('open'); dropdownEl.innerHTML=''; return; }
+    dropdownEl.innerHTML = filtered.map((it,i)=>`
+      <div class="ac-item${i===highlighted?' highlight':''}" data-idx="${i}">
+        ${it.label}${it.sub?`<div class="ac-sub">${it.sub}</div>`:''}
+      </div>`).join('');
+    dropdownEl.classList.add('open');
+    dropdownEl.querySelectorAll('.ac-item').forEach(el=>{
+      el.addEventListener('mousedown', (e)=>{ // mousedown fires before input blur
+        e.preventDefault();
+        pick(filtered[Number(el.dataset.idx)]);
+      });
+    });
+  }
+  function pick(item){
+    inputEl.value = item.value;
+    filtered = []; highlighted = -1;
+    dropdownEl.classList.remove('open'); dropdownEl.innerHTML='';
+    if(opts.onSelect) opts.onSelect(item);
+  }
+  function search(){
+    const q = inputEl.value.trim().toLowerCase();
+    highlighted = -1;
+    if(!q){ filtered = []; render(); return; }
+    filtered = items.filter(it => it.value.toLowerCase().includes(q)).slice(0, maxResults);
+    render();
+  }
+  inputEl.addEventListener('input', search);
+  inputEl.addEventListener('focus', ()=>{ if(inputEl.value.trim()) search(); });
+  inputEl.addEventListener('keydown', (e)=>{
+    if(!filtered.length) return;
+    if(e.key === 'ArrowDown'){ e.preventDefault(); highlighted = Math.min(highlighted+1, filtered.length-1); render(); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); highlighted = Math.max(highlighted-1, 0); render(); }
+    else if(e.key === 'Enter' && highlighted >= 0){ e.preventDefault(); pick(filtered[highlighted]); }
+    else if(e.key === 'Escape'){ filtered = []; highlighted = -1; render(); }
+  });
+  document.addEventListener('click', (e)=>{
+    if(!dropdownEl.contains(e.target) && e.target !== inputEl){ filtered = []; highlighted = -1; render(); }
+  });
+}
+
 (async function boot(){
   const PLAYERS = await loadPlayers();
-  const dl = document.getElementById("player-list");
-  PLAYERS.forEach(p=>{ const opt=document.createElement("option"); opt.value=`${p.first} ${p.last}`; dl.appendChild(opt); });
-  const odl = document.getElementById("opponent-list");
-  OPPONENT_CLUBS.forEach(c=>{ const opt=document.createElement("option"); opt.value=c; odl.appendChild(opt); });
 
   const stripAcc = stripAccents;
   const SURNAME5 = PLAYERS.filter(p => stripAcc(p.last).replace(/[^A-Za-z]/g,"").length === 5);
+
+  const playerItems = PLAYERS.map(p => ({
+    value: `${p.first} ${p.last}`,
+    label: `${p.first} ${p.last}`,
+    sub: `${POS_LABEL[p.pos]} · ${p.era}`
+  }));
+  const clubItems = OPPONENT_CLUBS.map(c => ({ value: c, label: c }));
+
+  attachAutocomplete(document.getElementById('m2-input'), document.getElementById('m2-ac'), playerItems);
+  attachAutocomplete(document.getElementById('m3-input'), document.getElementById('m3-ac'), playerItems);
+  attachAutocomplete(document.getElementById('m4-input'), document.getElementById('m4-ac'), clubItems);
 
   /* ================= MODE 1: Surname5 ================= */
   (function(){
@@ -368,7 +452,8 @@ async function loadGoals(){
       if(state.done) return; const p=findPlayer(input.value);
       if(!p){ toast("Not on the team sheet — pick from the list"); return; }
       if(state.guesses.some(g=>g.last===p.last&&g.first===p.first)){ toast("Already guessed that one"); return; }
-      state.guesses.push({first:p.first,last:p.last}); saveState(stateKey,state); renderRow(p); input.value="";
+      state.guesses.push({first:p.first,last:p.last}); saveState(stateKey,state); renderRow(p);
+      input.value=""; input.dispatchEvent(new Event('input'));
       const won=p.first===target.first&&p.last===target.last; updateAttempts();
       if(won||state.guesses.length>=MAX) finish(won);
     }
@@ -413,9 +498,10 @@ async function loadGoals(){
     }
     function submit(){
       if(state.done) return; const raw=input.value.trim(); if(!raw) return;
-      const p=findPlayer(raw); const won=p&&p.first===target.first&&p.last===target.last; input.value="";
+      const p=findPlayer(raw); const won=p&&p.first===target.first&&p.last===target.last;
+      input.value=""; input.dispatchEvent(new Event('input'));
       if(won){ finish(true); return; }
-      state.wrong.push(raw); saveState(stateKey,state); renderHistory(); unlockUpTo(state.wrong.length);
+      state.wrong.push(p ? `${p.first} ${p.last}` : raw); saveState(stateKey,state); renderHistory(); unlockUpTo(state.wrong.length);
       if(state.wrong.length>=MAX) finish(false);
     }
     btn.addEventListener("click",submit); input.addEventListener("keydown",e=>{ if(e.key==="Enter") submit(); });
@@ -476,7 +562,7 @@ async function loadGoals(){
     function submit(){
       if(state.done) return; const raw=input.value.trim(); if(!raw) return;
       const won = raw.toLowerCase() === String(target.opponent||"").toLowerCase();
-      input.value="";
+      input.value=""; input.dispatchEvent(new Event('input'));
       if(won){ finish(true); return; }
       state.wrongCount += 1; saveState(stateKey,state);
       const hist = loadState(stateKey+"_hist", []); hist.push(raw); saveState(stateKey+"_hist", hist);
