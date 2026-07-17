@@ -31,17 +31,33 @@
     <div class="formcard">
       <h3>Subscribers</h3>
       <div id="sub-count" class="meta" style="font-family:var(--mono); color:var(--paper-dim);">Loading…</div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="ghost-btn" id="sub-toggle">Show list</button>
+        <button class="ghost-btn" id="sub-export">Copy emails as text</button>
+      </div>
+      <div class="admin-list" id="sub-list" style="display:none; max-height:300px; overflow-y:auto; margin-top:10px; padding-right:4px;"></div>
+    </div>
+
+    <div class="formcard">
+      <h3>Backup</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        Downloads every player, post, goal puzzle, and subscriber email as one JSON file. Worth doing every so often —
+        Supabase's automatic backups aren't enabled on the free tier.
+      </p>
+      <button class="primary-btn" id="export-all">Download full backup</button>
+      <div class="subscribe-msg" id="export-msg"></div>
     </div>
 
     <!-- Bulk add signings -->
     <div class="formcard">
       <h3>Bulk add players</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        One player per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">First,Last,Position,Nationality,Era,Age</code><br>
-        Position must be GK, DF, MF or FW. Nationality, Era and Age are optional — leave blank if unsure.<br>
-        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Jimmy,Bullard,MF,England,Premier League Era,</code>
+        One player per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">First,Last,Position,Nationality,Era,Age,BirthDate,Appearances</code><br>
+        Position must be GK, DF, MF or FW. Everything after that is optional — leave blank if unsure.
+        BirthDate as YYYY-MM-DD (e.g. 1996-04-02) — if you know it, it's better than Age since the age then updates itself forever.<br>
+        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Jimmy,Bullard,MF,England,Premier League Era,,,</code>
       </p>
-      <div class="field"><textarea id="bulk-players" placeholder="Jimmy,Bullard,MF,England,Premier League Era,&#10;Nick,Barmby,MF,England,2000s Local Hero,"></textarea></div>
+      <div class="field"><textarea id="bulk-players" placeholder="Jimmy,Bullard,MF,England,Premier League Era,,,&#10;Nick,Barmby,MF,England,2000s Local Hero,,1974-02-11,"></textarea></div>
       <button class="primary-btn" id="bulk-submit">Add all</button>
       <div class="subscribe-msg" id="bulk-msg"></div>
     </div>
@@ -51,10 +67,10 @@
       <h3>Bulk fix existing players</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
         Same format, but this <b>updates</b> players already in the pool instead of adding new ones — matched by first + last name.
-        Leave any column blank to leave that field unchanged. Use this to fix missing ages, correct eras, or update nationalities in bulk.<br>
-        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Ahmed,Elmohamady,,,2012-2017,</code> only changes the era, leaves everything else as-is.
+        Leave any column blank to leave that field unchanged. Use this to fix missing ages/birth dates, correct eras, or refresh appearance counts in bulk.<br>
+        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Ahmed,Elmohamady,,,2012-2017,,,217</code> only changes the era and appearances, leaves everything else as-is.
       </p>
-      <div class="field"><textarea id="bulk-update" placeholder="Ahmed,Elmohamady,,,2012-2017,&#10;Sam,Clucas,,,2015-2017,29"></textarea></div>
+      <div class="field"><textarea id="bulk-update" placeholder="Ahmed,Elmohamady,,,2012-2017,,,217&#10;Sam,Clucas,,,2015-2017,,1993-09-25,"></textarea></div>
       <button class="primary-btn" id="bulk-update-submit">Update all</button>
       <div class="subscribe-msg" id="bulk-update-msg"></div>
     </div>
@@ -70,9 +86,17 @@
         <div class="field"><label>Position</label>
           <select id="p-pos"><option value="GK">Goalkeeper</option><option value="DF">Defender</option><option value="MF">Midfielder</option><option value="FW">Forward</option></select>
         </div>
-        <div class="field"><label>Age</label>
+        <div class="field"><label>Birth date <span style="text-transform:none; opacity:.7;">(preferred — age updates itself)</span></label>
+          <input type="date" id="p-birthdate">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Age <span style="text-transform:none; opacity:.7;">(only used if no birth date)</span></label>
           <select id="p-age"><option value="">Unknown</option></select>
           <input type="number" id="p-age-other" placeholder="Type age" style="display:none; margin-top:6px;">
+        </div>
+        <div class="field"><label>Appearances <span style="text-transform:none; opacity:.7;">(club career total — optional)</span></label>
+          <input type="number" id="p-apps" min="0" placeholder="e.g. 217">
         </div>
       </div>
       <div class="field-row">
@@ -287,12 +311,63 @@ async function refreshAll(){
   refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule();
 }
 
-/* ---- Subscriber count ---- */
+/* ---- Subscribers ---- */
+let allSubscribersCache = [];
+let subListExpanded = false;
+
 async function refreshStats(){
   try{ const data = await callAdmin('stats', {});
     document.getElementById('sub-count').textContent = `${data.subscriberCount} subscriber${data.subscriberCount===1?'':'s'}`;
   }catch(e){ document.getElementById('sub-count').textContent = 'Could not load.'; }
 }
+
+async function loadSubscribers(){
+  try{
+    const data = await callAdmin('list_subscribers', {});
+    allSubscribersCache = data.subscribers || [];
+    renderSubscriberList();
+  }catch(e){ document.getElementById('sub-list').innerHTML = '<div class="meta">Could not load.</div>'; }
+}
+function renderSubscriberList(){
+  const list = document.getElementById('sub-list');
+  if(!allSubscribersCache.length){ list.innerHTML = '<div class="meta">No subscribers yet.</div>'; return; }
+  list.innerHTML = allSubscribersCache.map(s=>`
+    <div class="admin-row">
+      <div>${s.email} <span class="meta">${s.subscribed ? '' : 'unsubscribed · '}joined ${new Date(s.created_at).toLocaleDateString()}</span></div>
+    </div>`).join('');
+}
+document.getElementById('sub-toggle').addEventListener('click', async ()=>{
+  subListExpanded = !subListExpanded;
+  document.getElementById('sub-list').style.display = subListExpanded ? 'block' : 'none';
+  document.getElementById('sub-toggle').textContent = subListExpanded ? 'Hide list' : 'Show list';
+  if(subListExpanded && !allSubscribersCache.length) await loadSubscribers();
+});
+document.getElementById('sub-export').addEventListener('click', async ()=>{
+  try{
+    if(!allSubscribersCache.length) await loadSubscribers();
+    if(!allSubscribersCache.length){ toast('No subscribers to export'); return; }
+    const text = allSubscribersCache.filter(s=>s.subscribed).map(s=>s.email).join('\n');
+    await navigator.clipboard.writeText(text);
+    toast(`Copied ${allSubscribersCache.filter(s=>s.subscribed).length} email(s) to clipboard`);
+  }catch(e){ toast('Could not copy — clipboard access blocked?'); }
+});
+
+/* ---- Full backup ---- */
+document.getElementById('export-all').addEventListener('click', async ()=>{
+  const msg = document.getElementById('export-msg');
+  msg.textContent = 'Preparing backup…';
+  try{
+    const data = await callAdmin('export_all_data', {});
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = `tigerdle-backup-${stamp}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    msg.textContent = `Downloaded — ${data.players.length} players, ${data.posts.length} posts, ${data.goals.length} goals, ${data.subscribers.length} subscribers.`;
+  }catch(e){ msg.textContent = e.message; }
+});
 
 /* ---- Bulk add players ---- */
 document.getElementById('bulk-submit').addEventListener('click', async ()=>{
@@ -303,14 +378,16 @@ document.getElementById('bulk-submit').addEventListener('click', async ()=>{
   const badLines = [];
   lines.forEach((line, i)=>{
     const parts = line.split(',').map(p=>p.trim());
-    const [first_name, last_name, position, nationality, era, age] = parts;
+    const [first_name, last_name, position, nationality, era, age, birth_date, appearances] = parts;
     if(!first_name || !last_name || !position){ badLines.push(i+1); return; }
     players.push({
       first_name, last_name,
       position: position.toUpperCase(),
       nationality: nationality || undefined,
       era: era || undefined,
-      age: age ? Number(age) : null
+      age: age ? Number(age) : null,
+      birth_date: birth_date || undefined,
+      appearances: appearances ? Number(appearances) : null
     });
   });
   if(!players.length){ document.getElementById('bulk-msg').textContent = 'No valid lines found — check the format.'; return; }
@@ -332,7 +409,7 @@ document.getElementById('p-export').addEventListener('click', async ()=>{
   try{
     const { data } = await sb.from('players').select('*').order('last_name');
     if(!data || !data.length){ toast('No players to export'); return; }
-    const text = data.map(p => [p.first_name, p.last_name, p.position, p.nationality, p.era, p.age ?? ''].join(',')).join('\n');
+    const text = data.map(p => [p.first_name, p.last_name, p.position, p.nationality, p.era, p.age ?? '', p.birth_date ?? '', p.appearances ?? ''].join(',')).join('\n');
     await navigator.clipboard.writeText(text);
     toast(`Copied ${data.length} players to clipboard`);
   }catch(e){ toast('Could not copy — clipboard access blocked?'); }
@@ -360,7 +437,9 @@ function startEditPlayer(id){
   document.getElementById('p-first').value = p.first_name;
   document.getElementById('p-last').value = p.last_name;
   document.getElementById('p-pos').value = p.position;
+  document.getElementById('p-birthdate').value = p.birth_date || '';
   setAgeField(p.age);
+  document.getElementById('p-apps').value = p.appearances ?? '';
   setNatField(p.nationality);
   document.getElementById('p-era').value = p.era || '';
   document.getElementById('p-form-heading').textContent = `Editing ${p.first_name} ${p.last_name}`;
@@ -378,14 +457,19 @@ function renderPlayerList(){
   );
   if(!allPlayersCache.length){ list.innerHTML = '<div class="meta">No players yet.</div>'; return; }
   if(!filtered.length){ list.innerHTML = `<div class="meta">No matches for "${query}".</div>`; return; }
-  list.innerHTML = filtered.map(p=>`
+  list.innerHTML = filtered.map(p=>{
+    const displayAge = computeAge(p.birth_date, p.age);
+    const ageLabel = displayAge ? `age ${displayAge}${p.birth_date ? ' (auto)' : ''}` : 'age unknown';
+    const appsLabel = p.appearances ? `${p.appearances} apps` : '';
+    return `
     <div class="admin-row">
-      <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.nationality ? ' · '+p.nationality : ''}${p.age ? ' · age '+p.age : ' · age unknown'}${p.active?'':' · inactive'}</span></div>
+      <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.nationality ? ' · '+p.nationality : ''} · ${ageLabel}${appsLabel ? ' · '+appsLabel : ''}${p.active?'':' · inactive'}</span></div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="ghost-btn" data-edit="${p.id}">Edit</button>
         <button class="ghost-btn" data-id="${p.id}" data-active="${p.active}">${p.active?'Deactivate':'Reactivate'}</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   list.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click', async ()=>{
     try{ await callAdmin('update_player', { id:b.dataset.id, active: b.dataset.active !== 'true' }); refreshPlayers(); }
     catch(e){ toast(e.message); }
@@ -400,8 +484,10 @@ function exitEditMode(){
   document.getElementById('p-cancel-edit').style.display = 'none';
   document.getElementById('p-first').value = '';
   document.getElementById('p-last').value = '';
+  document.getElementById('p-birthdate').value = '';
   document.getElementById('p-age').value = '';
   setAgeField('');
+  document.getElementById('p-apps').value = '';
   setNatField('');
   document.getElementById('p-era').value = 'Current Squad';
 }
@@ -431,7 +517,9 @@ document.getElementById('p-submit').addEventListener('click', async ()=>{
     first_name: document.getElementById('p-first').value.trim(),
     last_name: document.getElementById('p-last').value.trim(),
     position: document.getElementById('p-pos').value,
+    birth_date: document.getElementById('p-birthdate').value || null,
     age: getAgeValue(),
+    appearances: document.getElementById('p-apps').value ? Number(document.getElementById('p-apps').value) : null,
     nationality: getNatValue() || 'Unknown',
     era: document.getElementById('p-era').value.trim() || 'Current Squad',
   };
@@ -447,8 +535,10 @@ document.getElementById('p-submit').addEventListener('click', async ()=>{
       document.getElementById('p-msg').textContent = 'Added.';
       document.getElementById('p-first').value = '';
       document.getElementById('p-last').value = '';
+      document.getElementById('p-birthdate').value = '';
       document.getElementById('p-age').value = '';
       setAgeField('');
+      document.getElementById('p-apps').value = '';
       setNatField('');
     }
     refreshPlayers();
@@ -461,8 +551,12 @@ document.getElementById('bulk-update-submit').addEventListener('click', async ()
   const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
   if(!lines.length){ document.getElementById('bulk-update-msg').textContent = 'Paste at least one line first.'; return; }
   const updates = lines.map(line=>{
-    const [first_name, last_name, position, nationality, era, age] = line.split(',').map(p=>p.trim());
-    return { first_name, last_name, position: position || undefined, nationality: nationality || undefined, era: era || undefined, age: age || undefined };
+    const [first_name, last_name, position, nationality, era, age, birth_date, appearances] = line.split(',').map(p=>p.trim());
+    return {
+      first_name, last_name,
+      position: position || undefined, nationality: nationality || undefined, era: era || undefined,
+      age: age || undefined, birth_date: birth_date || undefined, appearances: appearances || undefined
+    };
   }).filter(u=>u.first_name && u.last_name);
   if(!updates.length){ document.getElementById('bulk-update-msg').textContent = 'No valid lines found — check the format.'; return; }
   document.getElementById('bulk-update-msg').textContent = `Updating ${updates.length} player(s)…`;

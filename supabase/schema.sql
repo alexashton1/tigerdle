@@ -14,6 +14,8 @@ create table if not exists players (
   nationality text not null default 'Unknown',
   era text not null default 'Current Squad',
   age int,
+  birth_date date,
+  appearances int,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );

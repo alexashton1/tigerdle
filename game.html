@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Play — TIGERDLE</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TIGERDLE">
+<meta property="og:title" content="Play — TIGERDLE">
+<meta property="og:description" content="Four daily Hull City puzzles: TIGERDLE, Guess the Tiger, Mystery Tiger, and Guess the Opponent.">
+<meta property="og:image" content="https://tigerdle.com/social-card.png">
+<meta property="og:url" content="https://tigerdle.com/game.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Play — TIGERDLE">
+<meta name="twitter:description" content="Four daily Hull City puzzles: TIGERDLE, Guess the Tiger, Mystery Tiger, and Guess the Opponent.">
+<meta name="twitter:image" content="https://tigerdle.com/social-card.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 76%22><path d=%22M32 2 L59 11 L59 39 C59 58 47 69 32 74 C17 69 5 58 5 39 L5 11 Z%22 fill=%22%23f5a300%22 stroke=%22%2314110d%22 stroke-width=%223%22/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,7 +94,7 @@
   .attempts-left{ font-family:var(--mono); font-size:11.5px; color:var(--paper-dim); text-align:right; margin:-8px 0 12px; }
 
   .cmp-table{ display:flex; flex-direction:column; gap:6px; }
-  .cmp-header, .cmp-row{ display:grid; grid-template-columns: 1.4fr 0.9fr 1fr 1fr 0.7fr; gap:5px; }
+  .cmp-header, .cmp-row{ display:grid; grid-template-columns: 1.3fr 0.75fr 0.9fr 0.9fr 0.6fr 0.7fr; gap:4px; }
   .cmp-header div{ font-family:var(--mono); font-size:9.5px; text-transform:uppercase; color:var(--paper-dim); letter-spacing:.05em; padding:0 4px; }
   .cmp-cell{
     background:var(--absent); border:1px solid var(--absent-2); border-radius:6px; padding:9px 6px; font-size:11.5px;
@@ -123,7 +133,7 @@
   .statsbar .num{ font-family:var(--display); font-size:22px; color:var(--amber); }
   .statsbar .lab{ font-family:var(--mono); font-size:9.5px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.05em; }
 
-  @media (max-width:380px){ .tile{ font-size:20px; } .cmp-header, .cmp-row{ grid-template-columns: 1.2fr 0.8fr 0.9fr 0.9fr 0.6fr; } }
+  @media (max-width:380px){ .tile{ font-size:20px; } .cmp-header, .cmp-row{ grid-template-columns: 1.1fr 0.65fr 0.8fr 0.8fr 0.5fr 0.6fr; font-size:10px; } }
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-7L95ER8N3S"></script>
@@ -160,7 +170,7 @@
 
   <!-- MODE 2 -->
   <section class="panel" id="panel-m2">
-    <div class="mode-head"><h2>Guess the Tiger</h2><p>One player from Hull's current squad or Tigers folklore. Compare position, era, nationality and age with every guess. 8 attempts.</p></div>
+    <div class="mode-head"><h2>Guess the Tiger</h2><p>One player from Hull's current squad or Tigers folklore. Compare position, era, nationality, age and appearances with every guess. 8 attempts.</p></div>
     <div class="guessrow">
       <div class="ac-wrap">
         <input type="text" id="m2-input" placeholder="Type a player name…" autocomplete="off">
@@ -169,7 +179,7 @@
       <button id="m2-submit">Guess</button>
     </div>
     <div class="attempts-left" id="m2-attempts"></div>
-    <div class="cmp-header"><div>Player</div><div>Position</div><div>Era</div><div>Nation</div><div>Age</div></div>
+    <div class="cmp-header"><div>Player</div><div>Position</div><div>Era</div><div>Nation</div><div>Age</div><div>Apps</div></div>
     <div class="cmp-table" id="m2-table"></div>
     <div id="m2-result"></div>
   </section>
@@ -265,7 +275,11 @@ async function loadPlayers(){
   try{
     const { data, error } = await sb.from('players').select('*').eq('active', true);
     if(error || !data || !data.length) return FALLBACK_PLAYERS;
-    return data.map(r=>({first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era, age:r.age}));
+    return data.map(r=>({
+      first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era,
+      age: computeAge(r.birth_date, r.age),
+      appearances: r.appearances ?? null
+    }));
   }catch(e){ return FALLBACK_PLAYERS; }
 }
 
@@ -442,7 +456,8 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
         ${matchCell(POS_LABEL[p.pos], p.pos===target.pos)}
         ${matchCell(p.era, p.era===target.era)}
         ${matchCell(p.nat, p.nat===target.nat && p.nat!=="Unknown")}
-        ${ageCell(p.age, target.age)}`;
+        ${ageCell(p.age, target.age)}
+        ${ageCell(p.appearances, target.appearances)}`;
       table.prepend(row); }
     function updateAttempts(){ attemptsEl.textContent = state.done? "" : `${MAX-state.guesses.length} guesses left`; }
     function finish(won){

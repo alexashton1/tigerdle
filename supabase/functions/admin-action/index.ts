@@ -63,6 +63,34 @@ Deno.serve(async (req) => {
         return json({ ok: true, data: { subscriberCount: count ?? 0 } });
       }
 
+      case "list_subscribers": {
+        const { data, error } = await supabase
+          .from("subscribers")
+          .select("email, subscribed, created_at")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return json({ ok: true, data: { subscribers: data } });
+      }
+
+      case "export_all_data": {
+        const [players, posts, goals, subscribers] = await Promise.all([
+          supabase.from("players").select("*"),
+          supabase.from("posts").select("*"),
+          supabase.from("goals").select("*"),
+          supabase.from("subscribers").select("email, subscribed, created_at"),
+        ]);
+        return json({
+          ok: true,
+          data: {
+            exported_at: new Date().toISOString(),
+            players: players.data || [],
+            posts: posts.data || [],
+            goals: goals.data || [],
+            subscribers: subscribers.data || [],
+          },
+        });
+      }
+
       case "add_player": {
         const p = payload || {};
         if (!p.first_name || !p.last_name || !p.position) {
@@ -84,6 +112,8 @@ Deno.serve(async (req) => {
           nationality: p.nationality || "Unknown",
           era: p.era || "Current Squad",
           age: p.age ?? null,
+          birth_date: p.birth_date || null,
+          appearances: p.appearances ?? null,
           active: p.active !== false,
         }).select().single();
         if (error) throw error;
@@ -127,6 +157,8 @@ Deno.serve(async (req) => {
             nationality: row.nationality || "Unknown",
             era: row.era || "Current Squad",
             age: row.age ?? null,
+            birth_date: row.birth_date || null,
+            appearances: row.appearances ?? null,
             active: true,
           });
         }
@@ -184,6 +216,8 @@ Deno.serve(async (req) => {
           if (row.nationality) patch.nationality = row.nationality;
           if (row.era) patch.era = row.era;
           if (row.age !== undefined && row.age !== null && row.age !== "") patch.age = Number(row.age);
+          if (row.birth_date) patch.birth_date = row.birth_date;
+          if (row.appearances !== undefined && row.appearances !== null && row.appearances !== "") patch.appearances = Number(row.appearances);
           if (!Object.keys(patch).length) continue;
 
           const { error } = await supabase.from("players").update(patch).eq("id", id);
@@ -196,7 +230,7 @@ Deno.serve(async (req) => {
         const p = payload || {};
         if (!p.id) return json({ ok: false, error: "id is required" }, 400);
         const patch: Record<string, unknown> = {};
-        for (const k of ["first_name", "last_name", "position", "nationality", "era", "age", "active"]) {
+        for (const k of ["first_name", "last_name", "position", "nationality", "era", "age", "birth_date", "appearances", "active"]) {
           if (k in p) patch[k] = p[k];
         }
         const { data, error } = await supabase.from("players").update(patch).eq("id", p.id).select().single();
