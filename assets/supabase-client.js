@@ -144,6 +144,17 @@ function pickForDate(pool, salt, date){
 function pickDaily(pool, salt){ return pickForDate(pool, salt, new Date()); }
 function stripAccents(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 
+/* Age from a birth date, calculated fresh every time — never goes stale.
+   Falls back to a static age value (old data, or players with no known
+   birth date) when no birth date is on file. */
+function computeAge(birthDate, fallbackAge){
+  if(!birthDate) return fallbackAge ?? null;
+  const b = new Date(birthDate);
+  if(isNaN(b.getTime())) return fallbackAge ?? null;
+  const diffMs = Date.now() - b.getTime();
+  return Math.floor(diffMs / (365.25 * 24 * 3600 * 1000));
+}
+
 function loadState(key, fallback){
   try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
   catch(e){ return fallback; }
