@@ -149,6 +149,14 @@ h1.title{ font-family:var(--display); font-weight:400; font-size:clamp(34px,8vw,
 
 footer.sitefoot{ text-align:center; font-family:var(--mono); font-size:10.5px; color:#665f50; margin-top:28px; line-height:1.9; }
 .tipjar-link{ color:#665f50; text-decoration:none; opacity:.85; }
+.social-row{ display:flex; justify-content:center; gap:10px; margin-top:24px; }
+.social-icon{
+  width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--ink-2); border:1px solid var(--line); color:var(--paper-dim);
+  font-family:var(--mono); font-size:15px; font-weight:700; text-decoration:none;
+  transition:all .15s ease;
+}
+.social-icon:hover{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
 .tipjar-link:hover{ color:var(--amber-soft); opacity:1; }
 
 /* ---- blog ---- */

@@ -39,6 +39,13 @@ function renderChrome(current){
   }
   const footer = document.getElementById('site-footer');
   if(footer){
+    const socialLinks = [];
+    if(typeof X_URL !== 'undefined' && X_URL && !X_URL.includes('YOUR-USERNAME')){
+      socialLinks.push(`<a class="social-icon" href="${X_URL}" target="_blank" rel="noopener" aria-label="Follow on X" title="Follow on X">𝕏</a>`);
+    }
+    if(typeof REDDIT_URL !== 'undefined' && REDDIT_URL && !REDDIT_URL.includes('YOUR-USERNAME')){
+      socialLinks.push(`<a class="social-icon" href="${REDDIT_URL}" target="_blank" rel="noopener" aria-label="Join us on Reddit" title="Join us on Reddit">r/</a>`);
+    }
     footer.innerHTML = `
       <div class="wrap">
         <div class="subscribe-box" id="subscribe-box">
@@ -50,6 +57,7 @@ function renderChrome(current){
           </div>
           <div class="subscribe-msg" id="sub-msg"></div>
         </div>
+        ${socialLinks.length ? `<div class="social-row">${socialLinks.join('')}</div>` : ''}
         <footer class="sitefoot">
           TIGERDLE · built for the amber &amp; black · not affiliated with Hull City AFC
           ${typeof TIP_JAR_URL !== 'undefined' && TIP_JAR_URL && !TIP_JAR_URL.includes('YOUR-USERNAME')
