@@ -46,22 +46,22 @@
 
   <div class="section-head"><h2>Today's puzzles</h2></div>
   <div class="cardgrid">
-    <a class="card game-card" href="game.html?mode=m1">
+    <a class="card game-card" href="game.html?mode=m1" id="card-m1">
       <div class="icon">🔤</div>
       <div class="ct">TIGERDLE</div>
       <div class="cd">5-letter surname</div>
     </a>
-    <a class="card game-card" href="game.html?mode=m2">
+    <a class="card game-card" href="game.html?mode=m2" id="card-m2">
       <div class="icon">🐯</div>
       <div class="ct">Guess the Tiger</div>
       <div class="cd">Squad &amp; legends</div>
     </a>
-    <a class="card game-card" href="game.html?mode=m3">
+    <a class="card game-card" href="game.html?mode=m3" id="card-m3">
       <div class="icon">🔍</div>
       <div class="ct">Mystery Tiger</div>
       <div class="cd">Clue by clue</div>
     </a>
-    <a class="card game-card" href="game.html?mode=m4">
+    <a class="card game-card" href="game.html?mode=m4" id="card-m4">
       <div class="icon">⚽</div>
       <div class="ct">Guess the Opponent</div>
       <div class="cd">Reveal the goal</div>
@@ -77,6 +77,28 @@
 <script src="assets/supabase-client.js"></script>
 <script src="assets/chrome.js"></script>
 <script>renderChrome('home');</script>
+<script>
+// Highlight any of today's puzzles already completed, using the same
+// localStorage state game.html writes when a puzzle finishes.
+(function markCompletedPuzzles(){
+  ['m1','m2','m3','m4'].forEach(mode=>{
+    try{
+      const raw = localStorage.getItem(`tigerdle_${mode}_${dateKey()}`);
+      if(!raw) return;
+      const state = JSON.parse(raw);
+      if(!state.done) return;
+      const card = document.getElementById(`card-${mode}`);
+      if(!card) return;
+      card.classList.add('completed');
+      const badge = document.createElement('div');
+      badge.className = 'check-badge';
+      badge.textContent = state.won ? '✓' : '×';
+      badge.title = state.won ? "Solved today" : "Completed today";
+      card.appendChild(badge);
+    }catch(e){ /* corrupted state, ignore */ }
+  });
+})();
+</script>
 <script>
 (async function(){
   const listEl = document.getElementById('latest-posts');

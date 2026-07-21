@@ -24,9 +24,11 @@
   nav.tabs button{
     flex:1; white-space:nowrap; font-family:var(--mono); font-size:11.5px; letter-spacing:.05em; text-transform:uppercase;
     background:var(--ink-2); color:var(--paper-dim); border:1px solid var(--line); padding:12px 8px; border-radius:999px; cursor:pointer;
+    transition:background .18s ease, color .18s ease, border-color .18s ease, transform .1s ease;
   }
   nav.tabs button.active{ background:var(--amber); color:var(--ink); border-color:var(--amber); font-weight:700; }
   nav.tabs button:hover:not(.active){ border-color:var(--amber-deep); color:var(--amber-soft); }
+  nav.tabs button:active{ transform:scale(.96); }
   section.panel{ display:none; }
   section.panel.active{ display:block; animation:fade .25s ease; }
   @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
@@ -49,6 +51,11 @@
   @keyframes pop{ 0%{transform:scale(1);} 50%{transform:scale(1.08);} 100%{transform:scale(1);} }
 
   .enter-hint{ text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-bottom:10px; letter-spacing:.03em; }
+  .starter-hint{
+    background:var(--ink-2); border:1px dashed var(--line); border-radius:8px;
+    padding:12px 14px; font-size:13px; color:var(--paper-dim); margin-bottom:14px; line-height:1.5;
+  }
+  .starter-hint b{ color:var(--amber-soft); }
   .enter-hint b{ color:var(--amber-soft); }
 
   #keyboard{ display:flex; flex-direction:column; gap:6px; max-width:480px; margin:0 auto; }
@@ -171,6 +178,7 @@
   <!-- MODE 2 -->
   <section class="panel" id="panel-m2">
     <div class="mode-head"><h2>Guess the Tiger</h2><p>One player from Hull's current squad or Tigers folklore. Compare position, era, nationality, age and appearances with every guess. 8 attempts.</p></div>
+    <div class="starter-hint" id="m2-starter"><b>Not sure where to start?</b> Guess anyone — current squad or a name from the archives — and the table below shows how close you were on every stat.</div>
     <div class="guessrow">
       <div class="ac-wrap">
         <input type="text" id="m2-input" placeholder="Type a player name…" autocomplete="off">
@@ -178,6 +186,7 @@
       </div>
       <button id="m2-submit">Guess</button>
     </div>
+    <div class="enter-hint">Start typing for suggestions, or press Enter to submit</div>
     <div class="attempts-left" id="m2-attempts"></div>
     <div class="cmp-header"><div>Player</div><div>Position</div><div>Era</div><div>Nation</div><div>Age</div><div>Apps</div></div>
     <div class="cmp-table" id="m2-table"></div>
@@ -195,6 +204,7 @@
       </div>
       <button id="m3-submit">Guess</button>
     </div>
+    <div class="enter-hint">Start typing for suggestions, or press Enter to submit</div>
     <div class="m3-history" id="m3-history"></div>
     <div id="m3-result"></div>
   </section>
@@ -210,6 +220,7 @@
       </div>
       <button id="m4-submit">Guess</button>
     </div>
+    <div class="enter-hint">Start typing for suggestions, or press Enter to submit</div>
     <div class="attempts-left" id="m4-attempts"></div>
     <div class="m3-history" id="m4-history"></div>
     <div id="m4-result"></div>
@@ -236,12 +247,20 @@ document.getElementById("today-label").textContent = new Date().toLocaleDateStri
   }
 })();
 
+const TAB_INPUT_MAP = {m2:'m2-input', m3:'m3-input', m4:'m4-input'};
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("panel-"+btn.dataset.mode).classList.add("active");
+    // Auto-focus the guess box on switch — desktop only, so this doesn't
+    // pop the on-screen keyboard on mobile just from tapping a tab.
+    const inputId = TAB_INPUT_MAP[btn.dataset.mode];
+    if(inputId && window.matchMedia('(pointer: fine)').matches){
+      const el = document.getElementById(inputId);
+      if(el && !el.disabled) setTimeout(()=>el.focus(), 60);
+    }
   });
 });
 
@@ -362,7 +381,8 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
 
   /* ================= MODE 1: Surname5 ================= */
   (function(){
-    const target = stripAcc(pickDaily(SURNAME5, "surname5").last).toUpperCase();
+    const targetPlayer = pickDaily(SURNAME5, "surname5");
+    const target = stripAcc(targetPlayer.last).toUpperCase();
     const stateKey = "tigerdle_m1_"+dateKey();
     let state = loadState(stateKey, {guesses:[], done:false, won:false});
     const gridEl = document.getElementById("grid5"), statusEl=document.getElementById("m1-status"), resultEl=document.getElementById("m1-result");
@@ -409,9 +429,14 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
       statusEl.textContent = won ? "Tigers!" : `The surname was ${target}`;
       const grid = state.guesses.map(g=>{ const res=evaluateGuess(g,target);
         return res.map(x=>x==="correct"?"🟧":x==="present"?"🟨":"⬛").join(""); }).join("\n");
+      const metaParts = [targetPlayer.era, targetPlayer.appearances ? `${targetPlayer.appearances} apps` : null].filter(Boolean).join(" · ");
       resultEl.innerHTML = `<div class="resultcard"><div class="rtitle">${won?`Solved in ${state.guesses.length}/6`:"Not today"}</div>
         <div class="rsub">TIGERDLE · ${dateKey()} · Streak: ${stats.streak}</div>
-        <button class="sharebtn" id="m1-share">Share result</button></div>`;
+        <button class="sharebtn" id="m1-share">Share result</button></div>
+        <div class="reveal-card">
+          <div class="reveal-name">${targetPlayer.first} ${targetPlayer.last}</div>
+          ${metaParts ? `<div class="reveal-meta">${metaParts}</div>` : ''}
+        </div>`;
       document.getElementById("m1-share").addEventListener("click", ()=>{
         const text=`TIGERDLE ${dateKey()}\n${won?state.guesses.length:"X"}/6\n${grid}`;
         navigator.clipboard?.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast(text)); });
@@ -444,7 +469,8 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     const target = pickDaily(PLAYERS, "guesstiger"); const MAX=8;
     const stateKey="tigerdle_m2_"+dateKey(); let state=loadState(stateKey,{guesses:[],done:false,won:false});
     const input=document.getElementById("m2-input"), btn=document.getElementById("m2-submit"), table=document.getElementById("m2-table"),
-          attemptsEl=document.getElementById("m2-attempts"), resultEl=document.getElementById("m2-result");
+          attemptsEl=document.getElementById("m2-attempts"), resultEl=document.getElementById("m2-result"), starterEl=document.getElementById("m2-starter");
+    function updateStarterHint(){ if(starterEl) starterEl.style.display = state.guesses.length ? "none" : "block"; }
     function findPlayer(name){ const norm=name.trim().toLowerCase();
       return PLAYERS.find(p=>`${p.first} ${p.last}`.toLowerCase()===norm || p.last.toLowerCase()===norm); }
     function ageCell(g,t){ if(g==null||t==null) return `<div class="cmp-cell">—</div>`;
@@ -477,12 +503,12 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
       if(state.guesses.some(g=>g.last===p.last&&g.first===p.first)){ toast("Already guessed that one"); return; }
       state.guesses.push({first:p.first,last:p.last}); saveState(stateKey,state); renderRow(p);
       input.value=""; input.dispatchEvent(new Event('input'));
-      const won=p.first===target.first&&p.last===target.last; updateAttempts();
+      const won=p.first===target.first&&p.last===target.last; updateAttempts(); updateStarterHint();
       if(won||state.guesses.length>=MAX) finish(won);
     }
     btn.addEventListener("click",submit); input.addEventListener("keydown",e=>{ if(e.key==="Enter") submit(); });
     state.guesses.forEach(g=>{ const p=PLAYERS.find(pp=>pp.first===g.first&&pp.last===g.last); if(p) renderRow(p); });
-    updateAttempts(); if(state.done) finish(state.won);
+    updateAttempts(); updateStarterHint(); if(state.done) finish(state.won);
   })();
 
   /* ================= MODE 3: Mystery Tiger ================= */
