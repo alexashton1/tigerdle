@@ -147,6 +147,26 @@ h1.title{ font-family:var(--display); font-weight:400; font-size:clamp(34px,8vw,
 }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
 
+.share-modal-overlay{
+  display:none; position:fixed; inset:0; background:rgba(10,9,7,0.75); z-index:80;
+  align-items:center; justify-content:center; padding:20px;
+}
+.share-modal-overlay.open{ display:flex; }
+.share-modal{
+  background:var(--ink-2); border:1px solid var(--line); border-radius:14px;
+  padding:22px; max-width:340px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.share-modal h3{ font-family:var(--display); font-weight:400; font-size:20px; color:var(--amber); margin:0 0 16px; text-align:center; }
+.share-modal-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+.share-opt{
+  display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 6px;
+  background:var(--ink); border:1px solid var(--line); border-radius:10px; cursor:pointer;
+  color:var(--paper); text-decoration:none; font-family:var(--mono); font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.03em; transition:all .15s ease;
+}
+.share-opt:hover{ border-color:var(--amber-deep); background:var(--ink-3); }
+.share-opt-icon{ font-size:22px; }
+
 footer.sitefoot{ text-align:center; font-family:var(--mono); font-size:10.5px; color:#665f50; margin-top:28px; line-height:1.9; }
 .tipjar-link{ color:#665f50; text-decoration:none; opacity:.85; }
 .social-row{ display:flex; justify-content:center; gap:10px; margin-top:24px; }

@@ -41,6 +41,8 @@
 
   #grid5{ display:grid; grid-template-rows:repeat(6, 1fr); gap:6px; max-width:330px; margin:0 auto 18px; }
   .row5{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+  .row5.shake{ animation:shakeRow .4s ease; }
+  @keyframes shakeRow{ 10%,90%{transform:translateX(-2px);} 20%,80%{transform:translateX(4px);} 30%,50%,70%{transform:translateX(-8px);} 40%,60%{transform:translateX(8px);} }
   .tile{
     aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:700;
     font-size:26px; background:var(--ink-2); border:2px solid var(--line); color:var(--paper); border-radius:6px;
@@ -231,10 +233,25 @@
 
   <div class="statsbar" id="statsbar"></div>
 </div>
+
+<div class="share-modal-overlay" id="share-modal-overlay">
+  <div class="share-modal">
+    <h3>Share your result</h3>
+    <div class="share-modal-grid">
+      <a class="share-opt" id="share-x" target="_blank" rel="noopener"><span class="share-opt-icon">𝕏</span><span>X</span></a>
+      <a class="share-opt" id="share-whatsapp" target="_blank" rel="noopener"><span class="share-opt-icon">💬</span><span>WhatsApp</span></a>
+      <a class="share-opt" id="share-facebook" target="_blank" rel="noopener"><span class="share-opt-icon">📘</span><span>Facebook</span></a>
+      <button class="share-opt" id="share-more"><span class="share-opt-icon">⋯</span><span>More</span></button>
+      <button class="share-opt" id="share-copy"><span class="share-opt-icon">📋</span><span>Copy</span></button>
+    </div>
+    <button class="ghost-btn" id="share-modal-close" style="width:100%; margin-top:14px;">Close</button>
+  </div>
+</div>
 <div id="site-footer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="assets/supabase-client.js"></script>
+<script src="assets/wordlist.js"></script>
 <script src="assets/chrome.js"></script>
 <script>renderChrome('play');</script>
 
@@ -265,6 +282,39 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
       if(el && !el.disabled) setTimeout(()=>el.focus(), 60);
     }
   });
+});
+
+/* Shared "share result" popup — used by all four modes instead of a
+   silent clipboard copy. Offers direct links for X/WhatsApp/Facebook,
+   a native share sheet ("More") on devices that support it, and a
+   plain copy fallback for anywhere else. */
+function openShareModal(text){
+  const overlay = document.getElementById('share-modal-overlay');
+  const siteUrl = 'https://tigerdle.com';
+  document.getElementById('share-x').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  document.getElementById('share-whatsapp').href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  document.getElementById('share-facebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(siteUrl)}&quote=${encodeURIComponent(text)}`;
+
+  const moreBtn = document.getElementById('share-more');
+  if(navigator.share){
+    moreBtn.style.display = '';
+    moreBtn.onclick = () => { navigator.share({ text }).catch(()=>{}); };
+  } else {
+    moreBtn.style.display = 'none';
+  }
+
+  document.getElementById('share-copy').onclick = () => {
+    navigator.clipboard?.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast(text));
+    overlay.classList.remove('open');
+  };
+
+  overlay.classList.add('open');
+}
+document.getElementById('share-modal-close').addEventListener('click', ()=>{
+  document.getElementById('share-modal-overlay').classList.remove('open');
+});
+document.getElementById('share-modal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'share-modal-overlay') e.currentTarget.classList.remove('open');
 });
 
 function updateStreak(modeKey, won){
@@ -386,6 +436,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
   (function(){
     const targetPlayer = pickDaily(SURNAME5, "surname5");
     const target = stripAcc(targetPlayer.last).toUpperCase();
+    const validSurnames = new Set(SURNAME5.map(p => stripAcc(p.last).toUpperCase().replace(/[^A-Z]/g,"")));
     const stateKey = "tigerdle_m1_"+dateKey();
     let state = loadState(stateKey, {guesses:[], done:false, won:false});
     const gridEl = document.getElementById("grid5"), statusEl=document.getElementById("m1-status"), resultEl=document.getElementById("m1-result");
@@ -442,13 +493,23 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
         </div>`;
       document.getElementById("m1-share").addEventListener("click", ()=>{
         const text=`Tigerdle ${dateKey()}\n${won?state.guesses.length:"X"}/6\n${grid}`;
-        navigator.clipboard?.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast(text)); });
+        openShareModal(text); });
+    }
+    function shakeRow(rowIndex){
+      const row = rows[rowIndex][0].parentElement;
+      row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake');
     }
     function handleKey(k){
       if(state.done) return;
       if(k==="BACK"){ current=current.slice(0,-1); renderTyping(); return; }
       if(k==="ENTER"){
         if(current.length!==5){ statusEl.textContent="Need 5 letters"; setTimeout(()=>statusEl.textContent="",1200); return; }
+        if(!VALID_GUESS_WORDS.has(current) && !validSurnames.has(current)){
+          statusEl.textContent = "Not a recognised word or surname";
+          shakeRow(state.guesses.length);
+          setTimeout(()=>statusEl.textContent="",1400);
+          return;
+        }
         const res=evaluateGuess(current,target); renderRow(state.guesses.length,current,res); paintKeyboard(current,res);
         state.guesses.push(current); saveState(stateKey,state);
         const won=current===target; const outOfTries=state.guesses.length>=6; current=""; updateEnterState();
@@ -497,7 +558,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
         <button class="sharebtn" id="m2-share">Share result</button></div>`;
       document.getElementById("m2-share").addEventListener("click", ()=>{
         const text=`Tigerdle Guess the Tiger ${dateKey()}\n${won?state.guesses.length:"X"}/${MAX} 🐯`;
-        navigator.clipboard?.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast(text)); });
+        openShareModal(text); });
       input.disabled=true; btn.disabled=true;
     }
     function submit(){
@@ -518,14 +579,48 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
   (function(){
     const target = pickDaily(PLAYERS, "mysterytiger"); const MAX=6;
     const stateKey="tigerdle_m3_"+dateKey(); let state=loadState(stateKey,{wrong:[],done:false,won:false});
-    const clues=[
-      `Plays as a <b>${POS_LABEL[target.pos]}</b>.`,
-      `Associated with: <b>${target.era}</b>.`,
-      target.nat==="Unknown" ? `Nationality: <b>unconfirmed</b> — no help there!` : `Nationality: <b>${target.nat}</b>.`,
-      `Surname starts with <b>${target.last[0].toUpperCase()}</b>.`,
-      `Surname is <b>${stripAcc(target.last).replace(/[^A-Za-z]/g,"").length} letters</b> long.`,
-      `First name is <b>${target.first}</b>.`,
+
+    // Every clue that CAN be built from this player's data — position, era,
+    // nationality, and both surname facts are always available; appearances
+    // and age only show up as clues when the database actually has that
+    // data, which now covers far more players since the TigerBase import.
+    const cluePool = [
+      { key:'pos', text:`Plays as a <b>${POS_LABEL[target.pos]}</b>.` },
+      { key:'era', text:`Associated with: <b>${target.era}</b>.` },
+      { key:'nat', text: target.nat==="Unknown" ? `Nationality: <b>unconfirmed</b> — no help there!` : `Nationality: <b>${target.nat}</b>.` },
+      { key:'surnameLetter', text:`Surname starts with <b>${target.last[0].toUpperCase()}</b>.` },
+      { key:'surnameLength', text:`Surname is <b>${stripAcc(target.last).replace(/[^A-Za-z]/g,"").length} letters</b> long.` },
+      { key:'firstLetter', text:`First name starts with <b>${target.first[0].toUpperCase()}</b>.` },
     ];
+    const apps = target.appearances;
+    if(apps !== null && apps !== undefined && apps !== ''){
+      const n = Number(apps);
+      let band;
+      if(n===0) band = "hasn't made a first-team appearance yet";
+      else if(n<10) band = "fewer than 10 appearances";
+      else if(n<50) band = "10–49 appearances";
+      else if(n<100) band = "50–99 appearances";
+      else if(n<200) band = "100–199 appearances";
+      else band = "200 or more appearances";
+      cluePool.push({ key:'apps', text:`Has <b>${band}</b> for Hull.` });
+    }
+    if(target.age !== null && target.age !== undefined){
+      const a = target.age;
+      let band;
+      if(a<21) band="under 21";
+      else if(a<25) band="21–24";
+      else if(a<29) band="25–28";
+      else if(a<33) band="29–32";
+      else band="33 or older";
+      cluePool.push({ key:'age', text:`Currently <b>${band}</b> years old.` });
+    }
+
+    // Which 5 of the eligible clues show up, and in what order, changes
+    // every day — same shuffling trick used for the daily puzzle rotation,
+    // just seeded with a clue-specific salt so it varies independently.
+    const shuffledClues = seededShuffle(cluePool, "mysteryclue-order::" + dateKey());
+    const clues = shuffledClues.slice(0, 5).map(c => c.text);
+    clues.push(`First name is <b>${target.first}</b>.`);
     const listEl=document.getElementById("clue-list");
     clues.forEach((c,i)=>{ const li=document.createElement("li"); li.className=i>0?"locked":"";
       li.innerHTML=`<span class="cn">${i+1}.</span><span>${c}</span>`; listEl.appendChild(li); });
@@ -545,7 +640,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
         <button class="sharebtn" id="m3-share">Share result</button></div>`;
       document.getElementById("m3-share").addEventListener("click", ()=>{
         const text=`Tigerdle Mystery Tiger ${dateKey()}\n${won?state.wrong.length+1:"X"}/${MAX} 🐯`;
-        navigator.clipboard?.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast(text)); });
+        openShareModal(text); });
       input.disabled=true; btn.disabled=true;
     }
     function submit(){
@@ -608,7 +703,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
         <button class="sharebtn" id="m4-share">Share result</button></div>`;
       document.getElementById("m4-share").addEventListener("click", ()=>{
         const text=`Tigerdle Guess the Opponent ${dateKey()}\n${won?state.wrongCount+1:"X"}/${MAX} 🐯⚽`;
-        navigator.clipboard?.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast(text)); });
+        openShareModal(text); });
       input.disabled=true; btn.disabled=true; updateAttempts();
     }
     function submit(){
