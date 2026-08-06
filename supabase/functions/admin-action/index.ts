@@ -360,6 +360,45 @@ Deno.serve(async (req) => {
         return json({ ok: true, data });
       }
 
+      case "bulk_add_fixtures": {
+        const p = payload || {};
+        const list = Array.isArray(p.fixtures) ? p.fixtures : [];
+        if (!list.length) return json({ ok: false, error: "No fixtures provided" }, 400);
+
+        const { data: existing } = await supabase.from("fixtures").select("opponent, match_date");
+        const existingKeys = new Set(
+          (existing || []).map((r: any) => `${r.opponent.trim().toLowerCase()}|${r.match_date}`)
+        );
+
+        const rows = [];
+        const errors: string[] = [];
+        let duplicateCount = 0;
+        for (const [i, row] of list.entries()) {
+          if (!row.opponent || !row.match_date) {
+            errors.push(`Row ${i + 1}: missing opponent or match date`);
+            continue;
+          }
+          const key = `${row.opponent.trim().toLowerCase()}|${row.match_date}`;
+          if (existingKeys.has(key)) { duplicateCount++; continue; }
+          existingKeys.add(key);
+          rows.push({
+            opponent: row.opponent,
+            match_date: row.match_date,
+            kickoff_time: row.kickoff_time || null,
+            competition: row.competition || null,
+            home_away: row.home_away || null,
+            status: row.status || "Scheduled",
+          });
+        }
+        if (!rows.length) {
+          const reason = duplicateCount ? `All ${duplicateCount} row(s) already exist.` : `No valid rows. ${errors.join("; ")}`;
+          return json({ ok: false, error: reason }, 400);
+        }
+        const { data, error } = await supabase.from("fixtures").insert(rows).select();
+        if (error) throw error;
+        return json({ ok: true, data: { inserted: data.length, skipped: errors, duplicatesSkipped: duplicateCount } });
+      }
+
       case "delete_fixture": {
         const p = payload || {};
         if (!p.id) return json({ ok: false, error: "id is required" }, 400);
