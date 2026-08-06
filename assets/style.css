@@ -72,6 +72,15 @@ a{ color:var(--amber-soft); }
   transition:all .15s ease;
 }
 .site-nav a:hover, .site-nav a.current{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
+.account-btn{
+  display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--paper-dim); text-decoration:none; padding:6px 13px; border-radius:999px;
+  border:1px solid var(--line); background:var(--ink-2); transition:all .15s ease;
+}
+.account-btn:hover, .account-btn.current{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
+.account-btn.signed-in{ border-color:var(--amber-deep); color:var(--amber-soft); }
+.account-btn.signed-in:hover, .account-btn.signed-in.current{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
 
 .kicker{ font-family:var(--mono); font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--amber-soft); margin-bottom:4px; }
 h1.title{ font-family:var(--display); font-weight:400; font-size:clamp(34px,8vw,52px); letter-spacing:.02em; margin:8px 0 0; line-height:.95; text-shadow:2px 2px 0 var(--amber-deep); }
@@ -214,6 +223,16 @@ footer.sitefoot{ text-align:center; font-family:var(--mono); font-size:10.5px; c
 .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--amber); }
 .field textarea{ min-height:140px; font-family:var(--mono); font-size:13px; resize:vertical; }
 .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.slot-row{ display:grid; grid-template-columns:52px 1fr 62px 26px; gap:8px; align-items:center; margin-bottom:8px; }
+.slot-label{ font-family:var(--mono); font-size:11px; font-weight:700; color:var(--amber-soft); text-align:center;
+  background:var(--ink); border:1px solid var(--line); border-radius:6px; padding:9px 2px; }
+.slot-row select, .slot-row input{
+  background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:13px;
+  padding:8px 9px; border-radius:7px; outline:none; width:100%;
+}
+.slot-row select:focus, .slot-row input:focus{ border-color:var(--amber); }
+.slot-remove{ background:none; border:none; color:var(--paper-dim); font-size:16px; cursor:pointer; padding:0; }
+.slot-remove:hover{ color:var(--bad); }
 .checkfield{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--paper-dim); margin-bottom:12px; }
 .primary-btn{ background:var(--amber); color:var(--ink); border:none; font-family:var(--mono); font-weight:700; text-transform:uppercase; font-size:12.5px; padding:11px 20px; border-radius:8px; cursor:pointer; }
 .primary-btn:disabled{ background:var(--absent-2); color:#7a7365; cursor:not-allowed; }

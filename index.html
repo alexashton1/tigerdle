@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="google-site-verification" content="jq7xX2PQRnJvLDVgjA9Hk_4ep2vcxpTYr5j4hgRBM5E" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TIGERDLE — The Hull City Wordle | Daily Puzzles for Tigers Fans</title>
 <meta name="description" content="TIGERDLE is the Hull City Wordle — a free daily word puzzle plus three more Hull City guessing games. New surname, new player, new goal every day.">
@@ -29,6 +28,18 @@
   .section-head h2{ font-family:var(--display); font-weight:400; font-size:21px; color:var(--amber); margin:0; }
   .section-head a{ font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); text-decoration:none; }
   .section-head a:hover{ color:var(--amber-soft); }
+  .team-news-btn{
+    display:flex; align-items:center; gap:14px;
+    padding:16px 18px; background:var(--ink-2); border:1px solid var(--line);
+    border-radius:12px; text-decoration:none; transition:all .15s ease;
+  }
+  .team-news-btn:hover{ border-color:var(--amber); background:var(--ink-3); }
+  .team-news-icon{ font-size:24px; flex-shrink:0; }
+  .team-news-text{ flex:1; min-width:0; }
+  .team-news-title{ display:block; font-family:var(--display); font-weight:400; font-size:16px; color:var(--paper); }
+  .team-news-detail{ display:block; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:2px; }
+  .team-news-arrow{ font-size:20px; color:var(--amber); flex-shrink:0; transition:transform .15s ease; }
+  .team-news-btn:hover .team-news-arrow{ transform:translateX(3px); }
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-7L95ER8N3S"></script>
@@ -71,6 +82,16 @@
       <div class="cd">Reveal the goal</div>
     </a>
   </div>
+
+  <div class="section-head" id="team-news-heading" style="display:none;"><h2>Team News</h2></div>
+  <a href="team.html" class="team-news-btn" id="team-teaser" style="display:none;">
+    <span class="team-news-icon">📋</span>
+    <span class="team-news-text">
+      <span class="team-news-title">See the latest lineup &amp; ratings</span>
+      <span class="team-news-detail" id="team-teaser-detail"></span>
+    </span>
+    <span class="team-news-arrow">→</span>
+  </a>
 
   <div class="section-head"><h2>Latest from the blog</h2><a href="blog.html">View all →</a></div>
   <div class="postlist" id="latest-posts" style="margin-top:14px;"></div>
@@ -125,6 +146,20 @@
 function escapeHtml(s){
   return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+
+(async function(){
+  try{
+    const { data, error } = await sb.from('matchdays').select('*').order('match_date', {ascending:false}).limit(1);
+    if(error || !data || !data.length) return;
+    const m = data[0];
+    const score = (m.hull_score != null && m.opponent_score != null) ? `${m.hull_score}-${m.opponent_score} ` : '';
+    const hasRatings = (m.lineup || []).some(p => p.rating != null);
+    document.getElementById('team-teaser-detail').textContent =
+      `Hull ${score}vs ${m.opponent} · ${new Date(m.match_date).toLocaleDateString(undefined,{day:'numeric',month:'short'})}${hasRatings ? '' : ' · ratings pending'}`;
+    document.getElementById('team-news-heading').style.display = 'flex';
+    document.getElementById('team-teaser').style.display = 'flex';
+  }catch(e){ /* teaser just stays hidden if this fails, not critical */ }
+})();
 </script>
 </body>
 </html>

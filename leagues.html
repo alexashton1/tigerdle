@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leagues — TIGERDLE</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .account-card{ background:var(--ink-2); border:1px solid var(--line); border-radius:12px; padding:24px; max-width:420px; margin:24px auto; }
+  .account-card h2{ font-family:var(--display); font-weight:400; font-size:22px; color:var(--amber); margin:0 0 10px; text-align:center; }
+  .account-card p{ font-size:13.5px; color:var(--paper-dim); text-align:center; margin:0 0 18px; line-height:1.5; }
+  .account-card input{ width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:14px; padding:11px 13px; border-radius:8px; outline:none; margin-bottom:10px; }
+  .account-card input:focus{ border-color:var(--amber); }
+
+  .formcard{ background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:20px; }
+  .formcard h3{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:19px; margin:0 0 10px; }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:5px; }
+  .field input{ width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-family:var(--body); font-size:14px; padding:10px 12px; border-radius:7px; outline:none; }
+  .checkfield{ display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13.5px; color:var(--paper-dim); }
+
+  .league-card{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px;
+  }
+  .league-name{ font-family:var(--display); font-weight:400; font-size:16px; color:var(--paper); }
+  .league-meta{ font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin-top:3px; }
+  .league-code-badge{
+    font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--amber-soft);
+    background:var(--ink); border:1px solid var(--line); padding:5px 10px; border-radius:6px; cursor:pointer;
+  }
+  .leaderboard-placeholder{
+    text-align:center; padding:24px; font-family:var(--mono); font-size:12px; color:var(--paper-dim);
+    background:var(--ink); border:1px dashed var(--line); border-radius:8px;
+  }
+  .back-link{ display:inline-block; font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-decoration:none; margin-bottom:14px; }
+  .back-link:hover{ color:var(--amber-soft); }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="wrap">
+  <header style="padding:20px 0 4px; text-align:center;">
+    <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
+    <h1 class="title" style="font-size:clamp(28px,7vw,40px);">Leagues</h1>
+    <p class="tagline">Compete with friends privately, or join the public leaderboard. Points aren't live yet — that's the next piece — but leagues and membership are ready now.</p>
+  </header>
+
+  <div id="signed-out-view">
+    <div class="account-card">
+      <h2>Sign in for leagues</h2>
+      <p>No password needed — enter your email and we'll send a one-click sign-in link.</p>
+      <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
+      <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
+      <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div id="signed-in-view" style="display:none;">
+
+    <a href="predictor.html" class="back-link">← Predictor</a>
+
+    <div class="formcard">
+      <h3>Join a league</h3>
+      <div class="field"><label>League code</label><input type="text" id="join-code" placeholder="e.g. A1B2C3" style="text-transform:uppercase;"></div>
+      <button class="primary-btn" id="join-btn">Join with code</button>
+      <div class="subscribe-msg" id="join-msg"></div>
+    </div>
+
+    <div class="formcard">
+      <h3>Create a league</h3>
+      <div class="field"><label>League name</label><input type="text" id="create-name" placeholder="e.g. The Tigers' Den"></div>
+      <div class="checkfield"><input type="checkbox" id="create-public"> <label for="create-public" style="margin:0;">Make this public (anyone can find and join it, no code needed)</label></div>
+      <button class="primary-btn" id="create-btn">Create league</button>
+      <div class="subscribe-msg" id="create-msg"></div>
+    </div>
+
+    <div class="formcard">
+      <h3>Public leagues</h3>
+      <div id="public-leagues-list"><div class="empty-state">Loading…</div></div>
+    </div>
+
+    <div class="formcard">
+      <h3>Your leagues</h3>
+      <div id="my-leagues-list"><div class="empty-state">Loading…</div></div>
+    </div>
+
+    <div id="league-detail-view" style="display:none;">
+      <a href="#" class="back-link" id="back-to-leagues">← All leagues</a>
+      <div id="league-detail-content"></div>
+    </div>
+  </div>
+</div>
+<div id="site-footer"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('account');
+
+let currentUser = null;
+
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function toast(message){
+  const t = document.getElementById('toast');
+  if(!t) return;
+  t.textContent = message; t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+document.getElementById('acc-send-link').addEventListener('click', async ()=>{
+  const email = document.getElementById('acc-email').value.trim();
+  const msg = document.getElementById('acc-msg');
+  if(!email){ msg.textContent = 'Enter your email first.'; return; }
+  msg.textContent = 'Sending…';
+  try{
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href.split('#')[0] } });
+    if(error) throw error;
+    msg.textContent = 'Check your email for a sign-in link.';
+  }catch(e){ msg.textContent = e.message; }
+});
+
+async function boot(user){
+  currentUser = user;
+  document.getElementById('signed-out-view').style.display = 'none';
+  document.getElementById('signed-in-view').style.display = 'block';
+  loadPublicLeagues();
+  loadMyLeagues();
+}
+sb.auth.onAuthStateChange((event, session)=>{ if(session?.user) boot(session.user); });
+sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.user); });
+
+document.getElementById('join-btn').addEventListener('click', async ()=>{
+  const code = document.getElementById('join-code').value.trim();
+  const msg = document.getElementById('join-msg');
+  if(!code){ msg.textContent = 'Enter a code first.'; return; }
+  msg.textContent = 'Joining…';
+  try{
+    const { data, error } = await sb.rpc('join_league_by_code', { join_code: code });
+    if(error) throw error;
+    const league = data?.[0];
+    msg.textContent = league ? `Joined "${league.league_name}".` : 'Joined.';
+    document.getElementById('join-code').value = '';
+    loadMyLeagues(); loadPublicLeagues();
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('create-btn').addEventListener('click', async ()=>{
+  const name = document.getElementById('create-name').value.trim();
+  const isPublic = document.getElementById('create-public').checked;
+  const msg = document.getElementById('create-msg');
+  if(!name){ msg.textContent = 'Give your league a name first.'; return; }
+  msg.textContent = 'Creating…';
+  try{
+    const { data, error } = await sb.rpc('create_league', { league_name: name, make_public: isPublic });
+    if(error) throw error;
+    const league = data?.[0];
+    msg.textContent = league ? `Created! Code: ${league.league_code}` : 'Created.';
+    document.getElementById('create-name').value = '';
+    document.getElementById('create-public').checked = false;
+    loadMyLeagues(); loadPublicLeagues();
+  }catch(e){ msg.textContent = e.message; }
+});
+
+async function loadPublicLeagues(){
+  const container = document.getElementById('public-leagues-list');
+  const { data, error } = await sb.from('leagues').select('*').eq('is_public', true).order('created_at', {ascending:true});
+  if(error || !data || !data.length){ container.innerHTML = '<div class="empty-state">No public leagues yet.</div>'; return; }
+  container.innerHTML = data.map(l=>`
+    <div class="league-card" data-open-league="${l.id}" style="cursor:pointer;">
+      <div>
+        <div class="league-name">${escapeHtml(l.name)}</div>
+        <div class="league-meta">Public league</div>
+      </div>
+      <button class="ghost-btn" data-join-public="${l.id}">Join</button>
+    </div>`).join('');
+  container.querySelectorAll('[data-join-public]').forEach(btn=>btn.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    try{
+      const { error } = await sb.from('league_members').insert({ league_id: btn.dataset.joinPublic, user_id: currentUser.id });
+      if(error && !error.message.includes('duplicate')) throw error;
+      toast('Joined!');
+      loadMyLeagues();
+    }catch(err){ toast(err.message); }
+  }));
+  container.querySelectorAll('[data-open-league]').forEach(card=>card.addEventListener('click', ()=> openLeagueDetail(card.dataset.openLeague)));
+}
+
+async function loadMyLeagues(){
+  const container = document.getElementById('my-leagues-list');
+  const { data: memberships } = await sb.from('league_members').select('league_id').eq('user_id', currentUser.id);
+  if(!memberships || !memberships.length){ container.innerHTML = "<div class=\"empty-state\">You haven't joined any leagues yet.</div>"; return; }
+  const ids = memberships.map(m=>m.league_id);
+  const { data: leagues } = await sb.from('leagues').select('*').in('id', ids);
+  container.innerHTML = (leagues||[]).map(l=>`
+    <div class="league-card" data-open-league="${l.id}" style="cursor:pointer;">
+      <div>
+        <div class="league-name">${escapeHtml(l.name)}</div>
+        <div class="league-meta">${l.is_public ? 'Public' : 'Private'}</div>
+      </div>
+      ${!l.is_public ? `<span class="league-code-badge" data-copy-code="${l.code}" title="Click to copy">${l.code}</span>` : ''}
+    </div>`).join('') || "<div class=\"empty-state\">You haven't joined any leagues yet.</div>";
+  container.querySelectorAll('[data-open-league]').forEach(card=>card.addEventListener('click', (e)=>{
+    if(e.target.closest('[data-copy-code]')) return;
+    openLeagueDetail(card.dataset.openLeague);
+  }));
+  container.querySelectorAll('[data-copy-code]').forEach(el=>el.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    navigator.clipboard?.writeText(el.dataset.copyCode).then(()=>toast('Code copied'));
+  }));
+}
+
+async function openLeagueDetail(leagueId){
+  document.getElementById('league-detail-view').style.display = 'block';
+  window.scrollTo({top: document.getElementById('league-detail-view').offsetTop - 20, behavior:'smooth'});
+
+  const { data: league } = await sb.from('leagues').select('*').eq('id', leagueId).single();
+  const { data: members } = await sb.from('league_members').select('user_id').eq('league_id', leagueId);
+  const { data: leaderboard } = await sb.from('league_leaderboard').select('*').eq('league_id', leagueId).order('total_points', {ascending:false});
+
+  let leaderboardHtml = `<div class="leaderboard-placeholder">🏆 No scores calculated yet — this fills in once results start coming in.</div>`;
+  if(leaderboard && leaderboard.length && leaderboard.some(r=>r.fixtures_scored > 0)){
+    const userIds = leaderboard.map(r=>r.user_id);
+    const { data: profiles } = await sb.from('profiles').select('*').in('user_id', userIds);
+    const nameFor = (uid) => uid === currentUser.id ? 'You' : (profiles||[]).find(p=>p.user_id===uid)?.email || 'Player';
+    leaderboardHtml = `
+      <div class="admin-list">
+        ${leaderboard.map((row, i)=>`
+          <div class="admin-row" style="${i===0 ? 'border:1px solid var(--amber); border-radius:8px; padding:10px 12px;' : ''}">
+            <div>${i===0?'🏆 ':''}${escapeHtml(nameFor(row.user_id))}${row.user_id===currentUser.id?' <span class="league-meta">(you)</span>':''}
+              <span class="league-meta" style="display:block;">${row.fixtures_scored} fixture${row.fixtures_scored===1?'':'s'} scored</span>
+            </div>
+            <div style="font-family:var(--display); font-size:20px; color:var(--amber);">${row.total_points}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  document.getElementById('league-detail-content').innerHTML = `
+    <div class="formcard">
+      <h3>${escapeHtml(league?.name || 'League')}</h3>
+      <p style="font-size:12.5px; color:var(--paper-dim); margin-top:-4px;">
+        ${league?.is_public ? 'Public league' : 'Private league'} · ${members?.length || 0} member${members?.length===1?'':'s'}
+        ${!league?.is_public && league?.created_by === currentUser.id ? `· code: <b style="color:var(--amber-soft);">${league.code}</b>` : ''}
+      </p>
+      ${leaderboardHtml}
+    </div>
+  `;
+}
+document.getElementById('back-to-leagues').addEventListener('click', (e)=>{
+  e.preventDefault();
+  document.getElementById('league-detail-view').style.display = 'none';
+});
+</script>
+</body>
+</html>

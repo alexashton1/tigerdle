@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Account — TIGERDLE</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .account-card{ background:var(--ink-2); border:1px solid var(--line); border-radius:12px; padding:24px; max-width:420px; margin:24px auto; }
+  .account-card h2{ font-family:var(--display); font-weight:400; font-size:22px; color:var(--amber); margin:0 0 10px; text-align:center; }
+  .account-card p{ font-size:13.5px; color:var(--paper-dim); text-align:center; margin:0 0 18px; line-height:1.5; }
+  .account-card input{
+    width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper);
+    font-size:14px; padding:11px 13px; border-radius:8px; outline:none; margin-bottom:10px;
+  }
+  .account-card input:focus{ border-color:var(--amber); }
+  .stat-summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0; text-align:center; }
+  .stat-summary .num{ font-family:var(--display); font-size:26px; color:var(--amber); }
+  .stat-summary .lab{ font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--paper-dim); margin-top:2px; }
+  .mode-stat-card{
+    background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:12px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .mode-stat-card .mode-name{ font-family:var(--display); font-weight:400; font-size:17px; color:var(--paper); }
+  .mode-stat-card .mode-icon{ font-size:20px; margin-right:8px; }
+  .mode-stat-row{ display:flex; gap:18px; }
+  .mode-stat-row div{ text-align:center; }
+  .mode-stat-row .num{ font-family:var(--display); font-size:19px; color:var(--amber-soft); }
+  .mode-stat-row .lab{ font-family:var(--mono); font-size:8.5px; text-transform:uppercase; color:var(--paper-dim); }
+  .signed-in-bar{ display:flex; align-items:center; justify-content:space-between; max-width:520px; margin:0 auto 18px; font-size:12.5px; color:var(--paper-dim); }
+  .cta-btn{
+    display:block; max-width:520px; margin:16px auto 0; padding:20px 22px;
+    background:linear-gradient(135deg, var(--amber) 0%, var(--amber-deep) 100%);
+    color:var(--ink); border:none; border-radius:14px; text-align:center; text-decoration:none;
+    box-shadow:0 8px 24px rgba(245,163,0,0.28); transition:all .2s ease;
+  }
+  .cta-btn:hover{ transform:translateY(-3px); box-shadow:0 14px 32px rgba(245,163,0,0.4); }
+  .cta-btn:first-of-type{ margin-top:24px; }
+  .cta-title{ font-family:var(--display); font-weight:400; font-size:19px; line-height:1.2; }
+  .cta-sub{ font-family:var(--body); font-size:12.5px; color:var(--ink); opacity:.75; display:block; margin-top:4px; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="wrap">
+  <header style="padding:20px 0 4px; text-align:center;">
+    <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
+    <h1 class="title" style="font-size:clamp(28px,7vw,40px);">Your Account</h1>
+    <p class="tagline">Nothing else on the site needs this — play all four games freely, no login required. This is just for anyone who wants their stats to follow them, and it's where the prediction game will live once it's ready.</p>
+  </header>
+
+  <div id="signed-out-view">
+    <div class="account-card">
+      <h2>Sign in</h2>
+      <p>No password to remember — enter your email and we'll send a one-click sign-in link.</p>
+      <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
+      <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
+      <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div id="signed-in-view" style="display:none;">
+    <div class="signed-in-bar">
+      <span id="acc-email-display"></span>
+      <button class="ghost-btn" id="acc-sign-out">Sign out</button>
+    </div>
+
+    <div id="stats-dashboard"></div>
+
+    <a href="predictor.html" class="cta-btn">
+      <span class="cta-title">🔮 Predict Hull's team and score →</span>
+      <span class="cta-sub">Formation, scoreline, goalscorers — locks 75 minutes before kick-off</span>
+    </a>
+    <a href="leagues.html" class="cta-btn">
+      <span class="cta-title">🏆 Create or join a league →</span>
+      <span class="cta-sub">Private with a friend code, or public — real points, real leaderboards</span>
+    </a>
+  </div>
+</div>
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('account');
+
+const MODE_META = {
+  m1: { name: 'TIGERDLE', icon: '🔤' },
+  m2: { name: 'Guess the Tiger', icon: '🐯' },
+  m3: { name: 'Mystery Tiger', icon: '🔍' },
+  m4: { name: 'Guess the Opponent', icon: '⚽' },
+};
+
+function readLocalStats(){
+  const out = {};
+  ['m1','m2','m3','m4'].forEach(mode=>{
+    try{
+      const raw = localStorage.getItem('tigerdle_stats_'+mode);
+      out[mode] = raw ? JSON.parse(raw) : {played:0, wins:0, streak:0, maxStreak:0};
+    }catch(e){ out[mode] = {played:0, wins:0, streak:0, maxStreak:0}; }
+  });
+  return out;
+}
+
+function renderStatsDashboard(stats){
+  const container = document.getElementById('stats-dashboard');
+  const totalPlayed = Object.values(stats).reduce((a,s)=>a+(s.played||0),0);
+  const totalWins = Object.values(stats).reduce((a,s)=>a+(s.wins||0),0);
+  const bestStreak = Math.max(0, ...Object.values(stats).map(s=>s.maxStreak||0));
+
+  container.innerHTML = `
+    <div class="stat-summary">
+      <div><div class="num">${totalPlayed}</div><div class="lab">Total played</div></div>
+      <div><div class="num">${totalPlayed ? Math.round(100*totalWins/totalPlayed) : 0}%</div><div class="lab">Win rate</div></div>
+      <div><div class="num">${bestStreak}</div><div class="lab">Best streak ever</div></div>
+    </div>
+    ${Object.keys(MODE_META).map(mode=>{
+      const s = stats[mode] || {played:0, wins:0, streak:0, maxStreak:0};
+      const rate = s.played ? Math.round(100*s.wins/s.played) : 0;
+      return `
+      <div class="mode-stat-card">
+        <div class="mode-name"><span class="mode-icon">${MODE_META[mode].icon}</span>${MODE_META[mode].name}</div>
+        <div class="mode-stat-row">
+          <div><div class="num">${s.played||0}</div><div class="lab">Played</div></div>
+          <div><div class="num">${rate}%</div><div class="lab">Win rate</div></div>
+          <div><div class="num">${s.streak||0}</div><div class="lab">Streak</div></div>
+          <div><div class="num">${s.maxStreak||0}</div><div class="lab">Best</div></div>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+/* Merge two stats objects, keeping whichever side has played more —
+   used so signing in on a second device never overwrites a browser
+   with more games played by an empty/newer one. */
+function mergeStats(a, b){
+  const out = {};
+  ['m1','m2','m3','m4'].forEach(mode=>{
+    const sa = a[mode] || {played:0,wins:0,streak:0,maxStreak:0};
+    const sb = b[mode] || {played:0,wins:0,streak:0,maxStreak:0};
+    out[mode] = (sa.played||0) >= (sb.played||0) ? sa : sb;
+  });
+  return out;
+}
+
+async function syncStatsForUser(userId){
+  const local = readLocalStats();
+  const { data: existing } = await sb.from('user_stats').select('stats').eq('user_id', userId).single();
+  const merged = existing?.stats ? mergeStats(existing.stats, local) : local;
+  await sb.from('user_stats').upsert({ user_id: userId, stats: merged, updated_at: new Date().toISOString() });
+  return merged;
+}
+
+async function showSignedIn(user){
+  document.getElementById('signed-out-view').style.display = 'none';
+  document.getElementById('signed-in-view').style.display = 'block';
+  document.getElementById('acc-email-display').textContent = user.email;
+  const stats = await syncStatsForUser(user.id);
+  renderStatsDashboard(stats);
+}
+
+document.getElementById('acc-send-link').addEventListener('click', async ()=>{
+  const email = document.getElementById('acc-email').value.trim();
+  const msg = document.getElementById('acc-msg');
+  if(!email){ msg.textContent = 'Enter your email first.'; return; }
+  msg.textContent = 'Sending…';
+  try{
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href.split('#')[0] } });
+    if(error) throw error;
+    msg.textContent = 'Check your email for a sign-in link.';
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('acc-sign-out').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  document.getElementById('signed-in-view').style.display = 'none';
+  document.getElementById('signed-out-view').style.display = 'block';
+});
+
+sb.auth.onAuthStateChange((event, session)=>{
+  if(session?.user) showSignedIn(session.user);
+});
+sb.auth.getSession().then(({data})=>{
+  if(data?.session?.user) showSignedIn(data.session.user);
+});
+</script>
+</body>
+</html>

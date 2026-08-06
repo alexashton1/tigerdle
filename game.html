@@ -326,7 +326,22 @@ function updateStreak(modeKey, won){
   else { stats.streak = 0; }
   stats.lastResultDate = dateKey();
   saveState(statsKey, stats);
+  syncStatsIfSignedIn();
   return stats;
+}
+/* Nothing on this page requires an account — this only does anything if
+   someone happens to already be signed in via account.html, in which case
+   their just-updated stats quietly follow them there too. Fails silently
+   and harmlessly for the vast majority of anonymous players. */
+async function syncStatsIfSignedIn(){
+  try{
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user;
+    if(!user) return;
+    const allStats = {};
+    ['m1','m2','m3','m4'].forEach(m => { allStats[m] = getStats(m); });
+    await sb.from('user_stats').upsert({ user_id: user.id, stats: allStats, updated_at: new Date().toISOString() });
+  }catch(e){ /* silent — this is a nice-to-have, never block gameplay on it */ }
 }
 function getStats(modeKey){ return loadState("tigerdle_stats_"+modeKey, {played:0, wins:0, streak:0, maxStreak:0}); }
 function renderStatsbar(){

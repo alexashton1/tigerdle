@@ -191,6 +191,101 @@
       <h3>Goal puzzles</h3>
       <div class="admin-list" id="g-list"></div>
     </div>
+
+    <!-- Fixtures — Phase 1 of the predictor roadmap -->
+    <div class="formcard">
+      <h3 id="fx-form-heading">Add a fixture</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        Premier League fixtures — add and adjust them here as the season's confirmed or changes.
+        This is groundwork for the predictor feature, not connected to anything else yet.
+      </p>
+      <div class="field-row">
+        <div class="field"><label>Opponent</label><input type="text" id="fx-opponent" list="opponent-list-admin"></div>
+        <div class="field"><label>Match date</label><input type="date" id="fx-date"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Kick-off time</label><input type="text" id="fx-kickoff" placeholder="e.g. 15:00"></div>
+        <div class="field"><label>Home / Away</label>
+          <select id="fx-homeaway"><option value="Home">Home</option><option value="Away">Away</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Competition</label><input type="text" id="fx-competition" value="Premier League"></div>
+        <div class="field"><label>Status</label>
+          <select id="fx-status"><option>Scheduled</option><option>Completed</option><option>Postponed</option></select>
+        </div>
+      </div>
+      <button class="primary-btn" id="fx-save">Save fixture</button>
+      <button class="ghost-btn" id="fx-cancel-edit" style="display:none;">Cancel edit</button>
+      <div class="subscribe-msg" id="fx-msg"></div>
+    </div>
+    <div class="formcard">
+      <h3>Fixture list</h3>
+      <div class="admin-list" id="fx-list"></div>
+    </div>
+
+    <!-- Matchday lineups -->
+    <div class="formcard">
+      <h3 id="md-form-heading">Add a matchday</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        Built as a two-step job: publish the lineup as soon as the team's out — before kickoff, no ratings or score needed yet —
+        then come back after the game, click <b>Edit</b> on it below, and fill in ratings, the final score, and who scored.
+        Saving credits an appearance to everyone in the lineup the first time; editing afterwards only adjusts for players
+        actually added or removed, so filling in ratings later never double-counts anyone.
+      </p>
+      <div class="field">
+        <label>Linked fixture <span style="text-transform:none; opacity:.7;">(needed for predictions to be scored against this result)</span></label>
+        <select id="md-fixture"><option value="">— Not linked to a fixture —</option></select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Opponent</label><input type="text" id="md-opponent" list="opponent-list-admin"></div>
+        <div class="field"><label>Match date</label><input type="date" id="md-date"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Competition</label><input type="text" id="md-competition" placeholder="Championship, FA Cup…"></div>
+        <div class="field"><label>Home / Away</label>
+          <select id="md-homeaway"><option value="Home">Home</option><option value="Away">Away</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Hull score</label><input type="number" id="md-hull-score" min="0"></div>
+        <div class="field"><label>Opponent score</label><input type="number" id="md-opp-score" min="0"></div>
+      </div>
+      <div class="field">
+        <label>Formation</label>
+        <select id="md-formation"></select>
+      </div>
+      <div id="md-slots"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:14px 0 8px;">
+        <label style="font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">Substitutes used</label>
+        <button class="ghost-btn" id="md-add-sub" type="button">+ Add substitute</button>
+      </div>
+      <div id="md-subs"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:18px 0 8px;">
+        <label style="font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">Goalscorers <span style="text-transform:none; opacity:.7;">(in order — first one entered is the first goal)</span></label>
+        <button class="ghost-btn" id="md-add-scorer" type="button">+ Add goal</button>
+      </div>
+      <div id="md-scorers"></div>
+      <button class="primary-btn" id="md-save" style="margin-top:10px;">Save matchday</button>
+      <button class="ghost-btn" id="md-cancel-edit" style="display:none;">Cancel edit</button>
+      <div class="subscribe-msg" id="md-msg"></div>
+    </div>
+
+    <div class="formcard">
+      <h3>Recent matchdays</h3>
+      <div class="admin-list" id="md-list"></div>
+    </div>
+
+    <div class="formcard">
+      <h3>Calculate prediction scores</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        Once a matchday's fully entered — lineup, score, and goalscorers all correct — pick its fixture here to score everyone's
+        predictions against it. Safe to re-run if you need to fix something afterwards; it recalculates rather than double-adding.
+      </p>
+      <select id="score-fixture-select"></select>
+      <button class="primary-btn" id="score-calculate-btn" style="margin-top:10px;">Calculate scores</button>
+      <div class="subscribe-msg" id="score-calculate-msg"></div>
+    </div>
   </div>
 
 </div>
@@ -311,7 +406,7 @@ async function tryEnter(){
 if(PASSPHRASE) tryEnter(); else showGate('');
 
 async function refreshAll(){
-  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule();
+  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures();
 }
 
 /* ---- Subscribers ---- */
@@ -428,6 +523,12 @@ async function refreshPlayers(){
     allPlayersCache = data || [];
     renderPlayerList();
     updateToggleLabel();
+    // Player dropdowns in the matchday form are built from this same
+    // cache — refresh them now that real data exists, unless someone's
+    // actively mid-edit (don't want to wipe their in-progress selections).
+    if(typeof editingMatchdayId !== 'undefined' && !editingMatchdayId && document.getElementById('md-slots')){
+      renderSlots(document.getElementById('md-formation').value);
+    }
   }catch(e){ document.getElementById('p-list').innerHTML = '<div class="meta">Could not load.</div>'; }
 }
 
@@ -795,6 +896,339 @@ document.getElementById('g-submit').addEventListener('click', async ()=>{
     refreshGoals();
   }catch(e){ document.getElementById('g-msg').textContent = e.message; }
 });
+
+/* ==================== Fixtures ==================== */
+let editingFixtureId = null;
+
+function resetFixtureForm(){
+  editingFixtureId = null;
+  document.getElementById('fx-form-heading').textContent = 'Add a fixture';
+  document.getElementById('fx-save').textContent = 'Save fixture';
+  document.getElementById('fx-cancel-edit').style.display = 'none';
+  document.getElementById('fx-opponent').value = '';
+  document.getElementById('fx-date').value = '';
+  document.getElementById('fx-kickoff').value = '';
+  document.getElementById('fx-homeaway').value = 'Home';
+  document.getElementById('fx-competition').value = 'Premier League';
+  document.getElementById('fx-status').value = 'Scheduled';
+  document.getElementById('fx-msg').textContent = '';
+}
+document.getElementById('fx-cancel-edit').addEventListener('click', resetFixtureForm);
+
+function startEditFixture(fx){
+  editingFixtureId = fx.id;
+  document.getElementById('fx-form-heading').textContent = `Editing vs ${fx.opponent} (${fx.match_date})`;
+  document.getElementById('fx-save').textContent = 'Save changes';
+  document.getElementById('fx-cancel-edit').style.display = 'inline-block';
+  document.getElementById('fx-opponent').value = fx.opponent;
+  document.getElementById('fx-date').value = fx.match_date;
+  document.getElementById('fx-kickoff').value = fx.kickoff_time || '';
+  document.getElementById('fx-homeaway').value = fx.home_away || 'Home';
+  document.getElementById('fx-competition').value = fx.competition || 'Premier League';
+  document.getElementById('fx-status').value = fx.status || 'Scheduled';
+  document.getElementById('fx-msg').textContent = '';
+  document.getElementById('fx-form-heading').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+document.getElementById('fx-save').addEventListener('click', async ()=>{
+  const msg = document.getElementById('fx-msg');
+  const opponent = document.getElementById('fx-opponent').value.trim();
+  const match_date = document.getElementById('fx-date').value;
+  if(!opponent || !match_date){ msg.textContent = 'Opponent and match date are required.'; return; }
+  msg.textContent = 'Saving…';
+  try{
+    await callAdmin('save_fixture', {
+      id: editingFixtureId || undefined,
+      opponent, match_date,
+      kickoff_time: document.getElementById('fx-kickoff').value.trim() || null,
+      home_away: document.getElementById('fx-homeaway').value,
+      competition: document.getElementById('fx-competition').value.trim() || null,
+      status: document.getElementById('fx-status').value,
+    });
+    msg.textContent = 'Saved.';
+    resetFixtureForm();
+    refreshFixtures();
+  }catch(e){ msg.textContent = e.message; }
+});
+
+async function refreshFixtures(){
+  const list = document.getElementById('fx-list');
+  try{
+    const { data } = await sb.from('fixtures').select('*').order('match_date', {ascending:true});
+    if(!data || !data.length){ list.innerHTML = '<div class="meta">No fixtures added yet.</div>'; return; }
+    list.innerHTML = data.map(fx=>`
+      <div class="admin-row">
+        <div>vs ${fx.opponent} <span class="meta">${fx.match_date}${fx.kickoff_time ? ' '+fx.kickoff_time : ''} · ${fx.home_away || ''} · ${fx.competition || ''} · ${fx.status}</span></div>
+        <div style="display:flex; gap:6px;">
+          <button class="ghost-btn" data-edit-fx="${fx.id}">Edit</button>
+          <button class="ghost-btn" data-delete-fx="${fx.id}">Delete</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('[data-edit-fx]').forEach(b=>b.addEventListener('click', async ()=>{
+      const { data: fx } = await sb.from('fixtures').select('*').eq('id', b.dataset.editFx).single();
+      if(fx) startEditFixture(fx);
+    }));
+    list.querySelectorAll('[data-delete-fx]').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('Delete this fixture?')) return;
+      try{ await callAdmin('delete_fixture', { id: b.dataset.deleteFx }); refreshFixtures(); }
+      catch(e){ toast(e.message); }
+    }));
+
+    const fixtureOptionsHtml = data.map(fx=>`<option value="${fx.id}">vs ${fx.opponent} — ${fx.match_date}</option>`).join('');
+    const mdSel = document.getElementById('md-fixture');
+    if(mdSel) mdSel.innerHTML = '<option value="">— Not linked to a fixture —</option>' + fixtureOptionsHtml;
+    const scoreSel = document.getElementById('score-fixture-select');
+    if(scoreSel) scoreSel.innerHTML = fixtureOptionsHtml || '<option value="">No fixtures yet</option>';
+  }catch(e){ list.innerHTML = '<div class="meta">Could not load.</div>'; }
+}
+
+document.getElementById('score-calculate-btn').addEventListener('click', async ()=>{
+  const msg = document.getElementById('score-calculate-msg');
+  const fixtureId = document.getElementById('score-fixture-select').value;
+  if(!fixtureId){ msg.textContent = 'Pick a fixture first.'; return; }
+  if(!confirm('Calculate scores for this fixture? Make sure the linked matchday has the final score and goalscorers entered correctly first.')) return;
+  msg.textContent = 'Calculating…';
+  try{
+    const data = await callAdmin('calculate_fixture_scores', { fixture_id: fixtureId });
+    msg.textContent = `Done — scored ${data.scoredCount} prediction(s).`;
+  }catch(e){ msg.textContent = e.message; }
+});
+
+/* ==================== Matchdays ==================== */
+const FORMATIONS = {
+  "4-4-2": ["GK","RB","CB","CB","LB","RM","CM","CM","LM","ST","ST"],
+  "4-3-3": ["GK","RB","CB","CB","LB","CM","CM","CM","RW","ST","LW"],
+  "4-2-3-1": ["GK","RB","CB","CB","LB","CDM","CDM","RW","CAM","LW","ST"],
+  "3-5-2": ["GK","CB","CB","CB","RWB","CM","CM","CM","LWB","ST","ST"],
+  "5-3-2": ["GK","RWB","CB","CB","CB","LWB","CM","CM","CM","ST","ST"],
+};
+
+let editingMatchdayId = null;
+let subCounter = 0;
+
+(function populateFormationDropdown(){
+  const sel = document.getElementById('md-formation');
+  Object.keys(FORMATIONS).forEach(f=>{
+    const opt = document.createElement('option'); opt.value = f; opt.textContent = f;
+    sel.appendChild(opt);
+  });
+})();
+
+function activePlayerOptionsHtml(selectedId){
+  const active = allPlayersCache.filter(p=>p.active).sort((a,b)=> a.last_name.localeCompare(b.last_name));
+  return `<option value="">— Select —</option>` + active.map(p=>
+    `<option value="${p.id}" ${p.id===selectedId?'selected':''}>${p.first_name} ${p.last_name}</option>`
+  ).join('');
+}
+
+function renderSlots(formation, existingLineup){
+  const container = document.getElementById('md-slots');
+  const slots = FORMATIONS[formation] || [];
+  const starters = (existingLineup || []).filter(r => !r.is_sub);
+  container.innerHTML = slots.map((label, i)=>{
+    const existing = starters[i];
+    return `
+    <div class="slot-row" data-slot-index="${i}">
+      <div class="slot-label">${label}</div>
+      <select class="md-slot-player">${activePlayerOptionsHtml(existing?.player_id)}</select>
+      <input type="number" class="md-slot-rating" min="0" max="10" step="0.5" placeholder="Rtg" value="${existing?.rating ?? ''}">
+      <span></span>
+    </div>`;
+  }).join('');
+}
+
+function addSubRow(existing){
+  subCounter++;
+  const container = document.getElementById('md-subs');
+  const row = document.createElement('div');
+  row.className = 'slot-row';
+  row.dataset.subId = subCounter;
+  row.innerHTML = `
+    <div class="slot-label">SUB</div>
+    <select class="md-sub-player">${activePlayerOptionsHtml(existing?.player_id)}</select>
+    <input type="number" class="md-sub-rating" min="0" max="10" step="0.5" placeholder="Rtg" value="${existing?.rating ?? ''}">
+    <button type="button" class="slot-remove" onclick="this.closest('.slot-row').remove()">✕</button>`;
+  container.appendChild(row);
+}
+
+document.getElementById('md-add-sub').addEventListener('click', ()=> addSubRow());
+document.getElementById('md-formation').addEventListener('change', (e)=> renderSlots(e.target.value));
+
+function addScorerRow(existing){
+  const container = document.getElementById('md-scorers');
+  const row = document.createElement('div');
+  row.className = 'slot-row';
+  const goalNum = container.children.length + 1;
+  row.innerHTML = `
+    <div class="slot-label">${goalNum===1 ? '1st' : goalNum+'.'}</div>
+    <select class="md-scorer-player">${activePlayerOptionsHtml(existing?.player_id)}</select>
+    <button type="button" class="slot-remove" onclick="this.closest('.slot-row').remove(); renumberScorerRows();">✕</button>`;
+  container.appendChild(row);
+}
+function renumberScorerRows(){
+  document.querySelectorAll('#md-scorers .slot-row').forEach((row,i)=>{
+    row.querySelector('.slot-label').textContent = i===0 ? '1st' : (i+1)+'.';
+  });
+}
+document.getElementById('md-add-scorer').addEventListener('click', ()=> addScorerRow());
+
+function collectGoalscorers(){
+  const goalscorers = [];
+  document.querySelectorAll('#md-scorers .slot-row').forEach(row=>{
+    const id = row.querySelector('.md-scorer-player').value;
+    if(!id) return;
+    const player = allPlayersCache.find(p=>p.id===id);
+    goalscorers.push({ player_id: id, first_name: player?.first_name || '', last_name: player?.last_name || '' });
+  });
+  return goalscorers;
+}
+
+function collectLineup(){
+  const lineup = [];
+  document.querySelectorAll('#md-slots .slot-row').forEach(row=>{
+    const select = row.querySelector('.md-slot-player');
+    const id = select.value;
+    if(!id) return;
+    const player = allPlayersCache.find(p=>p.id===id);
+    lineup.push({
+      player_id: id,
+      first_name: player?.first_name || '',
+      last_name: player?.last_name || '',
+      slot: row.querySelector('.slot-label').textContent,
+      is_sub: false,
+      rating: row.querySelector('.md-slot-rating').value ? Number(row.querySelector('.md-slot-rating').value) : null,
+    });
+  });
+  document.querySelectorAll('#md-subs .slot-row').forEach(row=>{
+    const select = row.querySelector('.md-sub-player');
+    const id = select.value;
+    if(!id) return;
+    const player = allPlayersCache.find(p=>p.id===id);
+    lineup.push({
+      player_id: id,
+      first_name: player?.first_name || '',
+      last_name: player?.last_name || '',
+      slot: 'SUB',
+      is_sub: true,
+      rating: row.querySelector('.md-sub-rating').value ? Number(row.querySelector('.md-sub-rating').value) : null,
+    });
+  });
+  return lineup;
+}
+
+function resetMatchdayForm(){
+  editingMatchdayId = null;
+  document.getElementById('md-form-heading').textContent = 'Add a matchday';
+  document.getElementById('md-save').textContent = 'Save matchday';
+  document.getElementById('md-cancel-edit').style.display = 'none';
+  document.getElementById('md-fixture').value = '';
+  document.getElementById('md-opponent').value = '';
+  document.getElementById('md-date').value = '';
+  document.getElementById('md-competition').value = '';
+  document.getElementById('md-homeaway').value = 'Home';
+  document.getElementById('md-hull-score').value = '';
+  document.getElementById('md-opp-score').value = '';
+  document.getElementById('md-formation').value = '4-3-3';
+  document.getElementById('md-subs').innerHTML = '';
+  document.getElementById('md-scorers').innerHTML = '';
+  renderSlots('4-3-3');
+  document.getElementById('md-msg').textContent = '';
+}
+document.getElementById('md-cancel-edit').addEventListener('click', resetMatchdayForm);
+
+function startEditMatchday(matchday){
+  editingMatchdayId = matchday.id;
+  document.getElementById('md-form-heading').textContent = `Editing vs ${matchday.opponent} (${matchday.match_date})`;
+  document.getElementById('md-save').textContent = 'Save changes';
+  document.getElementById('md-cancel-edit').style.display = 'inline-block';
+  document.getElementById('md-fixture').value = matchday.fixture_id || '';
+  document.getElementById('md-opponent').value = matchday.opponent;
+  document.getElementById('md-date').value = matchday.match_date;
+  document.getElementById('md-competition').value = matchday.competition || '';
+  document.getElementById('md-homeaway').value = matchday.home_away || 'Home';
+  document.getElementById('md-hull-score').value = matchday.hull_score ?? '';
+  document.getElementById('md-opp-score').value = matchday.opponent_score ?? '';
+  document.getElementById('md-formation').value = matchday.formation;
+  renderSlots(matchday.formation, matchday.lineup);
+  document.getElementById('md-subs').innerHTML = '';
+  (matchday.lineup || []).filter(r=>r.is_sub).forEach(r => addSubRow(r));
+  document.getElementById('md-scorers').innerHTML = '';
+  (matchday.goalscorers || []).forEach(g => addScorerRow(g));
+  document.getElementById('md-msg').textContent = '';
+  document.getElementById('md-form-heading').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+document.getElementById('md-save').addEventListener('click', async ()=>{
+  const msg = document.getElementById('md-msg');
+  const opponent = document.getElementById('md-opponent').value.trim();
+  const match_date = document.getElementById('md-date').value;
+  const formation = document.getElementById('md-formation').value;
+  const lineup = collectLineup();
+  if(!opponent || !match_date){ msg.textContent = 'Opponent and match date are required.'; return; }
+  if(!lineup.length){ msg.textContent = 'Select at least one player.'; return; }
+
+  msg.textContent = 'Saving…';
+  try{
+    const payload = {
+      id: editingMatchdayId || undefined,
+      opponent, match_date, formation, lineup,
+      fixture_id: document.getElementById('md-fixture').value || null,
+      goalscorers: collectGoalscorers(),
+      competition: document.getElementById('md-competition').value.trim() || null,
+      home_away: document.getElementById('md-homeaway').value,
+      hull_score: document.getElementById('md-hull-score').value ? Number(document.getElementById('md-hull-score').value) : null,
+      opponent_score: document.getElementById('md-opp-score').value ? Number(document.getElementById('md-opp-score').value) : null,
+    };
+    const data = await callAdmin('save_matchday', payload);
+    let m = `Saved.`;
+    if(data.appearancesAdded) m += ` ${data.appearancesAdded} appearance(s) credited.`;
+    if(data.appearancesRemoved) m += ` ${data.appearancesRemoved} removed.`;
+    msg.textContent = m;
+    resetMatchdayForm();
+    refreshMatchdays(); refreshPlayers();
+  }catch(e){ msg.textContent = e.message; }
+});
+
+async function refreshMatchdays(){
+  const list = document.getElementById('md-list');
+  try{
+    const { data } = await sb.from('matchdays').select('*').order('match_date', {ascending:false});
+    if(!data || !data.length){ list.innerHTML = '<div class="meta">No matchdays recorded yet.</div>'; return; }
+    list.innerHTML = data.map(m=>{
+      const score = (m.hull_score != null && m.opponent_score != null) ? ` ${m.hull_score}-${m.opponent_score}` : '';
+      const hasRatings = (m.lineup || []).some(p => p.rating != null);
+      const status = hasRatings
+        ? `<span style="color:var(--good);">✓ Rated</span>`
+        : `<span style="color:var(--amber-soft);">⏳ Awaiting ratings</span>`;
+      return `
+      <div class="admin-row">
+        <div>vs ${m.opponent}${score} <span class="meta">${m.match_date} · ${m.formation}${m.competition ? ' · '+m.competition : ''} · ${status}</span></div>
+        <div style="display:flex; gap:6px;">
+          <button class="ghost-btn" data-edit-md="${m.id}">${hasRatings ? 'Edit' : 'Add ratings'}</button>
+          <button class="ghost-btn" data-delete-md="${m.id}">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('[data-edit-md]').forEach(b=>b.addEventListener('click', async ()=>{
+      const { data: m } = await sb.from('matchdays').select('*').eq('id', b.dataset.editMd).single();
+      if(m) startEditMatchday(m);
+    }));
+    list.querySelectorAll('[data-delete-md]').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('Delete this matchday? This also undoes the appearances it credited.')) return;
+      try{
+        const data = await callAdmin('delete_matchday', { id: b.dataset.deleteMd });
+        toast(`Deleted — ${data.appearancesRemoved} appearance(s) undone.`);
+        refreshMatchdays(); refreshPlayers();
+      }catch(e){ toast(e.message); }
+    }));
+  }catch(e){ list.innerHTML = '<div class="meta">Could not load.</div>'; }
+}
+
+// Initial render of an empty 4-3-3 so the form isn't blank before any
+// players/formation are picked — repopulates once players load.
+document.getElementById('md-homeaway').value = 'Home';
+document.getElementById('md-formation').value = '4-3-3';
+renderSlots('4-3-3');
 </script>
 </body>
 </html>

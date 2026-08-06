@@ -29,13 +29,17 @@ function renderChrome(current){
             ${BADGE_SVG}
             <span class="logo">TIGERDLE</span>
           </a>
-          <nav class="site-nav">
-            <a href="index.html" ${current==='home'?'class="current"':''}>Home</a>
-            <a href="game.html" ${current==='play'?'class="current"':''}>Play</a>
-            <a href="blog.html" ${current==='blog'?'class="current"':''}>Blog</a>
-          </nav>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <nav class="site-nav">
+              <a href="index.html" ${current==='home'?'class="current"':''}>Home</a>
+              <a href="game.html" ${current==='play'?'class="current"':''}>Play</a>
+              <a href="blog.html" ${current==='blog'?'class="current"':''}>Blog</a>
+            </nav>
+            <a href="account.html" class="account-btn ${current==='account'?'current':''}" id="header-account-btn">👤 Account</a>
+          </div>
         </div>
       </div>`;
+    updateAccountButtonAuthState();
   }
   const footer = document.getElementById('site-footer');
   if(footer){
@@ -73,6 +77,26 @@ function renderChrome(current){
     t.className='toast'; t.id='toast';
     document.body.appendChild(t);
   }
+}
+
+/* If someone's already signed in — from a magic-link click on ANY page,
+   not just this one — this shows it in the header immediately. Supabase
+   persists sessions in localStorage by default, shared across every
+   page on the same domain, so this isn't re-checking a login each time,
+   just surfacing a session that's already there. */
+async function updateAccountButtonAuthState(){
+  const btn = document.getElementById('header-account-btn');
+  if(!btn || typeof sb === 'undefined' || !sb.auth) return;
+  try{
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user;
+    if(user){
+      const label = user.email ? user.email.split('@')[0] : 'Account';
+      btn.textContent = `👤 ${label}`;
+      btn.title = `Signed in as ${user.email}`;
+      btn.classList.add('signed-in');
+    }
+  }catch(e){ /* not critical — button just shows the default state */ }
 }
 
 async function subscribeSubmit(){

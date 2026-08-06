@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
           age: p.age ?? null,
           birth_date: p.birth_date || null,
           appearances: p.appearances ?? null,
+          appearances_updated_at: p.appearances != null ? new Date().toISOString() : null,
           active: p.active !== false,
         }).select().single();
         if (error) throw error;
@@ -159,6 +160,7 @@ Deno.serve(async (req) => {
             age: row.age ?? null,
             birth_date: row.birth_date || null,
             appearances: row.appearances ?? null,
+            appearances_updated_at: row.appearances != null ? new Date().toISOString() : null,
             active: true,
           });
         }
@@ -217,7 +219,10 @@ Deno.serve(async (req) => {
           if (row.era) patch.era = row.era;
           if (row.age !== undefined && row.age !== null && row.age !== "") patch.age = Number(row.age);
           if (row.birth_date) patch.birth_date = row.birth_date;
-          if (row.appearances !== undefined && row.appearances !== null && row.appearances !== "") patch.appearances = Number(row.appearances);
+          if (row.appearances !== undefined && row.appearances !== null && row.appearances !== "") {
+            patch.appearances = Number(row.appearances);
+            patch.appearances_updated_at = new Date().toISOString();
+          }
           if (!Object.keys(patch).length) continue;
 
           const { error } = await supabase.from("players").update(patch).eq("id", id);
@@ -232,6 +237,12 @@ Deno.serve(async (req) => {
         const patch: Record<string, unknown> = {};
         for (const k of ["first_name", "last_name", "position", "nationality", "era", "age", "birth_date", "appearances", "active"]) {
           if (k in p) patch[k] = p[k];
+        }
+        if ("appearances" in patch) {
+          const { data: existing } = await supabase.from("players").select("appearances").eq("id", p.id).single();
+          if (!existing || existing.appearances !== patch.appearances) {
+            patch.appearances_updated_at = patch.appearances != null ? new Date().toISOString() : null;
+          }
         }
         const { data, error } = await supabase.from("players").update(patch).eq("id", p.id).select().single();
         if (error) throw error;
@@ -324,6 +335,130 @@ Deno.serve(async (req) => {
         const { error } = await supabase.from("goals").delete().eq("id", p.id);
         if (error) throw error;
         return json({ ok: true, data: { deleted: true } });
+      }
+
+      case "save_fixture": {
+        const p = payload || {};
+        if (!p.opponent || !p.match_date) {
+          return json({ ok: false, error: "opponent and match_date are required" }, 400);
+        }
+        const record = {
+          opponent: p.opponent,
+          match_date: p.match_date,
+          kickoff_time: p.kickoff_time || null,
+          competition: p.competition || null,
+          home_away: p.home_away || null,
+          status: p.status || "Scheduled",
+        };
+        let data, error;
+        if (p.id) {
+          ({ data, error } = await supabase.from("fixtures").update(record).eq("id", p.id).select().single());
+        } else {
+          ({ data, error } = await supabase.from("fixtures").insert(record).select().single());
+        }
+        if (error) throw error;
+        return json({ ok: true, data });
+      }
+
+      case "delete_fixture": {
+        const p = payload || {};
+        if (!p.id) return json({ ok: false, error: "id is required" }, 400);
+        const { error } = await supabase.from("fixtures").delete().eq("id", p.id);
+        if (error) throw error;
+        return json({ ok: true, data: { deleted: true } });
+      }
+
+      case "calculate_fixture_scores": {
+        const p = payload || {};
+        if (!p.fixture_id) return json({ ok: false, error: "fixture_id is required" }, 400);
+        const { data, error } = await supabase.rpc("calculate_fixture_scores", { fid: p.fixture_id });
+        if (error) throw error;
+        const scoredCount = data?.[0]?.scored_count ?? 0;
+        return json({ ok: true, data: { scoredCount } });
+      }
+
+      case "save_matchday": {
+        const p = payload || {};
+        if (!p.match_date || !p.opponent || !p.formation || !Array.isArray(p.lineup) || !p.lineup.length) {
+          return json({ ok: false, error: "match_date, opponent, formation and a lineup are required" }, 400);
+        }
+
+        const newIds = [...new Set(p.lineup.map((row: any) => row.player_id).filter(Boolean))];
+
+        let previouslyCounted: string[] = [];
+        if (p.id) {
+          const { data: existing } = await supabase.from("matchdays").select("appearances_counted_for").eq("id", p.id).single();
+          previouslyCounted = (existing?.appearances_counted_for as string[]) || [];
+        }
+
+        const newlyAdded = newIds.filter((id) => !previouslyCounted.includes(id));
+        const removed = previouslyCounted.filter((id) => !newIds.includes(id));
+
+        // Credit an appearance to anyone newly included in this matchday.
+        await Promise.all(newlyAdded.map(async (playerId) => {
+          const { data: player } = await supabase.from("players").select("appearances").eq("id", playerId).single();
+          const current = player?.appearances ?? 0;
+          await supabase.from("players").update({
+            appearances: current + 1,
+            appearances_updated_at: new Date().toISOString(),
+          }).eq("id", playerId);
+        }));
+
+        // Undo the appearance for anyone removed from an edited matchday.
+        await Promise.all(removed.map(async (playerId) => {
+          const { data: player } = await supabase.from("players").select("appearances").eq("id", playerId).single();
+          const current = player?.appearances ?? 0;
+          await supabase.from("players").update({
+            appearances: Math.max(0, current - 1),
+            appearances_updated_at: new Date().toISOString(),
+          }).eq("id", playerId);
+        }));
+
+        const record = {
+          match_date: p.match_date,
+          opponent: p.opponent,
+          competition: p.competition || null,
+          home_away: p.home_away || null,
+          hull_score: p.hull_score ?? null,
+          opponent_score: p.opponent_score ?? null,
+          formation: p.formation,
+          lineup: p.lineup,
+          fixture_id: p.fixture_id || null,
+          goalscorers: p.goalscorers || [],
+          appearances_counted_for: newIds,
+          updated_at: new Date().toISOString(),
+        };
+
+        let data, error;
+        if (p.id) {
+          ({ data, error } = await supabase.from("matchdays").update(record).eq("id", p.id).select().single());
+        } else {
+          ({ data, error } = await supabase.from("matchdays").insert(record).select().single());
+        }
+        if (error) throw error;
+        return json({ ok: true, data: { matchday: data, appearancesAdded: newlyAdded.length, appearancesRemoved: removed.length } });
+      }
+
+      case "delete_matchday": {
+        const p = payload || {};
+        if (!p.id) return json({ ok: false, error: "id is required" }, 400);
+
+        const { data: existing } = await supabase.from("matchdays").select("appearances_counted_for").eq("id", p.id).single();
+        const counted: string[] = (existing?.appearances_counted_for as string[]) || [];
+
+        // Deleting a matchday undoes every appearance it credited.
+        await Promise.all(counted.map(async (playerId) => {
+          const { data: player } = await supabase.from("players").select("appearances").eq("id", playerId).single();
+          const current = player?.appearances ?? 0;
+          await supabase.from("players").update({
+            appearances: Math.max(0, current - 1),
+            appearances_updated_at: new Date().toISOString(),
+          }).eq("id", playerId);
+        }));
+
+        const { error } = await supabase.from("matchdays").delete().eq("id", p.id);
+        if (error) throw error;
+        return json({ ok: true, data: { deleted: true, appearancesRemoved: counted.length } });
       }
 
       default:

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team News — TIGERDLE</title>
+<meta name="description" content="See Hull City's lineup and player ratings from the latest matchday.">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .md-header{ text-align:center; margin:20px 0 18px; }
+  .md-header .vs{ font-family:var(--display); font-size:26px; color:var(--paper); margin:6px 0 2px; }
+  .md-header .score{ font-family:var(--display); font-size:34px; color:var(--amber); }
+  .md-header .meta{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.05em; }
+  .md-picker{ display:flex; justify-content:center; margin-bottom:18px; }
+  .md-picker select{
+    background:var(--ink-2); border:1px solid var(--line); color:var(--paper); font-family:var(--mono);
+    font-size:12px; padding:9px 14px; border-radius:999px; outline:none;
+  }
+  .pitch-wrap{ position:relative; width:100%; max-width:420px; margin:0 auto; aspect-ratio:100/130; border-radius:12px; overflow:hidden; border:1px solid var(--line); }
+  .pitch-lines{ position:absolute; inset:0; width:100%; height:100%; }
+  .pitch-players{ position:absolute; inset:0; }
+  .pitch-player{ position:absolute; transform:translate(-50%,-50%); text-align:center; width:64px; }
+  .pitch-dot{
+    width:34px; height:34px; border-radius:50%; background:var(--amber); color:var(--ink);
+    font-family:var(--display); font-size:14px; display:flex; align-items:center; justify-content:center;
+    margin:0 auto 3px; border:2px solid var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+  .pitch-dot.no-rating{ background:var(--ink-3); color:var(--paper); border-color:var(--line); }
+  .pitch-name{
+    font-family:var(--mono); font-size:9.5px; color:var(--paper); background:rgba(13,15,20,0.75);
+    padding:2px 5px; border-radius:4px; white-space:nowrap; display:inline-block; max-width:64px; overflow:hidden; text-overflow:ellipsis;
+  }
+  .subs-list{ margin-top:20px; }
+  .subs-list h3{ font-family:var(--display); font-weight:400; font-size:17px; color:var(--amber-soft); margin:0 0 8px; text-align:center; }
+  .sub-chip{
+    display:inline-flex; align-items:center; gap:6px; background:var(--ink-2); border:1px solid var(--line);
+    border-radius:999px; padding:6px 12px 6px 6px; margin:4px; font-size:12.5px;
+  }
+  .sub-chip .rtg{
+    background:var(--amber); color:var(--ink); border-radius:50%; width:20px; height:20px; font-size:10px;
+    font-family:var(--display); display:flex; align-items:center; justify-content:center;
+  }
+  .subs-row{ text-align:center; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="wrap">
+  <header style="padding:20px 0 4px; text-align:center;">
+    <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
+    <h1 class="title" style="font-size:clamp(30px,7vw,44px);">Team News</h1>
+    <p class="tagline">The lineup, the formation, and how everyone rated.</p>
+  </header>
+
+  <div id="md-picker-wrap" class="md-picker" style="display:none;">
+    <select id="md-picker"></select>
+  </div>
+
+  <div id="md-content">
+    <div class="empty-state">Loading…</div>
+  </div>
+</div>
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('team');
+
+const FORMATION_COORDS = {
+  "4-4-2": [[50,8],[84,26],[36,24],[64,24],[16,26],[84,55],[38,52],[62,52],[16,55],[38,85],[62,85]],
+  "4-3-3": [[50,8],[84,26],[36,24],[64,24],[16,26],[30,50],[50,46],[70,50],[82,72],[50,85],[18,72]],
+  "4-2-3-1": [[50,8],[84,26],[36,24],[64,24],[16,26],[38,42],[62,42],[82,64],[50,60],[18,64],[50,85]],
+  "3-5-2": [[50,8],[30,22],[50,20],[70,22],[88,42],[30,50],[50,48],[70,50],[12,42],[38,85],[62,85]],
+  "5-3-2": [[50,8],[88,30],[30,22],[50,20],[70,22],[12,30],[30,52],[50,50],[70,52],[38,85],[62,85]],
+};
+
+function pitchSvg(){
+  return `<svg class="pitch-lines" viewBox="0 0 100 130" preserveAspectRatio="none">
+    <rect width="100" height="130" fill="#10231a"/>
+    <rect x="2" y="2" width="96" height="126" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <line x1="2" y1="65" x2="98" y2="65" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <circle cx="50" cy="65" r="11" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <rect x="24" y="2" width="52" height="16" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <rect x="24" y="112" width="52" height="16" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <rect x="38" y="2" width="24" height="6" fill="none" stroke="rgba(245,163,0,0.2)" stroke-width="0.3"/>
+    <rect x="38" y="122" width="24" height="6" fill="none" stroke="rgba(245,163,0,0.2)" stroke-width="0.3"/>
+  </svg>`;
+}
+
+function renderMatchday(m){
+  const content = document.getElementById('md-content');
+  const starters = (m.lineup || []).filter(r => !r.is_sub);
+  const subs = (m.lineup || []).filter(r => r.is_sub);
+  const coords = FORMATION_COORDS[m.formation] || [];
+  const hasAnyRating = (m.lineup || []).some(r => r.rating != null);
+
+  const score = (m.hull_score != null && m.opponent_score != null)
+    ? `<div class="score">${m.hull_score} - ${m.opponent_score}</div>`
+    : (hasAnyRating ? '' : `<div class="meta" style="margin-top:4px; color:var(--amber-soft);">Team news — ratings and result added after the match</div>`);
+
+  const playersHtml = starters.map((p, i)=>{
+    const c = coords[i] || [50,50];
+    const hasRating = p.rating !== null && p.rating !== undefined;
+    return `
+      <div class="pitch-player" style="left:${c[0]}%; top:${c[1]}%;">
+        <div class="pitch-dot ${hasRating?'':'no-rating'}">${hasRating ? p.rating : p.slot}</div>
+        <div class="pitch-name">${escapeHtml(p.last_name)}</div>
+      </div>`;
+  }).join('');
+
+  const subsHtml = subs.length ? `
+    <div class="subs-list">
+      <h3>Substitutes used</h3>
+      <div class="subs-row">
+        ${subs.map(s => `<span class="sub-chip">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}${s.rating!=null?`<span class="rtg">${s.rating}</span>`:''}</span>`).join('')}
+      </div>
+    </div>` : '';
+
+  content.innerHTML = `
+    <div class="md-header">
+      <div class="meta">${new Date(m.match_date).toLocaleDateString(undefined,{weekday:'long', day:'numeric', month:'long', year:'numeric'})}${m.competition ? ' · '+escapeHtml(m.competition) : ''}${m.home_away ? ' · '+m.home_away : ''}</div>
+      <div class="vs">Hull City vs ${escapeHtml(m.opponent)}</div>
+      ${score}
+      <div class="meta" style="margin-top:6px;">${m.formation}</div>
+    </div>
+    <div class="pitch-wrap">
+      ${pitchSvg()}
+      <div class="pitch-players">${playersHtml}</div>
+    </div>
+    ${subsHtml}
+  `;
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+(async function(){
+  const content = document.getElementById('md-content');
+  try{
+    const { data, error } = await sb.from('matchdays').select('*').order('match_date', {ascending:false}).limit(20);
+    if(error || !data || !data.length){
+      content.innerHTML = `<div class="empty-state">No matchdays recorded yet — check back after the next game.</div>`;
+      return;
+    }
+    const pickerWrap = document.getElementById('md-picker-wrap');
+    const picker = document.getElementById('md-picker');
+    if(data.length > 1){
+      pickerWrap.style.display = 'flex';
+      picker.innerHTML = data.map((m,i)=>`<option value="${i}">vs ${escapeHtml(m.opponent)} — ${m.match_date}</option>`).join('');
+      picker.addEventListener('change', ()=> renderMatchday(data[Number(picker.value)]));
+    }
+    renderMatchday(data[0]);
+  }catch(e){
+    content.innerHTML = `<div class="empty-state">Couldn't load team news right now.</div>`;
+  }
+})();
+</script>
+</body>
+</html>
