@@ -194,6 +194,18 @@
 
     <!-- Fixtures — Phase 1 of the predictor roadmap -->
     <div class="formcard">
+      <h3>Bulk add fixtures</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        One fixture per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Opponent,Date,KickoffTime,HomeAway,Competition,Status</code><br>
+        Date as YYYY-MM-DD. HomeAway is Home or Away. Competition and Status are optional — Status defaults to Scheduled.
+        Already-added fixtures (same opponent + date) are skipped automatically, so it's safe to paste the same list twice.
+      </p>
+      <div class="field"><textarea id="fx-bulk" placeholder="Middlesbrough,2026-08-16,15:00,Home,Premier League,&#10;Newcastle United,2026-08-23,17:30,Away,Premier League,"></textarea></div>
+      <button class="primary-btn" id="fx-bulk-submit">Add all</button>
+      <div class="subscribe-msg" id="fx-bulk-msg"></div>
+    </div>
+
+    <div class="formcard">
       <h3 id="fx-form-heading">Add a fixture</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
         Premier League fixtures — add and adjust them here as the season's confirmed or changes.
@@ -898,6 +910,36 @@ document.getElementById('g-submit').addEventListener('click', async ()=>{
 });
 
 /* ==================== Fixtures ==================== */
+/* ---- Bulk add fixtures ---- */
+document.getElementById('fx-bulk-submit').addEventListener('click', async ()=>{
+  const raw = document.getElementById('fx-bulk').value;
+  const msg = document.getElementById('fx-bulk-msg');
+  const badLines = [];
+  const fixtures = [];
+  raw.split('\n').map(l=>l.trim()).filter(Boolean).forEach((line, i)=>{
+    const [opponent, match_date, kickoff_time, home_away, competition, status] = line.split(',').map(p=>p.trim());
+    if(!opponent || !match_date){ badLines.push(i+1); return; }
+    fixtures.push({
+      opponent, match_date,
+      kickoff_time: kickoff_time || undefined,
+      home_away: home_away || undefined,
+      competition: competition || undefined,
+      status: status || undefined,
+    });
+  });
+  if(!fixtures.length){ msg.textContent = 'No valid lines found — check the format.'; return; }
+  msg.textContent = `Adding ${fixtures.length} fixture(s)…`;
+  try{
+    const data = await callAdmin('bulk_add_fixtures', { fixtures });
+    let m = `Added ${data.inserted} fixture(s).`;
+    if(data.duplicatesSkipped) m += ` ${data.duplicatesSkipped} already existed, skipped.`;
+    if(badLines.length) m += ` Skipped line(s) ${badLines.join(', ')} — missing opponent or date.`;
+    msg.textContent = m;
+    document.getElementById('fx-bulk').value = '';
+    refreshFixtures();
+  }catch(e){ msg.textContent = e.message; }
+});
+
 let editingFixtureId = null;
 
 function resetFixtureForm(){
