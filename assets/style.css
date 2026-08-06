@@ -81,6 +81,13 @@ a{ color:var(--amber-soft); }
 .account-btn:hover, .account-btn.current{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
 .account-btn.signed-in{ border-color:var(--amber-deep); color:var(--amber-soft); }
 .account-btn.signed-in:hover, .account-btn.signed-in.current{ color:var(--ink); background:var(--amber); border-color:var(--amber); }
+.nav-group{ display:flex; align-items:center; gap:16px; }
+
+@media (max-width:560px){
+  .brandrow{ flex-wrap:wrap; justify-content:center; text-align:center; row-gap:10px; }
+  .nav-group{ width:100%; justify-content:center; flex-wrap:wrap; gap:8px; }
+  .site-nav{ justify-content:center; width:100%; }
+}
 
 .kicker{ font-family:var(--mono); font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--amber-soft); margin-bottom:4px; }
 h1.title{ font-family:var(--display); font-weight:400; font-size:clamp(34px,8vw,52px); letter-spacing:.02em; margin:8px 0 0; line-height:.95; text-shadow:2px 2px 0 var(--amber-deep); }

@@ -73,6 +73,17 @@
       <button class="ghost-btn" id="acc-sign-out">Sign out</button>
     </div>
 
+    <div class="account-card" style="margin:0 auto 24px;">
+      <h2 style="font-size:18px;">Your display name</h2>
+      <p style="margin-bottom:12px;">This is what league-mates see — never your email. Pick something recognizable, or stay anonymous.</p>
+      <input type="text" id="acc-display-name" placeholder="e.g. TigerFan42" maxlength="24">
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button class="primary-btn" id="acc-save-name" style="flex:1;">Save</button>
+        <button class="ghost-btn" id="acc-random-name">🎲 Anonymous</button>
+      </div>
+      <div class="subscribe-msg" id="acc-name-msg" style="text-align:center; margin-top:8px;"></div>
+    </div>
+
     <div id="stats-dashboard"></div>
 
     <a href="predictor.html" class="cta-btn">
@@ -165,9 +176,42 @@ async function showSignedIn(user){
   document.getElementById('signed-out-view').style.display = 'none';
   document.getElementById('signed-in-view').style.display = 'block';
   document.getElementById('acc-email-display').textContent = user.email;
+  await loadDisplayName(user.id);
   const stats = await syncStatsForUser(user.id);
   renderStatsDashboard(stats);
 }
+
+async function loadDisplayName(userId){
+  const { data } = await sb.from('profiles').select('display_name').eq('user_id', userId).single();
+  document.getElementById('acc-display-name').value = data?.display_name || '';
+}
+
+function randomAnonymousName(){
+  return 'Tiger' + Math.floor(1000 + Math.random() * 9000);
+}
+
+document.getElementById('acc-random-name').addEventListener('click', ()=>{
+  document.getElementById('acc-display-name').value = randomAnonymousName();
+});
+
+document.getElementById('acc-save-name').addEventListener('click', async ()=>{
+  const msg = document.getElementById('acc-name-msg');
+  const name = document.getElementById('acc-display-name').value.trim();
+  if(!name){ msg.textContent = 'Enter a name first, or tap 🎲 for a random one.'; return; }
+  const { data: { session } } = await sb.auth.getSession();
+  const userId = session?.user?.id;
+  if(!userId) return;
+  msg.textContent = 'Saving…';
+  try{
+    const { error } = await sb.from('profiles').update({ display_name: name }).eq('user_id', userId);
+    if(error) throw error;
+    msg.textContent = 'Saved.';
+  }catch(e){
+    // The moderation trigger raises a plain exception — its message is
+    // already written for a person to read, so just show it directly.
+    msg.textContent = e.message;
+  }
+});
 
 document.getElementById('acc-send-link').addEventListener('click', async ()=>{
   const email = document.getElementById('acc-email').value.trim();

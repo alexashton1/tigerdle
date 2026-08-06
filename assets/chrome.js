@@ -29,7 +29,7 @@ function renderChrome(current){
             ${BADGE_SVG}
             <span class="logo">TIGERDLE</span>
           </a>
-          <div style="display:flex; align-items:center; gap:16px;">
+          <div class="nav-group">
             <nav class="site-nav">
               <a href="index.html" ${current==='home'?'class="current"':''}>Home</a>
               <a href="game.html" ${current==='play'?'class="current"':''}>Play</a>

@@ -297,6 +297,7 @@
       <select id="score-fixture-select"></select>
       <button class="primary-btn" id="score-calculate-btn" style="margin-top:10px;">Calculate scores</button>
       <div class="subscribe-msg" id="score-calculate-msg"></div>
+      <div id="score-results" style="margin-top:16px;"></div>
     </div>
   </div>
 
@@ -1033,8 +1034,42 @@ document.getElementById('score-calculate-btn').addEventListener('click', async (
   try{
     const data = await callAdmin('calculate_fixture_scores', { fixture_id: fixtureId });
     msg.textContent = `Done — scored ${data.scoredCount} prediction(s).`;
+    loadFixtureScores(fixtureId);
   }catch(e){ msg.textContent = e.message; }
 });
+
+document.getElementById('score-fixture-select').addEventListener('change', (e)=>{
+  if(e.target.value) loadFixtureScores(e.target.value);
+  else document.getElementById('score-results').innerHTML = '';
+});
+
+async function loadFixtureScores(fixtureId){
+  const container = document.getElementById('score-results');
+  container.innerHTML = '<div class="meta">Loading…</div>';
+  try{
+    const data = await callAdmin('list_fixture_scores', { fixture_id: fixtureId });
+    const scores = data.scores || [];
+    if(!scores.length){ container.innerHTML = '<div class="meta">No scores calculated for this fixture yet.</div>'; return; }
+    container.innerHTML = scores.map(s => `
+      <div class="admin-row">
+        <div>${s.display_name}
+          <span class="meta">position ${s.position_points} · score ${s.score_points} · scorer ${s.scorer_points} · first scorer ${s.first_scorer_points}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <input type="number" class="score-override-input" data-score-id="${s.id}" value="${s.total_points}" style="width:60px; background:var(--ink); border:1px solid var(--line); color:var(--paper); padding:6px 8px; border-radius:6px; text-align:center;">
+          <button class="ghost-btn" data-override-save="${s.id}">Save</button>
+        </div>
+      </div>`).join('');
+    container.querySelectorAll('[data-override-save]').forEach(btn=>btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.overrideSave;
+      const input = container.querySelector(`.score-override-input[data-score-id="${id}"]`);
+      try{
+        await callAdmin('override_prediction_score', { id, total_points: Number(input.value) });
+        toast('Score updated.');
+      }catch(e){ toast(e.message); }
+    }));
+  }catch(e){ container.innerHTML = `<div class="meta">${e.message}</div>`; }
+}
 
 /* ==================== Matchdays ==================== */
 const FORMATIONS = {

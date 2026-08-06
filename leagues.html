@@ -150,7 +150,7 @@ document.getElementById('join-btn').addEventListener('click', async ()=>{
     const { data, error } = await sb.rpc('join_league_by_code', { join_code: code });
     if(error) throw error;
     const league = data?.[0];
-    msg.textContent = league ? `Joined "${league.league_name}".` : 'Joined.';
+    msg.textContent = league ? `Joined "${league.result_league_name}".` : 'Joined.';
     document.getElementById('join-code').value = '';
     loadMyLeagues(); loadPublicLeagues();
   }catch(e){ msg.textContent = e.message; }
@@ -166,7 +166,7 @@ document.getElementById('create-btn').addEventListener('click', async ()=>{
     const { data, error } = await sb.rpc('create_league', { league_name: name, make_public: isPublic });
     if(error) throw error;
     const league = data?.[0];
-    msg.textContent = league ? `Created! Code: ${league.league_code}` : 'Created.';
+    msg.textContent = league ? `Created! Code: ${league.result_league_code}` : 'Created.';
     document.getElementById('create-name').value = '';
     document.getElementById('create-public').checked = false;
     loadMyLeagues(); loadPublicLeagues();
@@ -233,7 +233,7 @@ async function openLeagueDetail(leagueId){
   if(leaderboard && leaderboard.length && leaderboard.some(r=>r.fixtures_scored > 0)){
     const userIds = leaderboard.map(r=>r.user_id);
     const { data: profiles } = await sb.from('profiles').select('*').in('user_id', userIds);
-    const nameFor = (uid) => uid === currentUser.id ? 'You' : (profiles||[]).find(p=>p.user_id===uid)?.email || 'Player';
+    const nameFor = (uid) => uid === currentUser.id ? 'You' : (profiles||[]).find(p=>p.user_id===uid)?.display_name || 'Player';
     leaderboardHtml = `
       <div class="admin-list">
         ${leaderboard.map((row, i)=>`
