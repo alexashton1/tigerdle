@@ -26,9 +26,17 @@
     cursor:pointer; transition:border-color .15s ease;
   }
   .fixture-card:hover{ border-color:var(--amber-deep); }
+  .fixture-card.fixture-next{ border:2px solid var(--amber); box-shadow:0 4px 16px rgba(245,163,0,0.15); }
+  .fixture-card.fixture-locked{ cursor:default; opacity:.5; }
+  .fixture-card.fixture-locked:hover{ border-color:var(--line); }
+  .next-badge{
+    display:inline-block; font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.06em;
+    background:var(--amber); color:var(--ink); padding:2px 8px; border-radius:999px; margin-bottom:5px;
+  }
   .fixture-main{ font-family:var(--body); font-size:14px; color:var(--paper); }
   .fixture-meta{ font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin-top:3px; }
   .fixture-status{ font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.04em; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .fixture-status.locked{ background:var(--ink); border:1px solid var(--line); color:var(--paper-dim); font-size:9px; text-align:right; }
   .fixture-status.predicted{ background:var(--good); color:var(--ink); }
   .fixture-status.not-predicted{ background:var(--ink); border:1px solid var(--line); color:var(--paper-dim); }
 
@@ -212,15 +220,23 @@ async function loadFixtureList(){
   const { data: myPredictions } = await sb.from('predictions').select('fixture_id').eq('user_id', currentUser.id);
   const predictedIds = new Set((myPredictions||[]).map(p=>p.fixture_id));
 
-  list.innerHTML = fixtures.map(fx=>{
+  // Only the soonest fixture is open — everything after it stays locked
+  // until it's had its kickoff. One at a time, deliberately.
+  const nextFixtureId = fixtures[0].id;
+
+  list.innerHTML = fixtures.map((fx, i)=>{
     const has = predictedIds.has(fx.id);
+    const isNext = fx.id === nextFixtureId;
+    const statusLabel = has ? '✓ Predicted' : (isNext ? 'Predict now' : `Opens after ${escapeHtml(fixtures[i-1].opponent)}`);
+    const statusClass = has ? 'predicted' : (isNext ? 'not-predicted' : 'locked');
     return `
-    <div class="fixture-card" data-fixture-id="${fx.id}">
+    <div class="fixture-card ${isNext ? 'fixture-next' : ''} ${!isNext && !has ? 'fixture-locked' : ''}" ${isNext || has ? `data-fixture-id="${fx.id}"` : ''}>
       <div>
+        ${isNext ? '<span class="next-badge">NEXT UP</span>' : ''}
         <div class="fixture-main">Hull City vs ${escapeHtml(fx.opponent)}</div>
         <div class="fixture-meta">${fx.match_date}${fx.kickoff_time ? ' '+fx.kickoff_time : ''} · ${fx.home_away||''} · ${escapeHtml(fx.competition||'')}</div>
       </div>
-      <span class="fixture-status ${has?'predicted':'not-predicted'}">${has ? '✓ Predicted' : 'Predict now'}</span>
+      <span class="fixture-status ${statusClass}">${statusLabel}</span>
     </div>`;
   }).join('');
 
@@ -263,12 +279,21 @@ async function openPredictView(fixture){
 
   const { data: existing } = await sb.from('predictions').select('*').eq('user_id', currentUser.id).eq('fixture_id', fixture.id).single();
 
+  // A previous week's team to offer reusing — most recent prediction on
+  // a DIFFERENT fixture, so there's something to copy from.
+  let previousTeam = null;
+  if(!existing){
+    const { data: recent } = await sb.from('predictions').select('*').eq('user_id', currentUser.id).neq('fixture_id', fixture.id).order('updated_at', {ascending:false}).limit(1);
+    previousTeam = recent?.[0] || null;
+  }
+
   const content = document.getElementById('predict-content');
   content.innerHTML = `
     <div class="formcard">
       <h3>Hull City vs ${escapeHtml(fixture.opponent)}</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin:2px 0 14px;">${fixture.match_date}${fixture.kickoff_time ? ' '+fixture.kickoff_time : ''} · ${fixture.home_away||''} · ${escapeHtml(fixture.competition||'')}</p>
       ${locked ? '<div class="locked-note">⏱ Team sheets are out — predictions closed 75 minutes before kick-off.</div>' : ''}
+      ${previousTeam && !locked ? `<button class="ghost-btn" id="pr-reuse-team" style="width:100%; margin-bottom:14px;">📋 Use my team from last time (${previousTeam.formation})</button>` : ''}
       <div class="score-picker-row">
         <div class="score-picker">
           <label>Hull</label>
@@ -331,6 +356,15 @@ async function openPredictView(fixture){
     document.getElementById('pr-save').addEventListener('click', ()=> savePrediction(fixture));
   }
   document.getElementById('pr-share').addEventListener('click', ()=> shareMyPrediction(fixture));
+
+  const reuseBtn = document.getElementById('pr-reuse-team');
+  if(reuseBtn){
+    reuseBtn.addEventListener('click', ()=>{
+      document.getElementById('pr-formation').value = previousTeam.formation;
+      renderPredictSlots(previousTeam.formation, previousTeam.lineup);
+      toast('Team copied — scoreline and scorers left for you to set fresh.');
+    });
+  }
 
   loadAggregate(fixture.id);
 }

@@ -74,14 +74,23 @@
     </div>
 
     <div class="account-card" style="margin:0 auto 24px;">
-      <h2 style="font-size:18px;">Your display name</h2>
-      <p style="margin-bottom:12px;">This is what league-mates see — never your email. Pick something recognizable, or stay anonymous.</p>
-      <input type="text" id="acc-display-name" placeholder="e.g. TigerFan42" maxlength="24">
-      <div style="display:flex; gap:8px; margin-top:4px;">
-        <button class="primary-btn" id="acc-save-name" style="flex:1;">Save</button>
-        <button class="ghost-btn" id="acc-random-name">🎲 Anonymous</button>
+      <div id="name-view-state" style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">Your display name</div>
+          <div style="font-family:var(--display); font-size:20px; color:var(--paper); margin-top:2px;" id="name-view-display"></div>
+        </div>
+        <button class="ghost-btn" id="name-edit-toggle">Edit</button>
       </div>
-      <div class="subscribe-msg" id="acc-name-msg" style="text-align:center; margin-top:8px;"></div>
+      <div id="name-edit-state" style="display:none;">
+        <h2 style="font-size:18px;">Your display name</h2>
+        <p style="margin-bottom:12px;">This is what league-mates see — never your email. Pick something recognizable, or stay anonymous.</p>
+        <input type="text" id="acc-display-name" placeholder="e.g. TigerFan42" maxlength="24">
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button class="primary-btn" id="acc-save-name" style="flex:1;">Save</button>
+          <button class="ghost-btn" id="acc-random-name">🎲 Anonymous</button>
+        </div>
+        <div class="subscribe-msg" id="acc-name-msg" style="text-align:center; margin-top:8px;"></div>
+      </div>
     </div>
 
     <div id="stats-dashboard"></div>
@@ -183,8 +192,22 @@ async function showSignedIn(user){
 
 async function loadDisplayName(userId){
   const { data } = await sb.from('profiles').select('display_name').eq('user_id', userId).single();
-  document.getElementById('acc-display-name').value = data?.display_name || '';
+  const name = data?.display_name || '';
+  document.getElementById('acc-display-name').value = name;
+  showNameViewState(name);
 }
+
+function showNameViewState(name){
+  document.getElementById('name-view-display').textContent = name || '(not set)';
+  document.getElementById('name-view-state').style.display = 'flex';
+  document.getElementById('name-edit-state').style.display = 'none';
+}
+function showNameEditState(){
+  document.getElementById('name-view-state').style.display = 'none';
+  document.getElementById('name-edit-state').style.display = 'block';
+  document.getElementById('acc-name-msg').textContent = '';
+}
+document.getElementById('name-edit-toggle').addEventListener('click', showNameEditState);
 
 function randomAnonymousName(){
   return 'Tiger' + Math.floor(1000 + Math.random() * 9000);
@@ -205,7 +228,7 @@ document.getElementById('acc-save-name').addEventListener('click', async ()=>{
   try{
     const { error } = await sb.from('profiles').update({ display_name: name }).eq('user_id', userId);
     if(error) throw error;
-    msg.textContent = 'Saved.';
+    showNameViewState(name);
   }catch(e){
     // The moderation trigger raises a plain exception — its message is
     // already written for a person to read, so just show it directly.
