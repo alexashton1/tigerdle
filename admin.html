@@ -1092,7 +1092,7 @@ let subCounter = 0;
 })();
 
 function activePlayerOptionsHtml(selectedId){
-  const active = allPlayersCache.filter(p=>p.active).sort((a,b)=> a.last_name.localeCompare(b.last_name));
+  const active = allPlayersCache.filter(p=>p.active && p.era === 'Current Squad').sort((a,b)=> a.last_name.localeCompare(b.last_name));
   return `<option value="">— Select —</option>` + active.map(p=>
     `<option value="${p.id}" ${p.id===selectedId?'selected':''}>${p.first_name} ${p.last_name}</option>`
   ).join('');

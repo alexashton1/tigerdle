@@ -120,6 +120,11 @@
   <div id="signed-in-view" style="display:none;">
     <div id="fixture-list-view">
       <div id="fixture-list"></div>
+
+      <div id="past-results-section" style="display:none; margin-top:28px;">
+        <h3 style="font-family:var(--display); font-weight:400; font-size:19px; color:var(--amber-soft); margin-bottom:10px;">Your past results</h3>
+        <div id="past-results-list"></div>
+      </div>
     </div>
 
     <div id="predict-view" style="display:none;">
@@ -203,10 +208,92 @@ async function boot(user){
   const { data } = await sb.from('players').select('*').eq('era', 'Current Squad').eq('active', true).order('last_name');
   allPlayersCache = data || [];
   loadFixtureList();
+  loadPastResults();
 }
 
 sb.auth.onAuthStateChange((event, session)=>{ if(session?.user) boot(session.user); });
 sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.user); });
+
+/* ---------- past results ---------- */
+function renderScoreBreakdown(score){
+  const b = score.breakdown || {};
+  const positions = b.correct_positions || [];
+  const positionsHtml = positions.length
+    ? positions.map(p => `<div class="agg-row"><span>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)} — correct at ${p.slot}</span><span class="agg-pct">+2</span></div>`).join('')
+    : `<div class="empty-state" style="padding:8px 0;">No players matched their exact position this time.</div>`;
+
+  let scoreLineHtml;
+  if(b.score_result === 'exact'){
+    scoreLineHtml = `<div class="agg-row"><span>Exact score — you called ${b.predicted_hull_score}-${b.predicted_opponent_score}</span><span class="agg-pct">+10</span></div>`;
+  } else if(b.score_result === 'result'){
+    scoreLineHtml = `<div class="agg-row"><span>Correct result (scoreline was ${b.actual_hull_score}-${b.actual_opponent_score}, you had ${b.predicted_hull_score}-${b.predicted_opponent_score})</span><span class="agg-pct">+5</span></div>`;
+  } else {
+    scoreLineHtml = `<div class="empty-state" style="padding:8px 0;">Scoreline prediction didn't match — actual was ${b.actual_hull_score ?? '?'}-${b.actual_opponent_score ?? '?'}.</div>`;
+  }
+
+  function scorerLine(detail, label){
+    if(!detail) return '';
+    return detail.hit
+      ? `<div class="agg-row"><span>${label}: ${escapeHtml(detail.first_name)} ${escapeHtml(detail.last_name)} — scored!</span><span class="agg-pct">+${detail.points}</span></div>`
+      : `<div class="empty-state" style="padding:8px 0;">${label}: ${escapeHtml(detail.first_name)} ${escapeHtml(detail.last_name)} — didn't score.</div>`;
+  }
+
+  return `
+    <h4 style="font-size:13px; color:var(--amber-soft); margin:0 0 6px;">Correct positions</h4>
+    ${positionsHtml}
+    <h4 style="font-size:13px; color:var(--amber-soft); margin:14px 0 6px;">Scoreline</h4>
+    ${scoreLineHtml}
+    <h4 style="font-size:13px; color:var(--amber-soft); margin:14px 0 6px;">Goalscorers</h4>
+    ${scorerLine(b.predicted_scorer, 'Predicted scorer') || '<div class="empty-state" style="padding:8px 0;">No scorer predicted.</div>'}
+    ${scorerLine(b.first_scorer, 'First scorer') || ''}
+  `;
+}
+
+async function loadPastResults(){
+  const section = document.getElementById('past-results-section');
+  const list = document.getElementById('past-results-list');
+
+  // Own scores only — RLS already confines this to rows that belong to
+  // the signed-in user (or, separately, league-mates' scores once
+  // scored — but this view is specifically "my results", so no need to
+  // widen the query here).
+  const { data: scores } = await sb.from('prediction_scores').select('*').eq('user_id', currentUser.id).order('calculated_at', {ascending:false});
+  if(!scores || !scores.length){ section.style.display = 'none'; return; }
+
+  const fixtureIds = scores.map(s => s.fixture_id);
+  const { data: fixtures } = await sb.from('fixtures').select('*').in('id', fixtureIds);
+
+  section.style.display = 'block';
+  list.innerHTML = scores.map((s, i)=>{
+    const fx = (fixtures||[]).find(f => f.id === s.fixture_id);
+    const opponent = fx ? fx.opponent : 'Unknown fixture';
+    return `
+    <div class="fixture-card" data-toggle-detail="${i}" style="cursor:pointer;">
+      <div>
+        <div class="fixture-main">Hull City vs ${escapeHtml(opponent)} <span class="fixture-meta">(tap for detail)</span></div>
+        <div class="fixture-meta">${fx ? fx.match_date : ''}</div>
+        <div class="agg-row" style="border:none; padding-top:8px;">
+          <span class="fixture-meta">Position: ${s.position_points} · Score: ${s.score_points} · Scorer: ${s.scorer_points} · First scorer: ${s.first_scorer_points}</span>
+        </div>
+      </div>
+      <div style="font-family:var(--display); font-size:22px; color:var(--amber); white-space:nowrap;">${s.total_points} pts</div>
+    </div>
+    <div id="past-detail-${i}" style="display:none; margin:-4px 0 14px; padding:14px 16px; background:var(--ink); border:1px solid var(--line); border-radius:0 0 10px 10px; border-top:none;"></div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-toggle-detail]').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      const i = card.dataset.toggleDetail;
+      const detailEl = document.getElementById(`past-detail-${i}`);
+      const isOpen = detailEl.style.display === 'block';
+      detailEl.style.display = isOpen ? 'none' : 'block';
+      if(!isOpen && !detailEl.dataset.rendered){
+        detailEl.innerHTML = renderScoreBreakdown(scores[i]);
+        detailEl.dataset.rendered = '1';
+      }
+    });
+  });
+}
 
 /* ---------- fixture list ---------- */
 async function loadFixtureList(){
@@ -217,8 +304,8 @@ async function loadFixtureList(){
     list.innerHTML = '<div class="empty-state">No upcoming fixtures added yet — check back soon.</div>';
     return;
   }
-  const { data: myPredictions } = await sb.from('predictions').select('fixture_id').eq('user_id', currentUser.id);
-  const predictedIds = new Set((myPredictions||[]).map(p=>p.fixture_id));
+  const { data: myPredictions } = await sb.from('predictions').select('fixture_id, is_auto_carried').eq('user_id', currentUser.id);
+  const predictedIds = new Map((myPredictions||[]).map(p=>[p.fixture_id, p.is_auto_carried]));
 
   // Only the soonest fixture is open — everything after it stays locked
   // until it's had its kickoff. One at a time, deliberately.
@@ -226,8 +313,9 @@ async function loadFixtureList(){
 
   list.innerHTML = fixtures.map((fx, i)=>{
     const has = predictedIds.has(fx.id);
+    const wasAutoCarried = predictedIds.get(fx.id) === true;
     const isNext = fx.id === nextFixtureId;
-    const statusLabel = has ? '✓ Predicted' : (isNext ? 'Predict now' : `Opens after ${escapeHtml(fixtures[i-1].opponent)}`);
+    const statusLabel = wasAutoCarried ? '🔄 Carried over' : (has ? '✓ Predicted' : (isNext ? 'Predict now' : `Opens after ${escapeHtml(fixtures[i-1].opponent)}`));
     const statusClass = has ? 'predicted' : (isNext ? 'not-predicted' : 'locked');
     return `
     <div class="fixture-card ${isNext ? 'fixture-next' : ''} ${!isNext && !has ? 'fixture-locked' : ''}" ${isNext || has ? `data-fixture-id="${fx.id}"` : ''}>
@@ -293,6 +381,7 @@ async function openPredictView(fixture){
       <h3>Hull City vs ${escapeHtml(fixture.opponent)}</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin:2px 0 14px;">${fixture.match_date}${fixture.kickoff_time ? ' '+fixture.kickoff_time : ''} · ${fixture.home_away||''} · ${escapeHtml(fixture.competition||'')}</p>
       ${locked ? '<div class="locked-note">⏱ Team sheets are out — predictions closed 75 minutes before kick-off.</div>' : ''}
+      ${existing?.is_auto_carried ? '<div class="locked-note">🔄 This was carried over from your last prediction automatically — change anything you like before it locks.</div>' : ''}
       ${previousTeam && !locked ? `<button class="ghost-btn" id="pr-reuse-team" style="width:100%; margin-bottom:14px;">📋 Use my team from last time (${previousTeam.formation})</button>` : ''}
       <div class="score-picker-row">
         <div class="score-picker">
@@ -436,7 +525,7 @@ async function savePrediction(fixture){
   try{
     const { error } = await sb.from('predictions').upsert({
       user_id: currentUser.id, fixture_id: fixture.id, formation, lineup, hull_score, opponent_score, scorers,
-      updated_at: new Date().toISOString(),
+      is_auto_carried: false, updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,fixture_id' });
     if(error) throw error;
     msg.textContent = 'Saved.';

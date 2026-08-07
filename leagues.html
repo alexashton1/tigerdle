@@ -51,7 +51,7 @@
   <header style="padding:20px 0 4px; text-align:center;">
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title" style="font-size:clamp(28px,7vw,40px);">Leagues</h1>
-    <p class="tagline">Compete with friends privately, or join the public leaderboard. Points aren't live yet — that's the next piece — but leagues and membership are ready now.</p>
+    <p class="tagline">Compete with friends privately, or join the public leaderboard. Real points, real leaderboards, updated after every match.</p>
   </header>
 
   <div id="signed-out-view">
@@ -177,21 +177,28 @@ async function loadPublicLeagues(){
   const container = document.getElementById('public-leagues-list');
   const { data, error } = await sb.from('leagues').select('*').eq('is_public', true).order('created_at', {ascending:true});
   if(error || !data || !data.length){ container.innerHTML = '<div class="empty-state">No public leagues yet.</div>'; return; }
-  container.innerHTML = data.map(l=>`
+
+  const { data: memberships } = await sb.from('league_members').select('league_id').eq('user_id', currentUser.id);
+  const myLeagueIds = new Set((memberships||[]).map(m=>m.league_id));
+
+  container.innerHTML = data.map(l=>{
+    const alreadyIn = myLeagueIds.has(l.id);
+    return `
     <div class="league-card" data-open-league="${l.id}" style="cursor:pointer;">
       <div>
         <div class="league-name">${escapeHtml(l.name)}</div>
-        <div class="league-meta">Public league</div>
+        <div class="league-meta">Public league${alreadyIn ? ' · already a member' : ''}</div>
       </div>
-      <button class="ghost-btn" data-join-public="${l.id}">Join</button>
-    </div>`).join('');
+      ${alreadyIn ? '<span class="fixture-status predicted">✓ Joined</span>' : `<button class="ghost-btn" data-join-public="${l.id}">Join</button>`}
+    </div>`;
+  }).join('');
   container.querySelectorAll('[data-join-public]').forEach(btn=>btn.addEventListener('click', async (e)=>{
     e.stopPropagation();
     try{
       const { error } = await sb.from('league_members').insert({ league_id: btn.dataset.joinPublic, user_id: currentUser.id });
       if(error && !error.message.includes('duplicate')) throw error;
       toast('Joined!');
-      loadMyLeagues();
+      loadMyLeagues(); loadPublicLeagues();
     }catch(err){ toast(err.message); }
   }));
   container.querySelectorAll('[data-open-league]').forEach(card=>card.addEventListener('click', ()=> openLeagueDetail(card.dataset.openLeague)));
