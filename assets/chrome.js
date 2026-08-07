@@ -35,7 +35,7 @@ function renderChrome(current){
               <a href="game.html" ${current==='play'?'class="current"':''}>Play</a>
               <a href="blog.html" ${current==='blog'?'class="current"':''}>Blog</a>
             </nav>
-            <a href="account.html" class="account-btn ${current==='account'?'current':''}" id="header-account-btn">👤 Account</a>
+            <a href="account.html" class="account-btn ${current==='account'?'current':''}" id="header-account-btn">👤 Sign In</a>
           </div>
         </div>
       </div>`;
