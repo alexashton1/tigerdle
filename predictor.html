@@ -78,6 +78,45 @@
     margin:0 auto 3px; border:2px solid var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.5);
   }
   .pitch-name{ font-family:var(--mono); font-size:9px; color:var(--paper); background:rgba(13,15,20,0.75); padding:2px 5px; border-radius:4px; white-space:nowrap; display:inline-block; max-width:70px; overflow:hidden; text-overflow:ellipsis; }
+  .pitch-dot.empty{ background:var(--ink-3); color:var(--paper-dim); border-style:dashed; border-color:var(--line); }
+  .swap-icon{
+    position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%;
+    background:var(--ink); border:1px solid var(--amber-deep); color:var(--amber-soft);
+    font-size:8px; display:flex; align-items:center; justify-content:center;
+  }
+  .pitch-dot{ position:relative; }
+  .pitch-swap-hint{ text-align:center; font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin:8px auto 16px; max-width:320px; }
+  .pitch-swap-hint b{ color:var(--amber-soft); }
+
+  .progress-bar-wrap{ background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:16px; }
+  .progress-counts{ display:flex; justify-content:center; gap:16px; font-family:var(--mono); font-size:11px; margin-bottom:8px; flex-wrap:wrap; }
+  .progress-count{ color:var(--paper-dim); }
+  .progress-count.complete{ color:var(--good); font-weight:700; }
+  .progress-count.over{ color:var(--bad); font-weight:700; }
+  .progress-track{ height:6px; background:var(--ink); border-radius:99px; overflow:hidden; max-width:400px; margin:0 auto; }
+  .progress-fill{ height:100%; background:var(--amber); transition:width .2s ease; }
+  .progress-fill.complete{ background:var(--good); }
+
+  .pos-section-title{
+    font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--amber-soft);
+    margin:18px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line);
+  }
+  .player-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; }
+  .player-card{
+    background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:11px 9px; text-align:center;
+    cursor:pointer; transition:all .15s ease; position:relative; user-select:none;
+  }
+  .player-card:hover{ border-color:var(--amber-deep); }
+  .player-card.selected{ background:var(--amber); border-color:var(--amber); }
+  .player-card.selected .player-card-name{ color:var(--ink); }
+  .player-card.disabled{ opacity:.35; cursor:not-allowed; }
+  .player-card.disabled:hover{ border-color:var(--line); }
+  .player-card-check{
+    position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%; background:var(--ink);
+    color:var(--amber); font-size:10px; display:none; align-items:center; justify-content:center; font-weight:700;
+  }
+  .player-card.selected .player-card-check{ display:flex; }
+  .player-card-name{ font-family:var(--body); font-size:12.5px; color:var(--paper); font-weight:600; }
 
   .agg-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
   .agg-row:last-child{ border-bottom:none; }
@@ -161,26 +200,29 @@ renderChrome('account');
    specific fixture, and the real goalscorers (in order) recorded for
    that matchday. Once both exist, this is the exact table to score
    predictions against. */
+
+/* Scoring rules — position points now match on BROAD position (GK/DF/MF/FW)
+   rather than an exact slot, since the picker below only ever captures
+   broad position. See migrate_add_scoring_system.sql for the matching
+   change on the scoring side. */
 const SCORING_RULES = {
-  correctPosition: 1, // per predicted player who started in that exact slot
+  correctPosition: 2, // per predicted player who started in that broad position
   predictedScorer: { FW: 5, MF: 7, DF: 10, GK: 10 },  // scored ANY goal
   firstScorer:     { FW: 10, MF: 15, DF: 20, GK: 20 }, // scored the FIRST goal specifically
 };
 
 const FORMATIONS = {
-  "4-4-2": ["GK","RB","CB","CB","LB","RM","CM","CM","LM","ST","ST"],
-  "4-3-3": ["GK","RB","CB","CB","LB","CM","CM","CM","RW","ST","LW"],
-  "4-2-3-1": ["GK","RB","CB","CB","LB","CDM","CDM","RW","CAM","LW","ST"],
-  "3-5-2": ["GK","CB","CB","CB","RWB","CM","CM","CM","LWB","ST","ST"],
-  "5-3-2": ["GK","RWB","CB","CB","CB","LWB","CM","CM","CM","ST","ST"],
+  "4-4-2":  {GK:1, DF:4, MF:4, FW:2},
+  "4-3-3":  {GK:1, DF:4, MF:3, FW:3},
+  "4-2-3-1":{GK:1, DF:4, MF:5, FW:1},
+  "3-5-2":  {GK:1, DF:3, MF:5, FW:2},
+  "5-3-2":  {GK:1, DF:5, MF:3, FW:2},
 };
-const FORMATION_COORDS = {
-  "4-4-2": [[50,8],[84,26],[36,24],[64,24],[16,26],[84,55],[38,52],[62,52],[16,55],[38,85],[62,85]],
-  "4-3-3": [[50,8],[84,26],[36,24],[64,24],[16,26],[30,50],[50,46],[70,50],[82,72],[50,85],[18,72]],
-  "4-2-3-1": [[50,8],[84,26],[36,24],[64,24],[16,26],[38,42],[62,42],[82,64],[50,60],[18,64],[50,85]],
-  "3-5-2": [[50,8],[30,22],[50,20],[70,22],[88,42],[30,50],[50,48],[70,50],[12,42],[38,85],[62,85]],
-  "5-3-2": [[50,8],[88,30],[30,22],[50,20],[70,22],[12,30],[30,52],[50,50],[70,52],[38,85],[62,85]],
-};
+const POS_LABELS = {GK:'Goalkeepers', DF:'Defenders', MF:'Midfielders', FW:'Forwards'};
+const PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
+
+let positionOrder = { GK: [], DF: [], MF: [], FW: [] };
+let armedSwap = null;
 
 let currentUser = null;
 let allPlayersCache = [];
@@ -409,13 +451,33 @@ async function openPredictView(fixture){
           <option value="4-2-3-1">4-2-3-1</option><option value="3-5-2">3-5-2</option><option value="5-3-2">5-3-2</option>
         </select>
       </div>
-      <div id="pr-slots"></div>
+
+      <div class="progress-bar-wrap" id="pr-progress-wrap">
+        <div class="progress-counts" id="pr-progress-counts"></div>
+        <div class="progress-track"><div class="progress-fill" id="pr-progress-fill" style="width:0%;"></div></div>
+      </div>
+
+      <div class="pitch-wrap" id="pr-pitch-wrap">
+        <svg class="pitch-lines" viewBox="0 0 100 130" preserveAspectRatio="none">
+          <rect width="100" height="130" fill="#10231a"/>
+          <rect x="2" y="2" width="96" height="126" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+          <line x1="2" y1="65" x2="98" y2="65" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+          <circle cx="50" cy="65" r="11" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+          <rect x="24" y="2" width="52" height="16" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+          <rect x="24" y="112" width="52" height="16" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+        </svg>
+        <div class="pitch-players" id="pr-pitch-players"></div>
+      </div>
+      <p class="pitch-swap-hint" id="pr-swap-hint" style="display:none;">🔄 <b>Tap any two players</b> to swap their spots on the pitch — just for how it looks when shared, doesn't change scoring.</p>
+
+      <div id="pr-player-sections"></div>
+
       <div class="field-row" style="margin-top:6px;">
         <div class="field"><label>Predicted scorer <span style="text-transform:none; opacity:.7;">(any goal)</span></label><select id="pr-scorer" ${locked?'disabled':''}>${playerOptionsHtml()}</select></div>
         <div class="field"><label>First scorer <span style="text-transform:none; opacity:.7;">(worth more)</span></label><select id="pr-first-scorer" ${locked?'disabled':''}>${playerOptionsHtml()}</select></div>
       </div>
-      ${!locked ? `<button class="primary-btn" id="pr-save">Save prediction</button>` : ''}
-      <button class="ghost-btn" id="pr-share" style="margin-left:${locked?'0':'8px'};">Share my prediction</button>
+      ${!locked ? `<button class="primary-btn" id="pr-save" style="width:100%;" disabled>Save prediction</button><p id="pr-save-hint" style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:8px;"></p>` : ''}
+      <button class="ghost-btn" id="pr-share" style="width:100%; margin-top:8px;">Share my prediction</button>
       <div class="subscribe-msg" id="pr-msg"></div>
     </div>
 
@@ -425,10 +487,14 @@ async function openPredictView(fixture){
     </div>
   `;
 
-  const formation = existing?.formation || '4-3-3';
-  document.getElementById('pr-formation').value = formation;
-  renderPredictSlots(formation, existing?.lineup);
-  document.getElementById('pr-formation').addEventListener('change', (e)=> renderPredictSlots(e.target.value));
+  // Load existing lineup into positionOrder, or start fresh
+  positionOrder = { GK: [], DF: [], MF: [], FW: [] };
+  armedSwap = null;
+  if(existing){
+    (existing.lineup || []).forEach(item => { if(positionOrder[item.slot]) positionOrder[item.slot].push(item.player_id); });
+  }
+  document.getElementById('pr-formation').value = existing?.formation || '4-3-3';
+  document.getElementById('pr-formation').addEventListener('change', onFormationChange);
 
   setupScoreStepper('hull', existing?.hull_score ?? 0, locked);
   setupScoreStepper('opp', existing?.opponent_score ?? 0, locked);
@@ -441,6 +507,8 @@ async function openPredictView(fixture){
     if(first) document.getElementById('pr-first-scorer').value = first.player_id;
   }
 
+  renderPicker(locked);
+
   if(!locked){
     document.getElementById('pr-save').addEventListener('click', ()=> savePrediction(fixture));
   }
@@ -449,8 +517,11 @@ async function openPredictView(fixture){
   const reuseBtn = document.getElementById('pr-reuse-team');
   if(reuseBtn){
     reuseBtn.addEventListener('click', ()=>{
+      positionOrder = { GK: [], DF: [], MF: [], FW: [] };
+      (previousTeam.lineup || []).forEach(item => { if(positionOrder[item.slot]) positionOrder[item.slot].push(item.player_id); });
       document.getElementById('pr-formation').value = previousTeam.formation;
-      renderPredictSlots(previousTeam.formation, previousTeam.lineup);
+      armedSwap = null;
+      renderPicker(locked);
       toast('Team copied — scoreline and scorers left for you to set fresh.');
     });
   }
@@ -482,30 +553,146 @@ function getScoreValue(prefix){
   return el ? Number(el.dataset.value ?? 0) : null;
 }
 
-function renderPredictSlots(formation, presetLineup){
-  const container = document.getElementById('pr-slots');
-  const slots = FORMATIONS[formation];
-  const preset = presetLineup || [];
-  container.innerHTML = slots.map((label,i)=>{
-    const existing = preset[i];
-    return `
-    <div class="slot-row">
-      <div class="slot-label">${label}</div>
-      <select class="pr-slot-player">${playerOptionsHtml(existing?.player_id)}</select>
-    </div>`;
+/* ---------- tap-to-select picker (mirrors FPL) ---------- */
+function onFormationChange(){
+  const required = FORMATIONS[document.getElementById('pr-formation').value];
+  let trimmedAny = false;
+  Object.keys(required).forEach(pos=>{
+    if(positionOrder[pos].length > required[pos]){
+      trimmedAny = true;
+      positionOrder[pos] = positionOrder[pos].slice(0, required[pos]);
+    }
+  });
+  if(trimmedAny) toast('Removed a few players to fit the new formation.');
+  armedSwap = null;
+  renderPicker(false);
+}
+
+function isPlayerSelected(id){ return Object.values(positionOrder).some(arr => arr.includes(id)); }
+
+function spreadX(count){
+  if(count <= 1) return [50];
+  const margin = 14;
+  const step = (100 - margin*2) / (count - 1);
+  return Array.from({length:count}, (_, i) => margin + step*i);
+}
+
+function renderPredictPitch(){
+  const required = FORMATIONS[document.getElementById('pr-formation').value];
+  const container = document.getElementById('pr-pitch-players');
+  let html = '';
+  Object.keys(required).forEach(pos=>{
+    const need = required[pos];
+    const xs = spreadX(need);
+    const order = positionOrder[pos];
+    for(let i = 0; i < need; i++){
+      const playerId = order[i];
+      const player = playerId ? allPlayersCache.find(p=>p.id===playerId) : null;
+      const x = xs[i], y = PITCH_LINE_Y[pos];
+      const armed = armedSwap && armedSwap.pos === pos && armedSwap.index === i;
+      if(player){
+        html += `<div class="pitch-player" data-swap-pos="${pos}" data-swap-index="${i}" style="left:${x}%; top:${y}%;">
+          <div class="pitch-dot" style="${armed ? 'outline:2px solid var(--paper); outline-offset:2px;' : ''}">${pos}<span class="swap-icon">⇄</span></div>
+          <div class="pitch-name">${escapeHtml(player.last_name)}</div>
+        </div>`;
+      } else {
+        html += `<div class="pitch-player" style="left:${x}%; top:${y}%; cursor:default;">
+          <div class="pitch-dot empty">${pos}</div>
+        </div>`;
+      }
+    }
+  });
+  container.innerHTML = html;
+  document.getElementById('pr-swap-hint').style.display = container.querySelector('[data-swap-pos]') ? 'block' : 'none';
+
+  container.querySelectorAll('[data-swap-pos]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const pos = el.dataset.swapPos, index = Number(el.dataset.swapIndex);
+      if(!armedSwap){ armedSwap = { pos, index }; renderPredictPitch(); return; }
+      if(armedSwap.pos === pos && armedSwap.index === index){ armedSwap = null; renderPredictPitch(); return; }
+      if(armedSwap.pos === pos){
+        const arr = positionOrder[pos];
+        [arr[armedSwap.index], arr[index]] = [arr[index], arr[armedSwap.index]];
+        armedSwap = null; renderPredictPitch();
+      } else { armedSwap = { pos, index }; renderPredictPitch(); }
+    });
+  });
+}
+
+function renderPicker(locked){
+  const formation = document.getElementById('pr-formation').value;
+  const required = FORMATIONS[formation];
+  const counts = {};
+  Object.keys(required).forEach(pos => counts[pos] = positionOrder[pos].length);
+
+  const progressCounts = document.getElementById('pr-progress-counts');
+  progressCounts.innerHTML = Object.keys(required).map(pos=>{
+    const have = counts[pos], need = required[pos];
+    const cls = have === need ? 'complete' : (have > need ? 'over' : '');
+    return `<span class="progress-count ${cls}">${pos} ${have}/${need}</span>`;
   }).join('');
+  const totalHave = Object.values(counts).reduce((a,b)=>a+b,0);
+  const totalNeed = Object.values(required).reduce((a,b)=>a+b,0);
+  const fill = document.getElementById('pr-progress-fill');
+  fill.style.width = Math.min(100, Math.round(100*totalHave/totalNeed)) + '%';
+  const complete = Object.keys(required).every(pos => counts[pos] === required[pos]);
+  fill.classList.toggle('complete', complete);
+
+  const container = document.getElementById('pr-player-sections');
+  if(locked){
+    // Read-only view of a locked prediction — no tappable cards.
+    container.innerHTML = Object.keys(POS_LABELS).map(pos=>{
+      const names = positionOrder[pos].map(id => allPlayersCache.find(p=>p.id===id)).filter(Boolean).map(p=>`${p.first_name} ${p.last_name}`);
+      return names.length ? `<div class="pos-section-title">${POS_LABELS[pos]}</div><p style="font-size:13px; color:var(--paper-dim);">${names.join(', ')}</p>` : '';
+    }).join('');
+  } else {
+    container.innerHTML = Object.keys(POS_LABELS).map(pos=>{
+      const players = allPlayersCache.filter(p=>p.position===pos);
+      const posFull = counts[pos] >= required[pos];
+      return `
+      <div class="pos-section-title">${POS_LABELS[pos]} (${counts[pos]}/${required[pos]})</div>
+      <div class="player-grid">
+        ${players.map(p=>{
+          const selected = isPlayerSelected(p.id);
+          const disabled = !selected && posFull;
+          return `<div class="player-card ${selected?'selected':''} ${disabled?'disabled':''}" data-player-id="${p.id}" data-player-pos="${pos}">
+            <div class="player-card-check">✓</div>
+            <div class="player-card-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('.player-card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        const id = card.dataset.playerId, pos = card.dataset.playerPos;
+        const arr = positionOrder[pos];
+        const idx = arr.indexOf(id);
+        if(idx !== -1){ arr.splice(idx, 1); }
+        else{ if(card.classList.contains('disabled')) return; arr.push(id); }
+        renderPicker(locked);
+      });
+    });
+  }
+
+  renderPredictPitch();
+
+  const saveBtn = document.getElementById('pr-save');
+  const hint = document.getElementById('pr-save-hint');
+  if(saveBtn){
+    saveBtn.disabled = !complete;
+    if(hint) hint.textContent = complete ? 'Team complete — ready to save.' : `${totalHave} of ${totalNeed} selected — pick a few more to continue.`;
+  }
 }
 
 async function savePrediction(fixture){
   const msg = document.getElementById('pr-msg');
   const formation = document.getElementById('pr-formation').value;
   const lineup = [];
-  document.querySelectorAll('#pr-slots .slot-row').forEach(row=>{
-    const id = row.querySelector('.pr-slot-player').value;
-    if(!id) return;
+  Object.keys(positionOrder).forEach(pos => positionOrder[pos].forEach(id=>{
     const p = allPlayersCache.find(pp=>pp.id===id);
-    lineup.push({ player_id:id, first_name:p.first_name, last_name:p.last_name, slot: row.querySelector('.slot-label').textContent });
-  });
+    if(p) lineup.push({ player_id:id, first_name:p.first_name, last_name:p.last_name, slot: pos });
+  }));
   const scorers = [];
   const predictedId = document.getElementById('pr-scorer').value;
   const firstId = document.getElementById('pr-first-scorer').value;
@@ -520,7 +707,7 @@ async function savePrediction(fixture){
   const hull_score = getScoreValue('hull');
   const opponent_score = getScoreValue('opp');
 
-  if(!lineup.length){ msg.textContent = 'Pick at least a few players first.'; return; }
+  if(!lineup.length){ msg.textContent = 'Pick your team first.'; return; }
   msg.textContent = 'Saving…';
   try{
     const { error } = await sb.from('predictions').upsert({
@@ -562,21 +749,22 @@ async function loadAggregate(fixtureId){
   }
 
   const topFormation = formationCounts?.[0]?.formation || '4-3-3';
-  const coords = FORMATION_COORDS[topFormation] || [];
+  const required = FORMATIONS[topFormation] || FORMATIONS['4-3-3'];
   const slotsForFormation = (slotCounts||[]).filter(s=>s.formation===topFormation);
-  const bySlotLabel = {};
-  slotsForFormation.forEach(s=>{
-    if(!bySlotLabel[s.slot] || s.votes > bySlotLabel[s.slot].votes) bySlotLabel[s.slot] = s;
-  });
-  const slotLabels = FORMATIONS[topFormation] || [];
-  const playersHtml = slotLabels.map((label,i)=>{
-    const c = coords[i] || [50,50];
-    const top = bySlotLabel[label];
-    const pct = top ? Math.round(100*top.votes/total) : 0;
-    return `<div class="pitch-player" style="left:${c[0]}%; top:${c[1]}%;">
-      <div class="pitch-dot">${top ? pct+'%' : label}</div>
-      <div class="pitch-name">${top ? escapeHtml(top.last_name) : ''}</div>
-    </div>`;
+
+  const playersHtml = Object.keys(required).map(pos=>{
+    const need = required[pos];
+    const xs = spreadX(need);
+    // Top N most-voted players in this broad position, matching however
+    // many slots the top formation needs there.
+    const topPicks = slotsForFormation.filter(s=>s.slot===pos).sort((a,b)=>b.votes-a.votes).slice(0, need);
+    return topPicks.map((pick, i)=>{
+      const pct = Math.round(100*pick.votes/total);
+      return `<div class="pitch-player" style="left:${xs[i]}%; top:${PITCH_LINE_Y[pos]}%;">
+        <div class="pitch-dot">${pct}%</div>
+        <div class="pitch-name">${escapeHtml(pick.last_name)}</div>
+      </div>`;
+    }).join('');
   }).join('');
 
   const scoreHtml = (scoreCounts||[]).map(s=>`
@@ -629,10 +817,11 @@ document.getElementById('share-modal-overlay').addEventListener('click', (e)=>{ 
 
 function shareMyPrediction(fixture){
   const formation = document.getElementById('pr-formation').value;
-  const names = [...document.querySelectorAll('#pr-slots .pr-slot-player')].map(s=>{
-    const opt = s.options[s.selectedIndex];
-    return opt.value ? opt.textContent : null;
-  }).filter(Boolean);
+  const names = [];
+  Object.keys(positionOrder).forEach(pos => positionOrder[pos].forEach(id=>{
+    const p = allPlayersCache.find(pp=>pp.id===id);
+    if(p) names.push(`${p.first_name} ${p.last_name}`);
+  }));
   const hs = getScoreValue('hull');
   const os = getScoreValue('opp');
   const scoreLine = (hs!=null && os!=null) ? `My score prediction: Hull ${hs}-${os} ${fixture.opponent}\n` : '';
