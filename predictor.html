@@ -119,6 +119,16 @@
   .player-card.selected .player-card-check{ display:flex; }
   .player-card-name{ font-family:var(--body); font-size:12.5px; color:var(--paper); font-weight:600; }
 
+  .scorer-chips{ display:flex; flex-wrap:wrap; gap:7px; }
+  .scorer-chip{
+    font-family:var(--body); font-size:12.5px; padding:7px 13px; border-radius:999px;
+    background:var(--ink); border:1px solid var(--line); color:var(--paper); cursor:pointer;
+    transition:all .15s ease; user-select:none;
+  }
+  .scorer-chip:hover{ border-color:var(--amber-deep); }
+  .scorer-chip.selected{ background:var(--amber); border-color:var(--amber); color:var(--ink); font-weight:600; }
+  .scorer-chip.disabled{ opacity:.4; cursor:not-allowed; }
+
   .agg-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
   .agg-row:last-child{ border-bottom:none; }
   .agg-bar-wrap{ flex:1; height:6px; background:var(--ink); border-radius:99px; margin:0 12px; overflow:hidden; }
@@ -188,9 +198,23 @@
     <button class="ghost-btn" id="share-modal-close" style="width:100%; margin-top:14px;">Close</button>
   </div>
 </div>
+
+<div class="share-modal-overlay" id="image-share-modal-overlay">
+  <div class="share-modal">
+    <h3>Share your team sheet</h3>
+    <img id="image-share-preview" style="width:100%; max-height:220px; object-fit:contain; border-radius:8px; margin-bottom:14px; background:var(--ink);">
+    <div class="share-modal-grid" style="grid-template-columns:repeat(3,1fr);">
+      <button class="share-opt" id="image-share-save"><span class="share-opt-icon">💾</span><span>Save</span></button>
+      <button class="share-opt" id="image-share-copy"><span class="share-opt-icon">📋</span><span>Copy</span></button>
+      <button class="share-opt" id="image-share-more" style="display:none;"><span class="share-opt-icon">⋯</span><span>More</span></button>
+    </div>
+    <button class="ghost-btn" id="image-share-modal-close" style="width:100%; margin-top:14px;">Close</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script src="assets/chrome.js"></script>
 <script>
@@ -230,6 +254,8 @@ const PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
 
 let positionOrder = { GK: [], DF: [], MF: [], FW: [] };
 let armedSwap = null;
+let selectedPredictedScorer = null;
+let selectedFirstScorer = null;
 
 let currentUser = null;
 let allPlayersCache = [];
@@ -479,12 +505,19 @@ async function openPredictView(fixture){
 
       <div id="pr-player-sections"></div>
 
-      <div class="field-row" style="margin-top:6px;">
-        <div class="field"><label>Predicted scorer <span style="text-transform:none; opacity:.7;">(any goal)</span></label><select id="pr-scorer" ${locked?'disabled':''}>${playerOptionsHtml()}</select></div>
-        <div class="field"><label>First scorer <span style="text-transform:none; opacity:.7;">(worth more)</span></label><select id="pr-first-scorer" ${locked?'disabled':''}>${playerOptionsHtml()}</select></div>
+      <div class="field" style="margin-top:6px;">
+        <label>Predicted scorer <span style="text-transform:none; opacity:.7;">(any goal)</span></label>
+        <div class="scorer-chips" id="pr-scorer-chips"></div>
+      </div>
+      <div class="field">
+        <label>First scorer <span style="text-transform:none; opacity:.7;">(worth more)</span></label>
+        <div class="scorer-chips" id="pr-first-scorer-chips"></div>
       </div>
       ${!locked ? `<button class="primary-btn" id="pr-save" style="width:100%;" disabled>Save prediction</button><p id="pr-save-hint" style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:8px;"></p>` : ''}
-      <button class="ghost-btn" id="pr-share" style="width:100%; margin-top:8px;">Share my prediction</button>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="ghost-btn" id="pr-share" style="flex:1;">Share my prediction</button>
+        <button class="ghost-btn" id="pr-share-image" style="flex:1;">📸 Share as image</button>
+      </div>
       <div class="subscribe-msg" id="pr-msg"></div>
     </div>
 
@@ -506,12 +539,14 @@ async function openPredictView(fixture){
   setupScoreStepper('hull', existing?.hull_score ?? 0, locked);
   setupScoreStepper('opp', existing?.opponent_score ?? 0, locked);
 
+  selectedPredictedScorer = null;
+  selectedFirstScorer = null;
   if(existing){
     const scorers = existing.scorers || [];
     const predicted = scorers.find(s => s.type === 'predicted');
     const first = scorers.find(s => s.type === 'first');
-    if(predicted) document.getElementById('pr-scorer').value = predicted.player_id;
-    if(first) document.getElementById('pr-first-scorer').value = first.player_id;
+    if(predicted) selectedPredictedScorer = predicted.player_id;
+    if(first) selectedFirstScorer = first.player_id;
   }
 
   renderPicker(locked);
@@ -520,6 +555,7 @@ async function openPredictView(fixture){
     document.getElementById('pr-save').addEventListener('click', ()=> savePrediction(fixture));
   }
   document.getElementById('pr-share').addEventListener('click', ()=> shareMyPrediction(fixture));
+  document.getElementById('pr-share-image').addEventListener('click', ()=> shareTeamImage(fixture));
 
   const reuseBtn = document.getElementById('pr-reuse-team');
   if(reuseBtn){
@@ -626,6 +662,41 @@ function renderPredictPitch(){
   });
 }
 
+function renderScorerChips(locked){
+  const selectedIds = [];
+  Object.keys(positionOrder).forEach(pos => positionOrder[pos].forEach(id => selectedIds.push(id)));
+  const selectedPlayers = selectedIds.map(id => allPlayersCache.find(p=>p.id===id)).filter(Boolean);
+
+  // If the previously-chosen scorer got removed from the team, clear the pick —
+  // can't predict a goal from someone no longer in your lineup.
+  if(selectedPredictedScorer && !selectedIds.includes(selectedPredictedScorer)) selectedPredictedScorer = null;
+  if(selectedFirstScorer && !selectedIds.includes(selectedFirstScorer)) selectedFirstScorer = null;
+
+  function renderGroup(containerId, selectedValue, onPick){
+    const container = document.getElementById(containerId);
+    if(!container) return;
+    if(!selectedPlayers.length){
+      container.innerHTML = `<div class="empty-state" style="padding:6px 0; font-size:12px;">Pick your team first</div>`;
+      return;
+    }
+    container.innerHTML = selectedPlayers.map(p => `
+      <div class="scorer-chip ${p.id===selectedValue?'selected':''} ${locked?'disabled':''}" data-scorer-chip="${p.id}">${escapeHtml(p.last_name)}</div>
+    `).join('');
+    if(!locked){
+      container.querySelectorAll('[data-scorer-chip]').forEach(chip=>{
+        chip.addEventListener('click', ()=>{
+          const id = chip.dataset.scorerChip;
+          onPick(id === (containerId==='pr-scorer-chips' ? selectedPredictedScorer : selectedFirstScorer) ? null : id);
+          renderScorerChips(locked);
+        });
+      });
+    }
+  }
+
+  renderGroup('pr-scorer-chips', selectedPredictedScorer, (id)=>{ selectedPredictedScorer = id; });
+  renderGroup('pr-first-scorer-chips', selectedFirstScorer, (id)=>{ selectedFirstScorer = id; });
+}
+
 function renderPicker(locked){
   const formation = document.getElementById('pr-formation').value;
   const required = FORMATIONS[formation];
@@ -683,6 +754,7 @@ function renderPicker(locked){
   }
 
   renderPredictPitch();
+  renderScorerChips(locked);
 
   const saveBtn = document.getElementById('pr-save');
   const hint = document.getElementById('pr-save-hint');
@@ -701,8 +773,8 @@ async function savePrediction(fixture){
     if(p) lineup.push({ player_id:id, first_name:p.first_name, last_name:p.last_name, slot: pos });
   }));
   const scorers = [];
-  const predictedId = document.getElementById('pr-scorer').value;
-  const firstId = document.getElementById('pr-first-scorer').value;
+  const predictedId = selectedPredictedScorer;
+  const firstId = selectedFirstScorer;
   if(predictedId){
     const p = allPlayersCache.find(pp=>pp.id===predictedId);
     if(p) scorers.push({ player_id:predictedId, first_name:p.first_name, last_name:p.last_name, type:'predicted' });
@@ -823,6 +895,53 @@ function openShareModal(text){
 document.getElementById('share-modal-close').addEventListener('click', ()=> document.getElementById('share-modal-overlay').classList.remove('open'));
 document.getElementById('share-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='share-modal-overlay') e.currentTarget.classList.remove('open'); });
 
+/* ---------- share as image ---------- */
+let currentShareBlob = null;
+
+async function shareTeamImage(fixture){
+  const target = document.getElementById('pr-pitch-wrap');
+  if(!target || typeof html2canvas === 'undefined'){ toast("Couldn't build the image — try again in a moment."); return; }
+  toast('Building image…');
+  try{
+    const canvas = await html2canvas(target, { backgroundColor: '#10231a', scale: 2 });
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ toast("Couldn't build the image."); return; }
+      currentShareBlob = blob;
+      document.getElementById('image-share-preview').src = URL.createObjectURL(blob);
+
+      const moreBtn = document.getElementById('image-share-more');
+      const canUseNativeFiles = navigator.canShare && navigator.canShare({ files: [new File([blob], 'team.png', { type: 'image/png' })] });
+      if(canUseNativeFiles){
+        moreBtn.style.display = '';
+        moreBtn.onclick = () => {
+          navigator.share({ files: [new File([blob], `tigerdle-team-vs-${fixture.opponent.replace(/\s+/g,'-')}.png`, { type: 'image/png' })], title: 'My Tigerdle prediction' }).catch(()=>{});
+        };
+      } else {
+        moreBtn.style.display = 'none';
+      }
+      document.getElementById('image-share-modal-overlay').classList.add('open');
+    }, 'image/png');
+  }catch(e){ toast('Could not build the image right now.'); }
+}
+
+document.getElementById('image-share-save').addEventListener('click', ()=>{
+  if(!currentShareBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(currentShareBlob);
+  a.download = 'tigerdle-team.png';
+  a.click();
+  toast('Image saved.');
+});
+document.getElementById('image-share-copy').addEventListener('click', async ()=>{
+  if(!currentShareBlob) return;
+  try{
+    await navigator.clipboard.write([ new ClipboardItem({ 'image/png': currentShareBlob }) ]);
+    toast('Image copied — paste it anywhere.');
+  }catch(e){ toast("Copy isn't supported in this browser — try Save instead."); }
+});
+document.getElementById('image-share-modal-close').addEventListener('click', ()=> document.getElementById('image-share-modal-overlay').classList.remove('open'));
+document.getElementById('image-share-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='image-share-modal-overlay') e.currentTarget.classList.remove('open'); });
+
 function shareMyPrediction(fixture){
   const formation = document.getElementById('pr-formation').value;
   const names = [];
@@ -833,9 +952,8 @@ function shareMyPrediction(fixture){
   const hs = getScoreValue('hull');
   const os = getScoreValue('opp');
   const scoreLine = (hs!=null && os!=null) ? `My score prediction: Hull ${hs}-${os} ${fixture.opponent}\n` : '';
-  const firstScorerOpt = document.getElementById('pr-first-scorer');
-  const firstScorerName = firstScorerOpt.value ? firstScorerOpt.options[firstScorerOpt.selectedIndex].textContent : null;
-  const firstScorerLine = firstScorerName ? `First scorer: ${firstScorerName}\n` : '';
+  const firstScorerPlayer = selectedFirstScorer ? allPlayersCache.find(p=>p.id===selectedFirstScorer) : null;
+  const firstScorerLine = firstScorerPlayer ? `First scorer: ${firstScorerPlayer.first_name} ${firstScorerPlayer.last_name}\n` : '';
   const text = `My Hull City vs ${fixture.opponent} prediction (${formation}):\n${scoreLine}${firstScorerLine}${names.slice(0,11).join(', ')}\n\nPredict yours at tigerdle.com/predictor.html`;
   openShareModal(text);
 }
