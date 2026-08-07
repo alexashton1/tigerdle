@@ -299,6 +299,27 @@
       <div class="subscribe-msg" id="score-calculate-msg"></div>
       <div id="score-results" style="margin-top:16px;"></div>
     </div>
+
+    <div class="formcard">
+      <h3 id="fm-form-heading">Add a formation</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        These are the formations people can pick from in the Predictor. Goalkeeper is always 1 —
+        the other three need to add up to 10 between them (11 total on the pitch).
+      </p>
+      <div class="field"><label>Name</label><input type="text" id="fm-name" placeholder="e.g. 4-3-3"></div>
+      <div class="field-row">
+        <div class="field"><label>Defenders</label><input type="number" id="fm-df" min="1" max="10"></div>
+        <div class="field"><label>Midfielders</label><input type="number" id="fm-mf" min="1" max="10"></div>
+      </div>
+      <div class="field"><label>Forwards</label><input type="number" id="fm-fw" min="1" max="10"></div>
+      <button class="primary-btn" id="fm-save">Save formation</button>
+      <button class="ghost-btn" id="fm-cancel-edit" style="display:none;">Cancel edit</button>
+      <div class="subscribe-msg" id="fm-msg"></div>
+    </div>
+    <div class="formcard">
+      <h3>Current formations</h3>
+      <div class="admin-list" id="fm-list"></div>
+    </div>
   </div>
 
 </div>
@@ -419,7 +440,7 @@ async function tryEnter(){
 if(PASSPHRASE) tryEnter(); else showGate('');
 
 async function refreshAll(){
-  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures();
+  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures(); refreshFormations();
 }
 
 /* ---- Subscribers ---- */
@@ -1069,6 +1090,78 @@ async function loadFixtureScores(fixtureId){
       }catch(e){ toast(e.message); }
     }));
   }catch(e){ container.innerHTML = `<div class="meta">${e.message}</div>`; }
+}
+
+/* ==================== Predictor formations ==================== */
+let editingFormationName = null;
+
+function resetFormationForm(){
+  editingFormationName = null;
+  document.getElementById('fm-form-heading').textContent = 'Add a formation';
+  document.getElementById('fm-save').textContent = 'Save formation';
+  document.getElementById('fm-cancel-edit').style.display = 'none';
+  document.getElementById('fm-name').value = '';
+  document.getElementById('fm-name').disabled = false;
+  document.getElementById('fm-df').value = '';
+  document.getElementById('fm-mf').value = '';
+  document.getElementById('fm-fw').value = '';
+  document.getElementById('fm-msg').textContent = '';
+}
+document.getElementById('fm-cancel-edit').addEventListener('click', resetFormationForm);
+
+function startEditFormation(f){
+  editingFormationName = f.name;
+  document.getElementById('fm-form-heading').textContent = `Editing ${f.name}`;
+  document.getElementById('fm-save').textContent = 'Save changes';
+  document.getElementById('fm-cancel-edit').style.display = 'inline-block';
+  document.getElementById('fm-name').value = f.name;
+  document.getElementById('fm-name').disabled = true; // renaming would orphan existing predictions using the old name
+  document.getElementById('fm-df').value = f.df;
+  document.getElementById('fm-mf').value = f.mf;
+  document.getElementById('fm-fw').value = f.fw;
+  document.getElementById('fm-msg').textContent = '';
+  document.getElementById('fm-form-heading').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+document.getElementById('fm-save').addEventListener('click', async ()=>{
+  const msg = document.getElementById('fm-msg');
+  const name = document.getElementById('fm-name').value.trim();
+  const df = Number(document.getElementById('fm-df').value);
+  const mf = Number(document.getElementById('fm-mf').value);
+  const fw = Number(document.getElementById('fm-fw').value);
+  if(!name || !df || !mf || !fw){ msg.textContent = 'Fill in a name and all three position counts.'; return; }
+  msg.textContent = 'Saving…';
+  try{
+    await callAdmin('save_predictor_formation', { name, df, mf, fw });
+    msg.textContent = 'Saved.';
+    resetFormationForm();
+    refreshFormations();
+  }catch(e){ msg.textContent = e.message; }
+});
+
+async function refreshFormations(){
+  const list = document.getElementById('fm-list');
+  try{
+    const { data } = await sb.from('predictor_formations').select('*').order('sort_order', {ascending:true});
+    if(!data || !data.length){ list.innerHTML = '<div class="meta">No formations yet — add one above.</div>'; return; }
+    list.innerHTML = data.map(f=>`
+      <div class="admin-row">
+        <div>${f.name} <span class="meta">GK ${f.gk} · DF ${f.df} · MF ${f.mf} · FW ${f.fw}</span></div>
+        <div style="display:flex; gap:6px;">
+          <button class="ghost-btn" data-edit-fm="${f.name}">Edit</button>
+          <button class="ghost-btn" data-delete-fm="${f.name}">Delete</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('[data-edit-fm]').forEach(btn=>btn.addEventListener('click', ()=>{
+      const f = data.find(d=>d.name===btn.dataset.editFm);
+      if(f) startEditFormation(f);
+    }));
+    list.querySelectorAll('[data-delete-fm]').forEach(btn=>btn.addEventListener('click', async ()=>{
+      if(!confirm(`Delete ${btn.dataset.deleteFm}? Anyone with a saved prediction using it keeps their pick, but nobody can choose it for a new one.`)) return;
+      try{ await callAdmin('delete_predictor_formation', { name: btn.dataset.deleteFm }); refreshFormations(); }
+      catch(e){ toast(e.message); }
+    }));
+  }catch(e){ list.innerHTML = '<div class="meta">Could not load.</div>'; }
 }
 
 /* ==================== Matchdays ==================== */

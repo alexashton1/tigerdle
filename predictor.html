@@ -212,13 +212,19 @@ const SCORING_RULES = {
   firstScorer:     { FW: 10, MF: 15, DF: 20, GK: 20 }, // scored the FIRST goal specifically
 };
 
-const FORMATIONS = {
-  "4-4-2":  {GK:1, DF:4, MF:4, FW:2},
-  "4-3-3":  {GK:1, DF:4, MF:3, FW:3},
-  "4-2-3-1":{GK:1, DF:4, MF:5, FW:1},
-  "3-5-2":  {GK:1, DF:3, MF:5, FW:2},
-  "5-3-2":  {GK:1, DF:5, MF:3, FW:2},
+// Loaded from the predictor_formations table at boot — admin-editable
+// now, not hardcoded. Starts with a sane fallback so nothing breaks if
+// the fetch is slow or the table's briefly empty.
+let FORMATIONS = {
+  "4-3-3": {GK:1, DF:4, MF:3, FW:3},
 };
+async function loadFormations(){
+  const { data } = await sb.from('predictor_formations').select('*').order('sort_order', {ascending:true});
+  if(data && data.length){
+    FORMATIONS = {};
+    data.forEach(f => { FORMATIONS[f.name] = { GK: f.gk, DF: f.df, MF: f.mf, FW: f.fw }; });
+  }
+}
 const POS_LABELS = {GK:'Goalkeepers', DF:'Defenders', MF:'Midfielders', FW:'Forwards'};
 const PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
 
@@ -250,6 +256,7 @@ async function boot(user){
   document.getElementById('signed-in-view').style.display = 'block';
   const { data } = await sb.from('players').select('*').eq('era', 'Current Squad').eq('active', true).order('last_name');
   allPlayersCache = data || [];
+  await loadFormations();
   loadFixtureList();
   loadPastResults();
 }
@@ -448,8 +455,7 @@ async function openPredictView(fixture){
       <div class="field">
         <label>Formation</label>
         <select id="pr-formation" ${locked?'disabled':''}>
-          <option value="4-4-2">4-4-2</option><option value="4-3-3">4-3-3</option>
-          <option value="4-2-3-1">4-2-3-1</option><option value="3-5-2">3-5-2</option><option value="5-3-2">5-3-2</option>
+          ${Object.keys(FORMATIONS).map(f=>`<option value="${f}">${f}</option>`).join('')}
         </select>
       </div>
 
@@ -494,7 +500,7 @@ async function openPredictView(fixture){
   if(existing){
     (existing.lineup || []).forEach(item => { if(positionOrder[item.slot]) positionOrder[item.slot].push(item.player_id); });
   }
-  document.getElementById('pr-formation').value = existing?.formation || '4-3-3';
+  document.getElementById('pr-formation').value = (existing?.formation && FORMATIONS[existing.formation]) ? existing.formation : Object.keys(FORMATIONS)[0];
   document.getElementById('pr-formation').addEventListener('change', onFormationChange);
 
   setupScoreStepper('hull', existing?.hull_score ?? 0, locked);
@@ -749,8 +755,9 @@ async function loadAggregate(fixtureId){
     return;
   }
 
-  const topFormation = formationCounts?.[0]?.formation || '4-3-3';
-  const required = FORMATIONS[topFormation] || FORMATIONS['4-3-3'];
+  const fallbackFormation = Object.keys(FORMATIONS)[0];
+  const topFormation = formationCounts?.[0]?.formation || fallbackFormation;
+  const required = FORMATIONS[topFormation] || FORMATIONS[fallbackFormation];
   const slotsForFormation = (slotCounts||[]).filter(s=>s.formation===topFormation);
 
   const playersHtml = Object.keys(required).map(pos=>{
