@@ -260,6 +260,22 @@ sb.auth.onAuthStateChange((event, session)=>{
 sb.auth.getSession().then(({data})=>{
   if(data?.session?.user) showSignedIn(data.session.user);
 });
+
+/* Covers exactly this scenario: someone taps a magic-link email while
+   using the installed app, the OS opens the link in a regular browser
+   tab instead (normal — email apps can't route into installed PWAs),
+   they sign in there, then switch back to the app. The app's session
+   check already ran once on load, before any of that happened, so
+   without this it would keep showing "signed out" until manually
+   closed and reopened. This just reruns the same check whenever the
+   app regains focus, so it notices on its own. */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible'){
+    sb.auth.getSession().then(({data})=>{
+      if(data?.session?.user) showSignedIn(data.session.user);
+    });
+  }
+});
 </script>
 </body>
 </html>

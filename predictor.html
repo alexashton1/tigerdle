@@ -298,6 +298,19 @@ async function boot(user){
 sb.auth.onAuthStateChange((event, session)=>{ if(session?.user) boot(session.user); });
 sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.user); });
 
+/* Covers exactly this scenario: someone taps a magic-link email while
+   using the installed app, the OS opens the link in a regular browser
+   tab instead (normal — email apps can't route into installed PWAs),
+   they sign in there, then switch back to the app. Only rechecks while
+   still showing signed-out, so it doesn't wastefully re-fetch
+   everything just because someone briefly switched apps while already
+   signed in. */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && !currentUser){
+    sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.user); });
+  }
+});
+
 /* ---------- past results ---------- */
 function renderScoreBreakdown(score){
   const b = score.breakdown || {};
