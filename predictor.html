@@ -258,7 +258,16 @@ async function loadFormations(){
   }
 }
 const POS_LABELS = {GK:'Goalkeepers', DF:'Defenders', MF:'Midfielders', FW:'Forwards'};
-const PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
+// Loaded from pitch_layout_settings at boot — admin-adjustable now.
+// Starts with the original defaults so nothing breaks if the fetch is
+// slow or the table's briefly empty.
+let PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
+async function loadPitchLayout(){
+  const { data } = await sb.from('pitch_layout_settings').select('*');
+  if(data && data.length){
+    data.forEach(row => { PITCH_LINE_Y[row.position] = row.y_position; });
+  }
+}
 
 let positionOrder = { GK: [], DF: [], MF: [], FW: [] };
 let armedSwap = null;
@@ -297,6 +306,7 @@ async function boot(user){
   allPlayersCache.forEach(p => { p.season_points = pointsById[p.id] || 0; });
 
   await loadFormations();
+  await loadPitchLayout();
   loadFixtureList();
   loadPastResults();
 }
@@ -816,7 +826,12 @@ function renderPicker(locked){
         const arr = positionOrder[pos];
         const idx = arr.indexOf(id);
         if(idx !== -1){ arr.splice(idx, 1); }
-        else{ if(card.classList.contains('disabled')) return; arr.push(id); }
+        else{
+          if(card.classList.contains('disabled')) return;
+          const newOrder = allPlayersCache.find(p=>p.id===id)?.pitch_order ?? 99;
+          const insertAt = arr.findIndex(existingId => (allPlayersCache.find(p=>p.id===existingId)?.pitch_order ?? 99) > newOrder);
+          if(insertAt === -1) arr.push(id); else arr.splice(insertAt, 0, id);
+        }
         renderPicker(locked);
       });
     });
@@ -903,12 +918,17 @@ async function loadAggregate(fixtureId){
   const playersHtml = Object.keys(required).map(pos=>{
     const need = required[pos];
     const xs = spreadX(need);
-    // Top N most-voted players in this broad position — votes here count
-    // everyone who picked them there, regardless of their overall
-    // formation, so this isn't filtered by topFormation at all. Only the
-    // NUMBER of slots to show per line comes from the top formation.
+    // Which players make the cut is still purely by votes — but WHERE
+    // they sit along the line now follows the admin-set pitch order
+    // (wide vs central), not vote ranking, so a popular winger actually
+    // shows up wide instead of wherever the vote count happened to land.
     const topPicks = (slotCounts||[]).filter(s=>s.slot===pos).sort((a,b)=>b.votes-a.votes).slice(0, need);
-    return topPicks.map((pick, i)=>{
+    const arranged = topPicks.slice().sort((a,b)=>{
+      const orderA = allPlayersCache.find(p=>p.id===a.player_id)?.pitch_order ?? 99;
+      const orderB = allPlayersCache.find(p=>p.id===b.player_id)?.pitch_order ?? 99;
+      return orderA - orderB;
+    });
+    return arranged.map((pick, i)=>{
       const pct = Math.round(100*pick.votes/total);
       return `<div class="pitch-player" style="left:${xs[i]}%; top:${PITCH_LINE_Y[pos]}%;">
         <div class="pitch-dot">${pct}%</div>

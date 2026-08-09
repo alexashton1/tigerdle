@@ -120,6 +120,17 @@
           <input type="text" id="p-era" value="Current Squad" placeholder="e.g. 2012-2017, or pick a quick-fill above">
         </div>
       </div>
+      <div class="field">
+        <label>Pitch position <span style="text-transform:none; opacity:.7;">(where they show up left-to-right on any pitch view — leave blank if it doesn't matter)</span></label>
+        <select id="p-pitch-order">
+          <option value="">Not set</option>
+          <option value="1">Wide left</option>
+          <option value="2">Left of centre</option>
+          <option value="3">Centre</option>
+          <option value="4">Right of centre</option>
+          <option value="5">Wide right</option>
+        </select>
+      </div>
       <button class="primary-btn" id="p-submit">Add signing</button>
       <button class="ghost-btn" id="p-cancel-edit" style="display:none;">Cancel edit</button>
       <div class="subscribe-msg" id="p-msg"></div>
@@ -320,6 +331,26 @@
       <h3>Current formations</h3>
       <div class="admin-list" id="fm-list"></div>
     </div>
+
+    <div class="formcard">
+      <h3>Pitch layout</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
+        How far down the pitch each position's row sits — purely visual, doesn't touch any actual predictions, votes, or players.
+        0 is the very top, 100 is the very bottom.
+      </p>
+      <div id="pl-preview-wrap" style="position:relative; width:160px; aspect-ratio:100/130; margin:0 auto 18px; border-radius:8px; overflow:hidden; border:1px solid var(--line); background:#10231a;">
+        <div id="pl-preview-gk" style="position:absolute; left:50%; width:18px; height:18px; border-radius:50%; background:var(--amber); transform:translate(-50%,-50%); font-family:var(--mono); font-size:8px; display:flex; align-items:center; justify-content:center; color:var(--ink); font-weight:700;">GK</div>
+        <div id="pl-preview-df" style="position:absolute; left:50%; width:18px; height:18px; border-radius:50%; background:var(--amber); transform:translate(-50%,-50%); font-family:var(--mono); font-size:8px; display:flex; align-items:center; justify-content:center; color:var(--ink); font-weight:700;">DF</div>
+        <div id="pl-preview-mf" style="position:absolute; left:50%; width:18px; height:18px; border-radius:50%; background:var(--amber); transform:translate(-50%,-50%); font-family:var(--mono); font-size:8px; display:flex; align-items:center; justify-content:center; color:var(--ink); font-weight:700;">MF</div>
+        <div id="pl-preview-fw" style="position:absolute; left:50%; width:18px; height:18px; border-radius:50%; background:var(--amber); transform:translate(-50%,-50%); font-family:var(--mono); font-size:8px; display:flex; align-items:center; justify-content:center; color:var(--ink); font-weight:700;">FW</div>
+      </div>
+      <div class="field"><label>Goalkeepers (<span id="pl-gk-val">8</span>)</label><input type="range" id="pl-gk" min="0" max="100" value="8" style="width:100%;"></div>
+      <div class="field"><label>Defenders (<span id="pl-df-val">26</span>)</label><input type="range" id="pl-df" min="0" max="100" value="26" style="width:100%;"></div>
+      <div class="field"><label>Midfielders (<span id="pl-mf-val">52</span>)</label><input type="range" id="pl-mf" min="0" max="100" value="52" style="width:100%;"></div>
+      <div class="field"><label>Forwards (<span id="pl-fw-val">82</span>)</label><input type="range" id="pl-fw" min="0" max="100" value="82" style="width:100%;"></div>
+      <button class="primary-btn" id="pl-save">Save pitch layout</button>
+      <div class="subscribe-msg" id="pl-msg"></div>
+    </div>
   </div>
 
 </div>
@@ -440,7 +471,7 @@ async function tryEnter(){
 if(PASSPHRASE) tryEnter(); else showGate('');
 
 async function refreshAll(){
-  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures(); refreshFormations();
+  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures(); refreshFormations(); refreshPitchLayout();
 }
 
 /* ---- Subscribers ---- */
@@ -580,6 +611,7 @@ function startEditPlayer(id){
   document.getElementById('p-apps').value = p.appearances ?? '';
   setNatField(p.nationality);
   document.getElementById('p-era').value = p.era || '';
+  document.getElementById('p-pitch-order').value = p.pitch_order ?? '';
   document.getElementById('p-form-heading').textContent = `Editing ${p.first_name} ${p.last_name}`;
   document.getElementById('p-submit').textContent = 'Save changes';
   document.getElementById('p-cancel-edit').style.display = 'inline-block';
@@ -630,6 +662,7 @@ function exitEditMode(){
   document.getElementById('p-apps').value = '';
   setNatField('');
   document.getElementById('p-era').value = 'Current Squad';
+  document.getElementById('p-pitch-order').value = '';
 }
 document.getElementById('p-cancel-edit').addEventListener('click', exitEditMode);
 
@@ -662,6 +695,7 @@ document.getElementById('p-submit').addEventListener('click', async ()=>{
     appearances: document.getElementById('p-apps').value ? Number(document.getElementById('p-apps').value) : null,
     nationality: getNatValue() || 'Unknown',
     era: document.getElementById('p-era').value.trim() || 'Current Squad',
+    pitch_order: document.getElementById('p-pitch-order').value ? Number(document.getElementById('p-pitch-order').value) : null,
   };
   if(!payload.first_name || !payload.last_name){ document.getElementById('p-msg').textContent = 'First and last name are required.'; return; }
   document.getElementById('p-msg').textContent = editingPlayerId ? 'Saving changes…' : 'Saving…';
@@ -1163,6 +1197,44 @@ async function refreshFormations(){
     }));
   }catch(e){ list.innerHTML = '<div class="meta">Could not load.</div>'; }
 }
+
+/* ==================== Pitch layout ==================== */
+function updatePitchPreview(){
+  ['gk','df','mf','fw'].forEach(pos=>{
+    const val = document.getElementById(`pl-${pos}`).value;
+    document.getElementById(`pl-${pos}-val`).textContent = val;
+    document.getElementById(`pl-preview-${pos}`).style.top = val + '%';
+  });
+}
+['pl-gk','pl-df','pl-mf','pl-fw'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updatePitchPreview);
+});
+
+async function refreshPitchLayout(){
+  try{
+    const { data } = await sb.from('pitch_layout_settings').select('*');
+    (data||[]).forEach(row=>{
+      const id = 'pl-' + row.position.toLowerCase();
+      const el = document.getElementById(id);
+      if(el) el.value = row.y_position;
+    });
+    updatePitchPreview();
+  }catch(e){ /* falls back to the slider defaults already in the markup */ }
+}
+
+document.getElementById('pl-save').addEventListener('click', async ()=>{
+  const msg = document.getElementById('pl-msg');
+  msg.textContent = 'Saving…';
+  try{
+    await callAdmin('save_pitch_layout', {
+      GK: Number(document.getElementById('pl-gk').value),
+      DF: Number(document.getElementById('pl-df').value),
+      MF: Number(document.getElementById('pl-mf').value),
+      FW: Number(document.getElementById('pl-fw').value),
+    });
+    msg.textContent = 'Saved.';
+  }catch(e){ msg.textContent = e.message; }
+});
 
 /* ==================== Matchdays ==================== */
 const FORMATIONS = {
