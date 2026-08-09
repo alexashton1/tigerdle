@@ -563,7 +563,7 @@ document.getElementById('bulk-submit').addEventListener('click', async ()=>{
     if(data.skipped && data.skipped.length) msg += ` ${data.skipped.length} row(s) rejected server-side, check position values.`;
     document.getElementById('bulk-msg').textContent = msg;
     document.getElementById('bulk-players').value = '';
-    refreshPlayers(); refreshSchedule();
+    await refreshPlayers(); await refreshSchedule();
   }catch(e){ document.getElementById('bulk-msg').textContent = e.message; }
 });
 
@@ -643,7 +643,7 @@ function renderPlayerList(){
     </div>`;
   }).join('');
   list.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click', async ()=>{
-    try{ await callAdmin('update_player', { id:b.dataset.id, active: b.dataset.active !== 'true' }); refreshPlayers(); }
+    try{ await callAdmin('update_player', { id:b.dataset.id, active: b.dataset.active !== 'true' }); await refreshPlayers(); }
     catch(e){ toast(e.message); }
   }));
   list.querySelectorAll('button[data-edit]').forEach(b=>b.addEventListener('click', ()=>startEditPlayer(b.dataset.edit)));
@@ -715,7 +715,7 @@ document.getElementById('p-submit').addEventListener('click', async ()=>{
       document.getElementById('p-apps').value = '';
       setNatField('');
     }
-    refreshPlayers();
+    await refreshPlayers();
   }catch(e){ document.getElementById('p-msg').textContent = e.message; }
 });
 
@@ -740,7 +740,7 @@ document.getElementById('bulk-update-submit').addEventListener('click', async ()
     if(data.notFound && data.notFound.length) msg += ` Not found: ${data.notFound.join(', ')}.`;
     document.getElementById('bulk-update-msg').textContent = msg;
     document.getElementById('bulk-update').value = '';
-    refreshPlayers(); refreshSchedule();
+    await refreshPlayers(); await refreshSchedule();
   }catch(e){ document.getElementById('bulk-update-msg').textContent = e.message; }
 });
 
@@ -783,7 +783,7 @@ document.getElementById('dup-scan').addEventListener('click', async ()=>{
       try{
         await callAdmin('bulk_delete_players', { ids });
         document.getElementById('dup-msg').textContent = `Deleted ${ids.length}.`;
-        refreshPlayers(); refreshSchedule();
+        await refreshPlayers(); await refreshSchedule();
         document.getElementById('dup-scan').click();
       }catch(e){ document.getElementById('dup-msg').textContent = e.message; }
     });
@@ -1427,7 +1427,7 @@ document.getElementById('md-save').addEventListener('click', async ()=>{
     if(data.appearancesRemoved) m += ` ${data.appearancesRemoved} removed.`;
     msg.textContent = m;
     resetMatchdayForm();
-    refreshMatchdays(); refreshPlayers();
+    await refreshMatchdays(); await refreshPlayers();
   }catch(e){ msg.textContent = e.message; }
 });
 
@@ -1460,7 +1460,7 @@ async function refreshMatchdays(){
       try{
         const data = await callAdmin('delete_matchday', { id: b.dataset.deleteMd });
         toast(`Deleted — ${data.appearancesRemoved} appearance(s) undone.`);
-        refreshMatchdays(); refreshPlayers();
+        await refreshMatchdays(); await refreshPlayers();
       }catch(e){ toast(e.message); }
     }));
   }catch(e){ list.innerHTML = '<div class="meta">Could not load.</div>'; }
