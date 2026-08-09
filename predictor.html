@@ -551,8 +551,18 @@ async function openPredictView(fixture){
   // Load existing lineup into positionOrder, or start fresh
   positionOrder = { GK: [], DF: [], MF: [], FW: [] };
   armedSwap = null;
+  let removedDeparted = [];
   if(existing){
-    (existing.lineup || []).forEach(item => { if(positionOrder[item.slot]) positionOrder[item.slot].push(item.player_id); });
+    (existing.lineup || []).forEach(item => {
+      if(!positionOrder[item.slot]) return;
+      // If this player's left the current squad since the prediction was
+      // saved, don't silently show a broken empty slot or drop them from
+      // a save with no explanation — pull them out now and say so, so
+      // there's an obvious open slot to fill with someone current.
+      const stillCurrent = allPlayersCache.some(p => p.id === item.player_id);
+      if(stillCurrent){ positionOrder[item.slot].push(item.player_id); }
+      else{ removedDeparted.push(`${item.first_name} ${item.last_name}`); }
+    });
   }
   document.getElementById('pr-formation').value = (existing?.formation && FORMATIONS[existing.formation]) ? existing.formation : Object.keys(FORMATIONS)[0];
   document.getElementById('pr-formation').addEventListener('change', onFormationChange);
@@ -571,6 +581,9 @@ async function openPredictView(fixture){
   }
 
   renderPicker(locked);
+  if(removedDeparted.length){
+    toast(`${removedDeparted.join(', ')} ${removedDeparted.length===1?'has':'have'} left the squad since you picked them — replace before saving.`);
+  }
 
   if(!locked){
     document.getElementById('pr-save').addEventListener('click', ()=> savePrediction(fixture));
@@ -582,11 +595,19 @@ async function openPredictView(fixture){
   if(reuseBtn){
     reuseBtn.addEventListener('click', ()=>{
       positionOrder = { GK: [], DF: [], MF: [], FW: [] };
-      (previousTeam.lineup || []).forEach(item => { if(positionOrder[item.slot]) positionOrder[item.slot].push(item.player_id); });
+      let skippedDeparted = [];
+      (previousTeam.lineup || []).forEach(item => {
+        if(!positionOrder[item.slot]) return;
+        const stillCurrent = allPlayersCache.some(p => p.id === item.player_id);
+        if(stillCurrent){ positionOrder[item.slot].push(item.player_id); }
+        else{ skippedDeparted.push(`${item.first_name} ${item.last_name}`); }
+      });
       document.getElementById('pr-formation').value = previousTeam.formation;
       armedSwap = null;
       renderPicker(locked);
-      toast('Team copied — scoreline and scorers left for you to set fresh.');
+      toast(skippedDeparted.length
+        ? `Team copied — but ${skippedDeparted.join(', ')} left the squad since then, so those spots are open.`
+        : 'Team copied — scoreline and scorers left for you to set fresh.');
     });
   }
 
@@ -852,14 +873,15 @@ async function loadAggregate(fixtureId){
   const fallbackFormation = Object.keys(FORMATIONS)[0];
   const topFormation = formationCounts?.[0]?.formation || fallbackFormation;
   const required = FORMATIONS[topFormation] || FORMATIONS[fallbackFormation];
-  const slotsForFormation = (slotCounts||[]).filter(s=>s.formation===topFormation);
 
   const playersHtml = Object.keys(required).map(pos=>{
     const need = required[pos];
     const xs = spreadX(need);
-    // Top N most-voted players in this broad position, matching however
-    // many slots the top formation needs there.
-    const topPicks = slotsForFormation.filter(s=>s.slot===pos).sort((a,b)=>b.votes-a.votes).slice(0, need);
+    // Top N most-voted players in this broad position — votes here count
+    // everyone who picked them there, regardless of their overall
+    // formation, so this isn't filtered by topFormation at all. Only the
+    // NUMBER of slots to show per line comes from the top formation.
+    const topPicks = (slotCounts||[]).filter(s=>s.slot===pos).sort((a,b)=>b.votes-a.votes).slice(0, need);
     return topPicks.map((pick, i)=>{
       const pct = Math.round(100*pick.votes/total);
       return `<div class="pitch-player" style="left:${xs[i]}%; top:${PITCH_LINE_Y[pos]}%;">
