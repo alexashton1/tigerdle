@@ -116,6 +116,7 @@ Deno.serve(async (req) => {
           appearances: p.appearances ?? null,
           appearances_updated_at: p.appearances != null ? new Date().toISOString() : null,
           active: p.active !== false,
+          pitch_order: p.pitch_order ?? null,
         }).select().single();
         if (error) throw error;
         return json({ ok: true, data });
@@ -235,7 +236,7 @@ Deno.serve(async (req) => {
         const p = payload || {};
         if (!p.id) return json({ ok: false, error: "id is required" }, 400);
         const patch: Record<string, unknown> = {};
-        for (const k of ["first_name", "last_name", "position", "nationality", "era", "age", "birth_date", "appearances", "active"]) {
+        for (const k of ["first_name", "last_name", "position", "nationality", "era", "age", "birth_date", "appearances", "active", "pitch_order"]) {
           if (k in p) patch[k] = p[k];
         }
         if ("appearances" in patch) {
@@ -414,6 +415,82 @@ Deno.serve(async (req) => {
         if (error) throw error;
         const scoredCount = data?.[0]?.scored_count ?? 0;
         return json({ ok: true, data: { scoredCount } });
+      }
+
+      case "list_fixture_scores": {
+        const p = payload || {};
+        if (!p.fixture_id) return json({ ok: false, error: "fixture_id is required" }, 400);
+        const { data: scores, error } = await supabase
+          .from("prediction_scores")
+          .select("*")
+          .eq("fixture_id", p.fixture_id)
+          .order("total_points", { ascending: false });
+        if (error) throw error;
+        const userIds = (scores || []).map((s: any) => s.user_id);
+        const { data: profiles } = userIds.length
+          ? await supabase.from("profiles").select("user_id, email, display_name").in("user_id", userIds)
+          : { data: [] };
+        const withNames = (scores || []).map((s: any) => {
+          const profile = (profiles || []).find((pr: any) => pr.user_id === s.user_id);
+          return { ...s, display_name: profile?.display_name || profile?.email || "Unknown" };
+        });
+        return json({ ok: true, data: { scores: withNames } });
+      }
+
+      case "override_prediction_score": {
+        const p = payload || {};
+        if (!p.id || p.total_points === undefined) {
+          return json({ ok: false, error: "id and total_points are required" }, 400);
+        }
+        const { data, error } = await supabase
+          .from("prediction_scores")
+          .update({ total_points: p.total_points, calculated_at: new Date().toISOString() })
+          .eq("id", p.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return json({ ok: true, data });
+      }
+
+      case "save_predictor_formation": {
+        const p = payload || {};
+        if (!p.name || !p.df || !p.mf || !p.fw) {
+          return json({ ok: false, error: "name, df, mf, and fw are required" }, 400);
+        }
+        const total = 1 + Number(p.df) + Number(p.mf) + Number(p.fw);
+        if (total !== 11) {
+          return json({ ok: false, error: `Positions must add up to 11 including the goalkeeper — this adds up to ${total}.` }, 400);
+        }
+        const { data, error } = await supabase.from("predictor_formations").upsert({
+          name: p.name, gk: 1, df: p.df, mf: p.mf, fw: p.fw, sort_order: p.sort_order ?? 0,
+        }, { onConflict: "name" }).select().single();
+        if (error) throw error;
+        return json({ ok: true, data });
+      }
+
+      case "delete_predictor_formation": {
+        const p = payload || {};
+        if (!p.name) return json({ ok: false, error: "name is required" }, 400);
+        const { error } = await supabase.from("predictor_formations").delete().eq("name", p.name);
+        if (error) throw error;
+        return json({ ok: true, data: { deleted: true } });
+      }
+
+      case "save_pitch_layout": {
+        const p = payload || {};
+        const positions = ["GK", "DF", "MF", "FW"];
+        for (const pos of positions) {
+          if (p[pos] === undefined || p[pos] === null || p[pos] < 0 || p[pos] > 100) {
+            return json({ ok: false, error: `${pos} needs a value between 0 and 100` }, 400);
+          }
+        }
+        for (const pos of positions) {
+          const { error } = await supabase.from("pitch_layout_settings").upsert(
+            { position: pos, y_position: p[pos] }, { onConflict: "position" }
+          );
+          if (error) throw error;
+        }
+        return json({ ok: true, data: { saved: true } });
       }
 
       case "save_matchday": {
