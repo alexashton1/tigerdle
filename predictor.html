@@ -130,6 +130,12 @@
   .scorer-chip:hover{ border-color:var(--amber-deep); }
   .scorer-chip.selected{ background:var(--amber); border-color:var(--amber); color:var(--ink); font-weight:600; }
   .scorer-chip.disabled{ opacity:.4; cursor:not-allowed; }
+  .scorer-subgroup{ margin-bottom:10px; }
+  .scorer-subgroup-label{
+    font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--paper-dim); margin-bottom:6px;
+  }
+  .scorer-subgroup-points{ color:var(--amber-soft); font-weight:700; }
 
   .agg-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
   .agg-row:last-child{ border-bottom:none; }
@@ -527,12 +533,14 @@ async function openPredictView(fixture){
       <div id="pr-player-sections"></div>
 
       <div class="field" style="margin-top:6px;">
-        <label>Predicted scorer <span style="text-transform:none; opacity:.7;">(any goal)</span></label>
-        <div class="scorer-chips" id="pr-scorer-chips"></div>
+        <label style="margin-bottom:2px;">🎯 Anytime goalscorer</label>
+        <p style="font-family:var(--body); font-size:12px; color:var(--paper-dim); margin:0 0 8px;">Anyone to score at any point in the match</p>
+        <div id="pr-scorer-chips"></div>
       </div>
       <div class="field">
-        <label>First scorer <span style="text-transform:none; opacity:.7;">(worth more)</span></label>
-        <div class="scorer-chips" id="pr-first-scorer-chips"></div>
+        <label style="margin-bottom:2px;">⚡ First goalscorer</label>
+        <p style="font-family:var(--body); font-size:12px; color:var(--paper-dim); margin:0 0 8px;">Specifically whoever scores <b style="color:var(--amber-soft);">first</b> — worth more points</p>
+        <div id="pr-first-scorer-chips"></div>
       </div>
       ${!locked ? `<button class="primary-btn" id="pr-save" style="width:100%;" disabled>Save prediction</button><p id="pr-save-hint" style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:8px;"></p>` : ''}
       <div style="display:flex; gap:8px; margin-top:8px;">
@@ -714,16 +722,34 @@ function renderScorerChips(locked){
   if(selectedPredictedScorer && !selectedIds.includes(selectedPredictedScorer)) selectedPredictedScorer = null;
   if(selectedFirstScorer && !selectedIds.includes(selectedFirstScorer)) selectedFirstScorer = null;
 
-  function renderGroup(containerId, selectedValue, onPick){
+  // GK and DF share the same point value for both scorer types, so
+  // they're grouped together rather than showing an near-empty
+  // "Goalkeepers" section with just the one keeper in it.
+  const groups = [
+    { label: 'Goalkeepers & Defenders', positions: ['GK','DF'] },
+    { label: 'Midfielders', positions: ['MF'] },
+    { label: 'Forwards', positions: ['FW'] },
+  ];
+
+  function renderGroup(containerId, selectedValue, pointsMap, onPick){
     const container = document.getElementById(containerId);
     if(!container) return;
     if(!selectedPlayers.length){
       container.innerHTML = `<div class="empty-state" style="padding:6px 0; font-size:12px;">Pick your team first</div>`;
       return;
     }
-    container.innerHTML = selectedPlayers.map(p => `
-      <div class="scorer-chip ${p.id===selectedValue?'selected':''} ${locked?'disabled':''}" data-scorer-chip="${p.id}">${escapeHtml(p.last_name)}</div>
-    `).join('');
+    container.innerHTML = groups.map(group=>{
+      const players = selectedPlayers.filter(p => group.positions.includes(p.position));
+      if(!players.length) return '';
+      const points = pointsMap[group.positions[0]];
+      return `
+        <div class="scorer-subgroup">
+          <div class="scorer-subgroup-label">${group.label} <span class="scorer-subgroup-points">${points} pts</span></div>
+          <div class="scorer-chips">
+            ${players.map(p => `<div class="scorer-chip ${p.id===selectedValue?'selected':''} ${locked?'disabled':''}" data-scorer-chip="${p.id}">${escapeHtml(p.last_name)}</div>`).join('')}
+          </div>
+        </div>`;
+    }).join('');
     if(!locked){
       container.querySelectorAll('[data-scorer-chip]').forEach(chip=>{
         chip.addEventListener('click', ()=>{
@@ -735,8 +761,8 @@ function renderScorerChips(locked){
     }
   }
 
-  renderGroup('pr-scorer-chips', selectedPredictedScorer, (id)=>{ selectedPredictedScorer = id; });
-  renderGroup('pr-first-scorer-chips', selectedFirstScorer, (id)=>{ selectedFirstScorer = id; });
+  renderGroup('pr-scorer-chips', selectedPredictedScorer, SCORING_RULES.predictedScorer, (id)=>{ selectedPredictedScorer = id; });
+  renderGroup('pr-first-scorer-chips', selectedFirstScorer, SCORING_RULES.firstScorer, (id)=>{ selectedFirstScorer = id; });
 }
 
 function renderPicker(locked){
