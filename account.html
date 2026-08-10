@@ -106,16 +106,28 @@
     </div>
 
     <div class="account-card" style="margin:0 auto 24px;" id="acc-signin-options-card">
-      <h2 style="font-size:18px;">Sign-in options</h2>
-      <p style="margin-bottom:12px;">The email link works everywhere with no setup — everything here is entirely optional, on top of it, never instead of it.</p>
-      <div id="acc-recovery-banner" style="display:none; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:12.5px; color:var(--amber-soft);">
-        🔑 Enter a new password below to finish resetting it.
+      <div id="acc-signin-view-state" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <div>
+          <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">🔐 Sign-in options</div>
+          <div style="font-family:var(--body); font-size:13px; color:var(--paper-dim); margin-top:3px;" id="acc-signin-status">Email link only — nothing else set up</div>
+        </div>
+        <button class="ghost-btn" id="acc-signin-edit-toggle">Manage</button>
       </div>
-      <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">Password</div>
-      <input type="password" id="acc-new-password" placeholder="New password (min. 8 characters)" autocomplete="new-password">
-      <input type="password" id="acc-confirm-password" placeholder="Confirm password" autocomplete="new-password" style="margin-top:8px;">
-      <button class="primary-btn" id="acc-set-password" style="width:100%; margin-top:8px;">Set password</button>
-      <div class="subscribe-msg" id="acc-password-msg" style="text-align:center; margin-top:8px;"></div>
+      <div id="acc-signin-edit-state" style="display:none;">
+        <h2 style="font-size:18px;">Sign-in options</h2>
+        <p style="margin-bottom:12px;">The email link works everywhere with no setup — everything here is entirely optional, on top of it, never instead of it.</p>
+        <div id="acc-recovery-banner" style="display:none; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:12.5px; color:var(--amber-soft);">
+          🔑 Enter a new password below to finish resetting it.
+        </div>
+        <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">Password</div>
+        <input type="password" id="acc-new-password" placeholder="New password (min. 8 characters)" autocomplete="new-password">
+        <input type="password" id="acc-confirm-password" placeholder="Confirm password" autocomplete="new-password" style="margin-top:8px;">
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="primary-btn" id="acc-set-password" style="flex:1;">Set password</button>
+          <button class="ghost-btn" id="acc-signin-collapse">Done</button>
+        </div>
+        <div class="subscribe-msg" id="acc-password-msg" style="text-align:center; margin-top:8px;"></div>
+      </div>
     </div>
 
     <div id="stats-dashboard"></div>
@@ -234,6 +246,17 @@ function showNameEditState(){
 }
 document.getElementById('name-edit-toggle').addEventListener('click', showNameEditState);
 
+function showSigninViewState(){
+  document.getElementById('acc-signin-view-state').style.display = 'flex';
+  document.getElementById('acc-signin-edit-state').style.display = 'none';
+}
+function showSigninEditState(){
+  document.getElementById('acc-signin-view-state').style.display = 'none';
+  document.getElementById('acc-signin-edit-state').style.display = 'block';
+}
+document.getElementById('acc-signin-edit-toggle').addEventListener('click', showSigninEditState);
+document.getElementById('acc-signin-collapse').addEventListener('click', showSigninViewState);
+
 function randomAnonymousName(){
   return 'Tiger' + Math.floor(1000 + Math.random() * 9000);
 }
@@ -320,6 +343,7 @@ document.getElementById('acc-set-password').addEventListener('click', async ()=>
     msg.textContent = 'Password set — you can now sign in with it from the sign-in screen any time.';
     document.getElementById('acc-new-password').value = '';
     document.getElementById('acc-confirm-password').value = '';
+    document.getElementById('acc-signin-status').textContent = 'Password set up ✓';
   }catch(e){ msg.textContent = e.message; }
 });
 
@@ -332,6 +356,7 @@ document.getElementById('acc-sign-out').addEventListener('click', async ()=>{
 sb.auth.onAuthStateChange((event, session)=>{
   if(session?.user) showSignedIn(session.user);
   if(event === 'PASSWORD_RECOVERY'){
+    showSigninEditState();
     document.getElementById('acc-recovery-banner').style.display = 'block';
     document.getElementById('acc-signin-options-card').scrollIntoView({ behavior:'smooth', block:'center' });
   }
