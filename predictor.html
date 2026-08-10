@@ -21,7 +21,7 @@
   .account-card input:focus{ border-color:var(--amber); }
 
   .fixture-card{
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    display:block;
     background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px;
     cursor:pointer; transition:border-color .15s ease;
   }
@@ -145,6 +145,62 @@
 
   .locked-note{ text-align:center; font-family:var(--mono); font-size:11.5px; color:var(--amber-soft); background:var(--ink-2); border:1px dashed var(--line); border-radius:8px; padding:12px; margin-bottom:16px; }
 
+  .fixture-top-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .wc-pill{
+    display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10.5px;
+    background:var(--ink); border:1px solid var(--line); color:var(--paper-dim); padding:4px 10px 4px 8px;
+    border-radius:999px; cursor:pointer; margin-top:9px; white-space:nowrap; transition:all .15s ease;
+  }
+  .wc-pill:hover{ border-color:var(--amber-deep); color:var(--paper); }
+  .wc-pill.wc-pill-active{ background:rgba(245,163,0,0.12); border-color:var(--amber); color:var(--amber-soft); font-weight:600; }
+  .wc-pill-caret{ opacity:.6; font-size:9px; }
+
+  .prediction-summary{
+    display:flex; align-items:center; gap:14px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);
+    font-family:var(--body); font-size:12.5px; color:var(--paper-dim); flex-wrap:wrap;
+  }
+  .prediction-summary b{ color:var(--paper); }
+  .prediction-summary .score-pill{
+    font-family:var(--display); font-weight:400; font-size:15px; color:var(--amber); background:var(--ink);
+    border:1px solid var(--line); border-radius:6px; padding:1px 9px;
+  }
+
+  .wildcard-modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(13,15,20,0.82); z-index:100;
+    align-items:flex-end; justify-content:center; backdrop-filter:blur(2px);
+  }
+  .wildcard-modal-overlay.open{ display:flex; }
+  @media(min-width:640px){ .wildcard-modal-overlay{ align-items:center; } }
+  .wildcard-modal{
+    background:var(--ink-2); border:1px solid var(--line); border-radius:16px 16px 0 0; padding:22px;
+    width:100%; max-width:600px; max-height:88vh; overflow-y:auto;
+  }
+  @media(min-width:640px){ .wildcard-modal{ border-radius:16px; } }
+  .wildcard-modal h3{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:21px; margin:0 0 4px; }
+  .wildcard-modal p{ font-size:12.5px; color:var(--paper-dim); margin:0 0 4px; }
+  .wildcard-grid{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:14px; }
+  @media(min-width:520px){ .wildcard-grid{ grid-template-columns:1fr 1fr; } }
+  .wildcard-card{
+    position:relative; text-align:left; background:var(--ink); border:2px solid var(--line); border-radius:14px;
+    padding:16px; cursor:pointer; transition:all .18s ease; overflow:hidden;
+  }
+  .wildcard-card:hover:not(.wc-used):not(.wc-blocked){ border-color:var(--amber-deep); transform:translateY(-1px); }
+  .wildcard-icon{ font-size:26px; line-height:1; margin-bottom:8px; display:block; }
+  .wildcard-name{ font-family:var(--display); font-weight:400; font-size:18px; color:var(--paper); margin-bottom:4px; }
+  .wildcard-desc{ font-family:var(--body); font-size:12.5px; color:var(--paper-dim); line-height:1.5; }
+  .wildcard-badge{
+    position:absolute; top:12px; right:12px; font-family:var(--mono); font-size:9px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.05em; padding:3px 9px; border-radius:999px;
+  }
+  .wildcard-card.wc-available .wildcard-badge{ background:var(--ink-2); border:1px solid var(--line); color:var(--paper-dim); }
+  .wildcard-card.wc-selected{ border-color:var(--amber); background:linear-gradient(135deg, rgba(245,163,0,0.14), rgba(245,163,0,0.03)); box-shadow:0 6px 20px rgba(245,163,0,0.15); }
+  .wildcard-card.wc-selected .wildcard-badge{ background:var(--amber); color:var(--ink); }
+  .wildcard-card.wc-selected .wildcard-name{ color:var(--amber); }
+  .wildcard-card.wc-used{ cursor:not-allowed; opacity:.45; }
+  .wildcard-card.wc-used .wildcard-badge{ background:var(--ink-2); border:1px solid var(--line); color:var(--paper-dim); }
+  .wildcard-card.wc-blocked{ cursor:not-allowed; opacity:.35; filter:grayscale(0.4); }
+  .wildcard-modal-actions{ display:flex; gap:10px; margin-top:16px; }
+
   .share-modal-overlay{ display:none; position:fixed; inset:0; background:rgba(10,9,7,0.75); z-index:80; align-items:center; justify-content:center; padding:20px; }
   .share-modal-overlay.open{ display:flex; }
   .share-modal{ background:var(--ink-2); border:1px solid var(--line); border-radius:14px; padding:22px; max-width:340px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
@@ -217,6 +273,18 @@
       <button class="share-opt" id="image-share-more" style="display:none;"><span class="share-opt-icon">⋯</span><span>More</span></button>
     </div>
     <button class="ghost-btn" id="image-share-modal-close" style="width:100%; margin-top:14px;">Close</button>
+  </div>
+</div>
+
+<div class="wildcard-modal-overlay" id="wc-modal-overlay">
+  <div class="wildcard-modal">
+    <h3 id="wc-modal-title">Wildcard</h3>
+    <p>One per season, each. Pick at most one for this fixture.</p>
+    <div class="wildcard-grid" id="wc-grid"></div>
+    <div class="wildcard-modal-actions">
+      <button class="ghost-btn" id="wc-cancel" style="flex:1;">Cancel</button>
+      <button class="primary-btn" id="wc-confirm" style="flex:1;">Confirm</button>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -328,16 +396,107 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 /* ---------- past results ---------- */
-function renderScoreBreakdown(score){
+const WILDCARD_NAMES = {
+  double: { icon:'🎯', name:'Double Points' },
+  clean_sheet: { icon:'🧤', name:'Clean Sheet Hero' },
+  hat_trick_hero: { icon:'⚡', name:'Hat-trick Hero' },
+  reverse_score: { icon:'🔄', name:'Reverse Score' },
+};
+
+// Compares score/scorer/first-scorer points only — position points are
+// deliberately never eligible to be THE headline pick here, even though
+// they still show up in the full breakdown below.
+function buildResultHighlight(score){
   const b = score.breakdown || {};
-  const positions = b.correct_positions || [];
-  const positionsHtml = positions.length
-    ? positions.map(p => `<div class="agg-row"><span>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)} — correct at ${p.slot}</span><span class="agg-pct">+2</span></div>`).join('')
-    : `<div class="empty-state" style="padding:8px 0;">No players matched their exact position this time.</div>`;
+  const candidates = [
+    { type:'score', points: score.score_points },
+    { type:'scorer', points: score.scorer_points },
+    { type:'first', points: score.first_scorer_points },
+  ];
+  const best = candidates.reduce((a,c) => c.points > a.points ? c : a);
+  if(!best.points) return null;
+  if(best.type === 'score'){
+    const label = (b.score_result === 'exact' || b.score_result === 'exact_reversed') ? 'Exact score!' : 'Correct result';
+    const reversedNote = b.score_result === 'exact_reversed' ? ', the other way round' : '';
+    return `<b>${label}</b> — you called ${b.predicted_hull_score}-${b.predicted_opponent_score}${reversedNote} — <b>+${best.points}pts</b>`;
+  }
+  if(best.type === 'scorer' && b.predicted_scorer) return `<b>${escapeHtml(b.predicted_scorer.first_name)} ${escapeHtml(b.predicted_scorer.last_name)}</b> scored, just like you called it — <b>+${best.points}pts</b>`;
+  if(best.type === 'first' && b.first_scorer) return `<b>${escapeHtml(b.first_scorer.first_name)} ${escapeHtml(b.first_scorer.last_name)}</b> scored first, exactly as predicted — <b>+${best.points}pts</b>`;
+  return null;
+}
+
+// How many of the awarded points are actually attributable to the
+// wildcard — not just re-displaying the already-boosted number, since
+// that would overstate what it actually contributed.
+function wildcardUplift(score){
+  const wildcard = score.wildcard_applied;
+  if(!wildcard) return null;
+  const b = score.breakdown || {};
+  if(wildcard === 'hat_trick_hero'){
+    const uplift = Math.round((score.scorer_points + score.first_scorer_points) * 2 / 3);
+    return uplift > 0 ? uplift : null;
+  }
+  if(wildcard === 'double') return Math.round(score.total_points / 2);
+  if(wildcard === 'reverse_score' && b.score_result === 'exact_reversed') return score.score_points;
+  if(wildcard === 'clean_sheet') return score.clean_sheet_points > 0 ? score.clean_sheet_points : null;
+  return null;
+}
+
+function renderPositionPitch(breakdown, prediction){
+  if(!prediction || !prediction.lineup || !prediction.lineup.length){
+    return `<div class="empty-state" style="padding:8px 0;">Team details aren't available for this one.</div>`;
+  }
+  const hitNames = new Set((breakdown.correct_positions||[]).map(p => p.first_name + ' ' + p.last_name));
+  const byLine = { GK:[], DF:[], MF:[], FW:[] };
+  prediction.lineup.forEach(p => { if(byLine[p.slot]) byLine[p.slot].push(p); });
+
+  let html = '';
+  Object.keys(byLine).forEach(pos=>{
+    const players = byLine[pos];
+    const xs = spreadX(players.length);
+    players.forEach((p, i)=>{
+      const hit = hitNames.has(p.first_name + ' ' + p.last_name);
+      html += `<div class="pitch-player" style="left:${xs[i]}%; top:${PITCH_LINE_Y[pos]}%;">
+        <div class="pitch-dot" style="background:${hit ? 'var(--good)' : 'var(--ink-3)'}; color:${hit ? 'var(--ink)' : 'var(--paper-dim)'}; ${hit ? '' : 'border-style:dashed;'}">${hit ? '+2' : '0'}</div>
+        <div class="pitch-name">${escapeHtml(p.last_name)}</div>
+      </div>`;
+    });
+  });
+  return `
+    <div style="display:flex; justify-content:center; gap:18px; font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin-bottom:14px;">
+      <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px; height:10px; border-radius:50%; background:var(--good); display:inline-block;"></span>Correct position (+2)</span>
+      <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px; height:10px; border-radius:50%; background:var(--ink-3); border:1px solid var(--line); display:inline-block;"></span>Not this time</span>
+    </div>
+    <div class="pitch-wrap" style="max-width:320px;">
+      <svg class="pitch-lines" viewBox="0 0 100 130" preserveAspectRatio="none">
+        <rect width="100" height="130" fill="#10231a"/>
+        <rect x="2" y="2" width="96" height="126" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+        <line x1="2" y1="65" x2="98" y2="65" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+        <circle cx="50" cy="65" r="11" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+      </svg>
+      <div class="pitch-players">${html}</div>
+    </div>`;
+}
+
+function renderScoreBreakdown(score, prediction){
+  const b = score.breakdown || {};
+
+  const highlight = buildResultHighlight(score);
+  const highlightHtml = highlight
+    ? `<div class="result-highlight" style="display:flex; align-items:center; gap:10px; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-family:var(--body); font-size:13px; color:var(--amber-soft);"><span style="font-size:20px; flex-shrink:0;">🏆</span><span>Your best pick: ${highlight}</span></div>`
+    : `<div class="empty-state" style="background:var(--ink-2); border:1px dashed var(--line); border-radius:8px; padding:10px 14px; margin-bottom:14px;">No scoreline or scorer hits this one — still picked up points from your team selection below.</div>`;
+
+  const uplift = wildcardUplift(score);
+  const wc = score.wildcard_applied ? WILDCARD_NAMES[score.wildcard_applied] : null;
+  const wildcardHtml = (wc && uplift)
+    ? `<div style="display:flex; align-items:center; gap:10px; background:rgba(110,31,42,0.18); border:1px solid var(--maroon-soft); border-radius:8px; padding:9px 14px; margin-bottom:14px; font-family:var(--body); font-size:12.5px; color:var(--paper);"><span style="font-size:18px; flex-shrink:0;">${wc.icon}</span><span><b style="color:var(--maroon-soft);">${wc.name}</b> was active — worth an extra <b style="color:var(--maroon-soft);">+${uplift}pts</b> on top of what you'd have scored without it</span></div>`
+    : '';
 
   let scoreLineHtml;
   if(b.score_result === 'exact'){
     scoreLineHtml = `<div class="agg-row"><span>Exact score — you called ${b.predicted_hull_score}-${b.predicted_opponent_score}</span><span class="agg-pct">+10</span></div>`;
+  } else if(b.score_result === 'exact_reversed'){
+    scoreLineHtml = `<div class="agg-row"><span>Exact score, the other way round — you called ${b.predicted_hull_score}-${b.predicted_opponent_score}, it finished ${b.actual_hull_score}-${b.actual_opponent_score}</span><span class="agg-pct">+10</span></div>`;
   } else if(b.score_result === 'result'){
     scoreLineHtml = `<div class="agg-row"><span>Correct result (scoreline was ${b.actual_hull_score}-${b.actual_opponent_score}, you had ${b.predicted_hull_score}-${b.predicted_opponent_score})</span><span class="agg-pct">+5</span></div>`;
   } else {
@@ -352,13 +511,15 @@ function renderScoreBreakdown(score){
   }
 
   return `
-    <h4 style="font-size:13px; color:var(--amber-soft); margin:0 0 6px;">Correct positions</h4>
-    ${positionsHtml}
-    <h4 style="font-size:13px; color:var(--amber-soft); margin:14px 0 6px;">Scoreline</h4>
+    ${highlightHtml}
+    ${wildcardHtml}
+    <h4 style="font-size:13px; color:var(--amber-soft); margin:0 0 6px;">Scoreline</h4>
     ${scoreLineHtml}
     <h4 style="font-size:13px; color:var(--amber-soft); margin:14px 0 6px;">Goalscorers</h4>
     ${scorerLine(b.predicted_scorer, 'Predicted scorer') || '<div class="empty-state" style="padding:8px 0;">No scorer predicted.</div>'}
     ${scorerLine(b.first_scorer, 'First scorer') || ''}
+    <h4 style="font-size:13px; color:var(--amber-soft); margin:16px 0 10px;">Your team</h4>
+    ${renderPositionPitch(b, prediction)}
   `;
 }
 
@@ -375,13 +536,17 @@ async function loadPastResults(){
 
   const fixtureIds = scores.map(s => s.fixture_id);
   const { data: fixtures } = await sb.from('fixtures').select('*').in('id', fixtureIds);
+  // The full prediction (lineup, wildcard) alongside its score — needed
+  // to draw the pitch and show any wildcard uplift, neither of which
+  // live on the prediction_scores row itself.
+  const { data: predictions } = await sb.from('predictions').select('*').eq('user_id', currentUser.id).in('fixture_id', fixtureIds);
 
   section.style.display = 'block';
   list.innerHTML = scores.map((s, i)=>{
     const fx = (fixtures||[]).find(f => f.id === s.fixture_id);
     const opponent = fx ? fx.opponent : 'Unknown fixture';
     return `
-    <div class="fixture-card" data-toggle-detail="${i}" style="cursor:pointer;">
+    <div class="fixture-card" data-toggle-detail="${i}" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px;">
       <div>
         <div class="fixture-main">Hull City vs ${escapeHtml(opponent)} <span class="fixture-meta">(tap for detail)</span></div>
         <div class="fixture-meta">${fx ? fx.match_date : ''}</div>
@@ -401,7 +566,8 @@ async function loadPastResults(){
       const isOpen = detailEl.style.display === 'block';
       detailEl.style.display = isOpen ? 'none' : 'block';
       if(!isOpen && !detailEl.dataset.rendered){
-        detailEl.innerHTML = renderScoreBreakdown(scores[i]);
+        const pred = (predictions||[]).find(p => p.fixture_id === scores[i].fixture_id);
+        detailEl.innerHTML = renderScoreBreakdown(scores[i], pred);
         detailEl.dataset.rendered = '1';
       }
     });
@@ -409,6 +575,22 @@ async function loadPastResults(){
 }
 
 /* ---------- fixture list ---------- */
+const WILDCARDS = [
+  { id:'double', icon:'🎯', name:'Double Points', desc:'Doubles every point this prediction earns you — position, score, and both scorers, all of it.' },
+  { id:'clean_sheet', icon:'🧤', name:'Clean Sheet Hero', desc:'5 points for every goalkeeper and defender in your team if Hull keep a clean sheet.' },
+  { id:'hat_trick_hero', icon:'⚡', name:'Hat-trick Hero', desc:'Triples the points from your anytime and first goalscorer picks.' },
+  { id:'reverse_score', icon:'🔄', name:'Reverse Score', desc:'Predict 1-0 and it finishes 0-1? Still counts as your exact score, either way round.' },
+];
+let usedWildcardsThisSeason = new Set();
+let wildcardModalFixtureId = null;
+let wildcardModalPending = null;
+
+function footballSeason(dateStr){
+  const d = new Date(dateStr);
+  const y = d.getFullYear(), m = d.getMonth() + 1; // JS months are 0-indexed
+  return m >= 7 ? `${y}-${String(y+1).slice(-2)}` : `${y-1}-${String(y).slice(-2)}`;
+}
+
 async function loadFixtureList(){
   const list = document.getElementById('fixture-list');
   list.innerHTML = '<div class="empty-state">Loading fixtures…</div>';
@@ -417,34 +599,128 @@ async function loadFixtureList(){
     list.innerHTML = '<div class="empty-state">No upcoming fixtures added yet — check back soon.</div>';
     return;
   }
-  const { data: myPredictions } = await sb.from('predictions').select('fixture_id, is_auto_carried').eq('user_id', currentUser.id);
-  const predictedIds = new Map((myPredictions||[]).map(p=>[p.fixture_id, p.is_auto_carried]));
+  const { data: myPredictions } = await sb.from('predictions').select('*').eq('user_id', currentUser.id);
+  const predictionByFixture = new Map((myPredictions||[]).map(p=>[p.fixture_id, p]));
+
+  // A wildcard is "used" for the season the moment it's attached to any
+  // of this user's predictions — including ones not yet locked, so two
+  // fixtures can't both quietly claim the same wildcard at once.
+  const currentSeason = footballSeason(new Date().toISOString());
+  usedWildcardsThisSeason = new Set();
+  (myPredictions||[]).forEach(p=>{
+    const fx = fixtures.find(f=>f.id===p.fixture_id);
+    if(p.wildcard && fx && footballSeason(fx.match_date) === currentSeason) usedWildcardsThisSeason.add(p.wildcard);
+  });
 
   // Only the soonest fixture is open — everything after it stays locked
   // until it's had its kickoff. One at a time, deliberately.
   const nextFixtureId = fixtures[0].id;
 
   list.innerHTML = fixtures.map((fx, i)=>{
-    const has = predictedIds.has(fx.id);
-    const wasAutoCarried = predictedIds.get(fx.id) === true;
+    const pred = predictionByFixture.get(fx.id);
+    const has = !!pred;
+    const wasAutoCarried = pred?.is_auto_carried === true;
     const isNext = fx.id === nextFixtureId;
     const statusLabel = wasAutoCarried ? '🔄 Carried over' : (has ? '✓ Predicted' : (isNext ? 'Predict now' : `Opens after ${escapeHtml(fixtures[i-1].opponent)}`));
     const statusClass = has ? 'predicted' : (isNext ? 'not-predicted' : 'locked');
+    const canInteract = isNext || has;
+
+    let wildcardPillHtml = '';
+    if(canInteract){
+      if(pred?.wildcard){
+        const wc = WILDCARDS.find(w=>w.id===pred.wildcard);
+        wildcardPillHtml = `<span class="wc-pill wc-pill-active" data-open-wc="${fx.id}">${wc.icon} ${wc.name} <span class="wc-pill-caret">▾</span></span>`;
+      } else {
+        wildcardPillHtml = `<span class="wc-pill" data-open-wc="${fx.id}">🔥 No wildcard <span class="wc-pill-caret">▾</span></span>`;
+      }
+    }
+
+    let summaryHtml = '';
+    if(pred && (pred.hull_score != null || (pred.scorers||[]).length)){
+      const predicted = (pred.scorers||[]).find(s=>s.type==='predicted');
+      const first = (pred.scorers||[]).find(s=>s.type==='first');
+      const parts = [];
+      if(pred.hull_score != null && pred.opponent_score != null) parts.push(`<span>Your prediction: <span class="score-pill">${pred.hull_score}-${pred.opponent_score}</span></span>`);
+      if(predicted) parts.push(`<span>⚽ <b>${escapeHtml(predicted.first_name)} ${escapeHtml(predicted.last_name)}</b> to score</span>`);
+      if(first) parts.push(`<span>⚡ <b>${escapeHtml(first.first_name)} ${escapeHtml(first.last_name)}</b> first</span>`);
+      if(parts.length) summaryHtml = `<div class="prediction-summary">${parts.join('')}</div>`;
+    }
+
     return `
-    <div class="fixture-card ${isNext ? 'fixture-next' : ''} ${!isNext && !has ? 'fixture-locked' : ''}" ${isNext || has ? `data-fixture-id="${fx.id}"` : ''}>
-      <div>
-        ${isNext ? '<span class="next-badge">NEXT UP</span>' : ''}
-        <div class="fixture-main">Hull City vs ${escapeHtml(fx.opponent)}</div>
-        <div class="fixture-meta">${fx.match_date}${fx.kickoff_time ? ' '+fx.kickoff_time : ''} · ${fx.home_away||''} · ${escapeHtml(fx.competition||'')}</div>
+    <div class="fixture-card ${isNext ? 'fixture-next' : ''} ${!isNext && !has ? 'fixture-locked' : ''}" ${canInteract ? `data-fixture-id="${fx.id}"` : ''}>
+      <div class="fixture-top-row">
+        <div>
+          ${isNext ? '<span class="next-badge">NEXT UP</span>' : ''}
+          <div class="fixture-main">Hull City vs ${escapeHtml(fx.opponent)}</div>
+          <div class="fixture-meta">${fx.match_date}${fx.kickoff_time ? ' '+fx.kickoff_time : ''} · ${fx.home_away||''} · ${escapeHtml(fx.competition||'')}</div>
+        </div>
+        <span class="fixture-status ${statusClass}">${statusLabel}</span>
       </div>
-      <span class="fixture-status ${statusClass}">${statusLabel}</span>
+      ${wildcardPillHtml}
+      ${summaryHtml}
     </div>`;
   }).join('');
 
+  list.querySelectorAll('[data-open-wc]').forEach(pill=>{
+    pill.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openWildcardModal(pill.dataset.openWc, predictionByFixture.get(pill.dataset.openWc)?.wildcard || null, fixtures.find(f=>f.id===pill.dataset.openWc));
+    });
+  });
   list.querySelectorAll('[data-fixture-id]').forEach(el=>{
     el.addEventListener('click', ()=> openPredictView(fixtures.find(f=>f.id===el.dataset.fixtureId)));
   });
 }
+
+function openWildcardModal(fixtureId, currentWildcard, fixture){
+  wildcardModalFixtureId = fixtureId;
+  wildcardModalPending = currentWildcard;
+  document.getElementById('wc-modal-title').textContent = 'Wildcard — vs ' + (fixture?.opponent || '');
+  renderWildcardModalGrid();
+  document.getElementById('wc-modal-overlay').classList.add('open');
+}
+function renderWildcardModalGrid(){
+  const grid = document.getElementById('wc-grid');
+  grid.innerHTML = WILDCARDS.map(wc=>{
+    const used = usedWildcardsThisSeason.has(wc.id) && wildcardModalPending !== wc.id;
+    const isSelected = wildcardModalPending === wc.id;
+    const isBlocked = !used && !isSelected && wildcardModalPending !== null;
+    let cls = 'wildcard-card ', badge = '';
+    if(used){ cls += 'wc-used'; badge = 'Used this season'; }
+    else if(isSelected){ cls += 'wc-selected'; badge = 'Selected'; }
+    else if(isBlocked){ cls += 'wc-blocked'; badge = 'Pick one only'; }
+    else{ cls += 'wc-available'; badge = 'Available'; }
+    return `<div class="${cls}" data-wc="${wc.id}">
+      <span class="wildcard-badge">${badge}</span>
+      <span class="wildcard-icon">${wc.icon}</span>
+      <div class="wildcard-name">${wc.name}</div>
+      <div class="wildcard-desc">${wc.desc}</div>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('[data-wc]').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      const id = card.dataset.wc;
+      if(usedWildcardsThisSeason.has(id) && wildcardModalPending !== id) return;
+      if(wildcardModalPending !== null && wildcardModalPending !== id) return;
+      wildcardModalPending = (wildcardModalPending === id) ? null : id;
+      renderWildcardModalGrid();
+    });
+  });
+}
+document.getElementById('wc-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='wc-modal-overlay') document.getElementById('wc-modal-overlay').classList.remove('open'); });
+document.getElementById('wc-cancel').addEventListener('click', ()=> document.getElementById('wc-modal-overlay').classList.remove('open'));
+document.getElementById('wc-confirm').addEventListener('click', async ()=>{
+  const { data: existing } = await sb.from('predictions').select('id').eq('user_id', currentUser.id).eq('fixture_id', wildcardModalFixtureId).single();
+  if(!existing){
+    toast("Start your prediction for this fixture first, then you can pick a wildcard.");
+    document.getElementById('wc-modal-overlay').classList.remove('open');
+    return;
+  }
+  await sb.from('predictions').update({ wildcard: wildcardModalPending }).eq('user_id', currentUser.id).eq('fixture_id', wildcardModalFixtureId);
+  document.getElementById('wc-modal-overlay').classList.remove('open');
+  toast(wildcardModalPending ? 'Wildcard applied.' : 'Wildcard cleared.');
+  loadFixtureList();
+});
 
 document.getElementById('back-to-fixtures').addEventListener('click', (e)=>{
   e.preventDefault();
