@@ -46,6 +46,19 @@
   .cta-btn:first-of-type{ margin-top:24px; }
   .cta-title{ font-family:var(--display); font-weight:400; font-size:19px; line-height:1.2; }
   .cta-sub{ font-family:var(--body); font-size:12.5px; color:var(--ink); opacity:.75; display:block; margin-top:4px; }
+
+  .wildcard-modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(13,15,20,0.82); z-index:100;
+    align-items:flex-end; justify-content:center; backdrop-filter:blur(2px);
+  }
+  .wildcard-modal-overlay.open{ display:flex; }
+  @media(min-width:640px){ .wildcard-modal-overlay{ align-items:center; } }
+  .wildcard-modal{
+    background:var(--ink-2); border:1px solid var(--line); border-radius:16px 16px 0 0; padding:22px;
+    width:100%; max-height:88vh; overflow-y:auto;
+  }
+  @media(min-width:640px){ .wildcard-modal{ border-radius:16px; } }
+  .wildcard-modal h3{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:21px; margin:0 0 2px; }
 </style>
 </head>
 <body>
@@ -82,51 +95,9 @@
   <div id="signed-in-view" style="display:none;">
     <div class="signed-in-bar">
       <span id="acc-email-display"></span>
-      <button class="ghost-btn" id="acc-sign-out">Sign out</button>
-    </div>
-
-    <div class="account-card" style="margin:0 auto 24px;">
-      <div id="name-view-state" style="display:flex; align-items:center; justify-content:space-between;">
-        <div>
-          <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">Your display name</div>
-          <div style="font-family:var(--display); font-size:20px; color:var(--paper); margin-top:2px;" id="name-view-display"></div>
-        </div>
-        <button class="ghost-btn" id="name-edit-toggle">Edit</button>
-      </div>
-      <div id="name-edit-state" style="display:none;">
-        <h2 style="font-size:18px;">Your display name</h2>
-        <p style="margin-bottom:12px;">This is what league-mates see — never your email. Pick something recognizable, or stay anonymous.</p>
-        <input type="text" id="acc-display-name" placeholder="e.g. TigerFan42" maxlength="24">
-        <div style="display:flex; gap:8px; margin-top:4px;">
-          <button class="primary-btn" id="acc-save-name" style="flex:1;">Save</button>
-          <button class="ghost-btn" id="acc-random-name">🎲 Anonymous</button>
-        </div>
-        <div class="subscribe-msg" id="acc-name-msg" style="text-align:center; margin-top:8px;"></div>
-      </div>
-    </div>
-
-    <div class="account-card" style="margin:0 auto 24px;" id="acc-signin-options-card">
-      <div id="acc-signin-view-state" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-        <div>
-          <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">🔐 Sign-in options</div>
-          <div style="font-family:var(--body); font-size:13px; color:var(--paper-dim); margin-top:3px;" id="acc-signin-status">Email link only — nothing else set up</div>
-        </div>
-        <button class="ghost-btn" id="acc-signin-edit-toggle">Manage</button>
-      </div>
-      <div id="acc-signin-edit-state" style="display:none;">
-        <h2 style="font-size:18px;">Sign-in options</h2>
-        <p style="margin-bottom:12px;">The email link works everywhere with no setup — everything here is entirely optional, on top of it, never instead of it.</p>
-        <div id="acc-recovery-banner" style="display:none; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:12.5px; color:var(--amber-soft);">
-          🔑 Enter a new password below to finish resetting it.
-        </div>
-        <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">Password</div>
-        <input type="password" id="acc-new-password" placeholder="New password (min. 8 characters)" autocomplete="new-password">
-        <input type="password" id="acc-confirm-password" placeholder="Confirm password" autocomplete="new-password" style="margin-top:8px;">
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <button class="primary-btn" id="acc-set-password" style="flex:1;">Set password</button>
-          <button class="ghost-btn" id="acc-signin-collapse">Done</button>
-        </div>
-        <div class="subscribe-msg" id="acc-password-msg" style="text-align:center; margin-top:8px;"></div>
+      <div style="display:flex; gap:14px; align-items:center;">
+        <span id="acc-settings-open" style="cursor:pointer; font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">⚙️ Settings</span>
+        <button class="ghost-btn" id="acc-sign-out">Sign out</button>
       </div>
     </div>
 
@@ -142,6 +113,37 @@
     </a>
   </div>
 </div>
+
+<div class="wildcard-modal-overlay" id="acc-settings-modal-overlay">
+  <div class="wildcard-modal" style="max-width:440px;">
+    <h3>Settings</h3>
+    <p style="font-size:12.5px; color:var(--paper-dim); margin:0 0 16px;">Everything here is optional — nothing changes unless you specifically ask it to.</p>
+
+    <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">Display name</div>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 8px;">What league-mates see — never your email.</p>
+    <input type="text" id="acc-display-name" placeholder="e.g. TigerFan42" maxlength="24">
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="primary-btn" id="acc-save-name" style="flex:1;">Save name</button>
+      <button class="ghost-btn" id="acc-random-name">🎲 Anonymous</button>
+    </div>
+    <div class="subscribe-msg" id="acc-name-msg" style="text-align:center; margin-top:8px;"></div>
+
+    <div style="border-top:1px dashed var(--line); margin:18px 0 16px;"></div>
+
+    <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">🔐 Password</div>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 8px;">The email link still works everywhere with no setup — this is purely an extra option on top of it.</p>
+    <div id="acc-recovery-banner" style="display:none; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12.5px; color:var(--amber-soft);">
+      🔑 Enter a new password below to finish resetting it.
+    </div>
+    <input type="password" id="acc-new-password" placeholder="New password (min. 8 characters)" autocomplete="new-password">
+    <input type="password" id="acc-confirm-password" placeholder="Confirm password" autocomplete="new-password" style="margin-top:8px;">
+    <button class="primary-btn" id="acc-set-password" style="width:100%; margin-top:8px;">Set password</button>
+    <div class="subscribe-msg" id="acc-password-msg" style="text-align:center; margin-top:8px;"></div>
+
+    <button class="ghost-btn" id="acc-settings-close" style="width:100%; margin-top:16px;">Close</button>
+  </div>
+</div>
+
 <div id="site-footer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -229,33 +231,20 @@ async function showSignedIn(user){
 
 async function loadDisplayName(userId){
   const { data } = await sb.from('profiles').select('display_name').eq('user_id', userId).single();
-  const name = data?.display_name || '';
-  document.getElementById('acc-display-name').value = name;
-  showNameViewState(name);
+  document.getElementById('acc-display-name').value = data?.display_name || '';
 }
 
-function showNameViewState(name){
-  document.getElementById('name-view-display').textContent = name || '(not set)';
-  document.getElementById('name-view-state').style.display = 'flex';
-  document.getElementById('name-edit-state').style.display = 'none';
+function openSettingsModal(){
+  document.getElementById('acc-settings-modal-overlay').classList.add('open');
 }
-function showNameEditState(){
-  document.getElementById('name-view-state').style.display = 'none';
-  document.getElementById('name-edit-state').style.display = 'block';
-  document.getElementById('acc-name-msg').textContent = '';
+function closeSettingsModal(){
+  document.getElementById('acc-settings-modal-overlay').classList.remove('open');
 }
-document.getElementById('name-edit-toggle').addEventListener('click', showNameEditState);
-
-function showSigninViewState(){
-  document.getElementById('acc-signin-view-state').style.display = 'flex';
-  document.getElementById('acc-signin-edit-state').style.display = 'none';
-}
-function showSigninEditState(){
-  document.getElementById('acc-signin-view-state').style.display = 'none';
-  document.getElementById('acc-signin-edit-state').style.display = 'block';
-}
-document.getElementById('acc-signin-edit-toggle').addEventListener('click', showSigninEditState);
-document.getElementById('acc-signin-collapse').addEventListener('click', showSigninViewState);
+document.getElementById('acc-settings-open').addEventListener('click', openSettingsModal);
+document.getElementById('acc-settings-close').addEventListener('click', closeSettingsModal);
+document.getElementById('acc-settings-modal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'acc-settings-modal-overlay') closeSettingsModal();
+});
 
 function randomAnonymousName(){
   return 'Tiger' + Math.floor(1000 + Math.random() * 9000);
@@ -276,7 +265,7 @@ document.getElementById('acc-save-name').addEventListener('click', async ()=>{
   try{
     const { error } = await sb.from('profiles').update({ display_name: name }).eq('user_id', userId);
     if(error) throw error;
-    showNameViewState(name);
+    msg.textContent = 'Saved.';
   }catch(e){
     // The moderation trigger raises a plain exception — its message is
     // already written for a person to read, so just show it directly.
@@ -343,7 +332,6 @@ document.getElementById('acc-set-password').addEventListener('click', async ()=>
     msg.textContent = 'Password set — you can now sign in with it from the sign-in screen any time.';
     document.getElementById('acc-new-password').value = '';
     document.getElementById('acc-confirm-password').value = '';
-    document.getElementById('acc-signin-status').textContent = 'Password set up ✓';
   }catch(e){ msg.textContent = e.message; }
 });
 
@@ -356,9 +344,8 @@ document.getElementById('acc-sign-out').addEventListener('click', async ()=>{
 sb.auth.onAuthStateChange((event, session)=>{
   if(session?.user) showSignedIn(session.user);
   if(event === 'PASSWORD_RECOVERY'){
-    showSigninEditState();
+    openSettingsModal();
     document.getElementById('acc-recovery-banner').style.display = 'block';
-    document.getElementById('acc-signin-options-card').scrollIntoView({ behavior:'smooth', block:'center' });
   }
 });
 sb.auth.getSession().then(({data})=>{
