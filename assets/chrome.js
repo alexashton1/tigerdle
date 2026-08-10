@@ -135,27 +135,27 @@ async function updateAccountButtonAuthState(){
       if(animate) link.classList.add('animate-in');
     });
   }
+  function markSignedIn(user){
+    const label = user.email ? user.email.split('@')[0] : 'Account';
+    btn.textContent = `👤 ${label}`;
+    btn.title = `Signed in as ${user.email}`;
+    btn.classList.add('signed-in');
+  }
 
-  try{
-    const { data } = await sb.auth.getSession();
-    const user = data?.session?.user;
-    if(user){
-      const label = user.email ? user.email.split('@')[0] : 'Account';
-      btn.textContent = `👤 ${label}`;
-      btn.title = `Signed in as ${user.email}`;
-      btn.classList.add('signed-in');
-      // Already signed in when the page loaded — just show them, no
-      // animation needed since nothing is visibly "appearing" here.
-      revealAuthNavLinks(false);
-    }
-  }catch(e){ /* not critical — button just shows the default state */ }
-
-  // Signing in DURING this page view (magic link, password, etc.) is the
-  // moment worth the small entrance animation — it's the one time these
-  // links are genuinely appearing in front of the person, not just
-  // already being there when they arrived.
+  // A single source of truth for this, rather than a separate getSession()
+  // call racing against this listener — onAuthStateChange reliably fires
+  // once on setup with whatever the current session is (event
+  // 'INITIAL_SESSION' if signed in, or none if not), then again for any
+  // real sign-in that happens afterward. Mixing two separate async paths
+  // here was the likely cause of the nav links being fine on the page
+  // someone signed in on, but not reliably showing after navigating on to
+  // a page with more of its own async work competing at load time.
   sb.auth.onAuthStateChange((event, session)=>{
-    if(event === 'SIGNED_IN' && session?.user) revealAuthNavLinks(true);
+    if(!session?.user) return;
+    markSignedIn(session.user);
+    // Only the live SIGNED_IN event is someone watching it happen —
+    // arriving on a page already signed in shouldn't animate anything.
+    revealAuthNavLinks(event === 'SIGNED_IN');
   });
 }
 
