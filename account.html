@@ -64,6 +64,18 @@
       <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
       <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
+      <div id="acc-password-toggle-wrap" style="text-align:center; margin-top:10px;">
+        <span id="acc-show-password-signin" style="cursor:pointer; font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">Set a password? Sign in with it here</span>
+      </div>
+      <div id="acc-password-signin" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);">
+        <input type="email" id="acc-pw-email" placeholder="you@email.com" autocomplete="email" style="margin-bottom:8px;">
+        <input type="password" id="acc-pw-password" placeholder="Password" autocomplete="current-password">
+        <button class="primary-btn" id="acc-password-signin-btn" style="width:100%; margin-top:8px;">Sign in with password</button>
+        <div class="subscribe-msg" id="acc-pw-msg" style="text-align:center; margin-top:8px;"></div>
+        <div style="text-align:center; margin-top:8px;">
+          <span id="acc-forgot-password" style="cursor:pointer; font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">Forgot your password?</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -91,6 +103,19 @@
         </div>
         <div class="subscribe-msg" id="acc-name-msg" style="text-align:center; margin-top:8px;"></div>
       </div>
+    </div>
+
+    <div class="account-card" style="margin:0 auto 24px;" id="acc-signin-options-card">
+      <h2 style="font-size:18px;">Sign-in options</h2>
+      <p style="margin-bottom:12px;">The email link works everywhere with no setup — everything here is entirely optional, on top of it, never instead of it.</p>
+      <div id="acc-recovery-banner" style="display:none; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:12.5px; color:var(--amber-soft);">
+        🔑 Enter a new password below to finish resetting it.
+      </div>
+      <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">Password</div>
+      <input type="password" id="acc-new-password" placeholder="New password (min. 8 characters)" autocomplete="new-password">
+      <input type="password" id="acc-confirm-password" placeholder="Confirm password" autocomplete="new-password" style="margin-top:8px;">
+      <button class="primary-btn" id="acc-set-password" style="width:100%; margin-top:8px;">Set password</button>
+      <div class="subscribe-msg" id="acc-password-msg" style="text-align:center; margin-top:8px;"></div>
     </div>
 
     <div id="stats-dashboard"></div>
@@ -248,6 +273,56 @@ document.getElementById('acc-send-link').addEventListener('click', async ()=>{
   }catch(e){ msg.textContent = e.message; }
 });
 
+// Purely opt-in — hidden until someone specifically asks for it, never
+// shown as the default way in.
+document.getElementById('acc-show-password-signin').addEventListener('click', ()=>{
+  const el = document.getElementById('acc-password-signin');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('acc-password-signin-btn').addEventListener('click', async ()=>{
+  const email = document.getElementById('acc-pw-email').value.trim();
+  const password = document.getElementById('acc-pw-password').value;
+  const msg = document.getElementById('acc-pw-msg');
+  if(!email || !password){ msg.textContent = 'Enter your email and password.'; return; }
+  msg.textContent = 'Signing in…';
+  try{
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    // onAuthStateChange (already wired lower in this file) picks up the
+    // new session and swaps to the signed-in view automatically.
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('acc-forgot-password').addEventListener('click', async ()=>{
+  const email = document.getElementById('acc-pw-email').value.trim();
+  const msg = document.getElementById('acc-pw-msg');
+  if(!email){ msg.textContent = 'Enter your email above first, then tap this again.'; return; }
+  msg.textContent = 'Sending a reset link…';
+  try{
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.href.split('#')[0].split('?')[0],
+    });
+    if(error) throw error;
+    msg.textContent = 'Check your email for a link to set a new password.';
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('acc-set-password').addEventListener('click', async ()=>{
+  const pw = document.getElementById('acc-new-password').value;
+  const confirm = document.getElementById('acc-confirm-password').value;
+  const msg = document.getElementById('acc-password-msg');
+  if(pw.length < 8){ msg.textContent = 'Needs to be at least 8 characters.'; return; }
+  if(pw !== confirm){ msg.textContent = "Those two don't match."; return; }
+  msg.textContent = 'Saving…';
+  try{
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if(error) throw error;
+    msg.textContent = 'Password set — you can now sign in with it from the sign-in screen any time.';
+    document.getElementById('acc-new-password').value = '';
+    document.getElementById('acc-confirm-password').value = '';
+  }catch(e){ msg.textContent = e.message; }
+});
+
 document.getElementById('acc-sign-out').addEventListener('click', async ()=>{
   await sb.auth.signOut();
   document.getElementById('signed-in-view').style.display = 'none';
@@ -256,6 +331,10 @@ document.getElementById('acc-sign-out').addEventListener('click', async ()=>{
 
 sb.auth.onAuthStateChange((event, session)=>{
   if(session?.user) showSignedIn(session.user);
+  if(event === 'PASSWORD_RECOVERY'){
+    document.getElementById('acc-recovery-banner').style.display = 'block';
+    document.getElementById('acc-signin-options-card').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
 });
 sb.auth.getSession().then(({data})=>{
   if(data?.session?.user) showSignedIn(data.session.user);

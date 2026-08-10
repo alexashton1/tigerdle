@@ -61,6 +61,18 @@
       <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
       <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
+      <div style="text-align:center; margin-top:10px;">
+        <span id="acc-show-password-signin" style="cursor:pointer; font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">Set a password? Sign in with it here</span>
+      </div>
+      <div id="acc-password-signin" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);">
+        <input type="email" id="acc-pw-email" placeholder="you@email.com" autocomplete="email" style="margin-bottom:8px;">
+        <input type="password" id="acc-pw-password" placeholder="Password" autocomplete="current-password">
+        <button class="primary-btn" id="acc-password-signin-btn" style="width:100%; margin-top:8px;">Sign in with password</button>
+        <div class="subscribe-msg" id="acc-pw-msg" style="text-align:center; margin-top:8px;"></div>
+        <div style="text-align:center; margin-top:8px;">
+          <span id="acc-forgot-password" style="cursor:pointer; font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">Forgot your password?</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -128,6 +140,35 @@ document.getElementById('acc-send-link').addEventListener('click', async ()=>{
     const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href.split('#')[0] } });
     if(error) throw error;
     msg.textContent = 'Check your email for a sign-in link.';
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('acc-show-password-signin').addEventListener('click', ()=>{
+  const el = document.getElementById('acc-password-signin');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('acc-password-signin-btn').addEventListener('click', async ()=>{
+  const email = document.getElementById('acc-pw-email').value.trim();
+  const password = document.getElementById('acc-pw-password').value;
+  const msg = document.getElementById('acc-pw-msg');
+  if(!email || !password){ msg.textContent = 'Enter your email and password.'; return; }
+  msg.textContent = 'Signing in…';
+  try{
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('acc-forgot-password').addEventListener('click', async ()=>{
+  const email = document.getElementById('acc-pw-email').value.trim();
+  const msg = document.getElementById('acc-pw-msg');
+  if(!email){ msg.textContent = 'Enter your email above first, then tap this again.'; return; }
+  msg.textContent = 'Sending a reset link…';
+  try{
+    const resetUrl = new URL('account.html', window.location.href).href;
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: resetUrl });
+    if(error) throw error;
+    msg.textContent = 'Check your email for a link to set a new password.';
   }catch(e){ msg.textContent = e.message; }
 });
 

@@ -156,6 +156,16 @@
       <input type="email" id="rate-email" placeholder="you@email.com" style="width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:14px; padding:10px 12px; border-radius:7px; margin-bottom:10px;">
       <button class="primary-btn" id="rate-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="rate-signin-msg" style="text-align:center; margin-top:8px;"></div>
+      <div style="margin-top:8px;">
+        <span id="rate-show-password-signin" style="cursor:pointer; font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">Set a password? Sign in with it here</span>
+      </div>
+      <div id="rate-password-signin" style="display:none; margin-top:10px;">
+        <input type="password" id="rate-pw-password" placeholder="Password" style="width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:14px; padding:10px 12px; border-radius:7px; margin-bottom:8px;">
+        <button class="primary-btn" id="rate-password-signin-btn" style="width:100%;">Sign in with password</button>
+        <div style="text-align:center; margin-top:8px;">
+          <span id="rate-forgot-password" style="cursor:pointer; font-family:var(--mono); font-size:10px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">Forgot your password?</span>
+        </div>
+      </div>
     </div>
 
     <div id="rate-form" style="display:none;">
@@ -404,6 +414,39 @@ document.getElementById('rate-send-link').addEventListener('click', async ()=>{
     const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.href } });
     if(error) throw error;
     msg.textContent = 'Check your email for the link, then come back and tap the player again.';
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('rate-show-password-signin').addEventListener('click', ()=>{
+  const el = document.getElementById('rate-password-signin');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('rate-password-signin-btn').addEventListener('click', async ()=>{
+  const email = document.getElementById('rate-email').value.trim();
+  const password = document.getElementById('rate-pw-password').value;
+  const msg = document.getElementById('rate-signin-msg');
+  if(!email || !password){ msg.textContent = 'Enter your email and password.'; return; }
+  msg.textContent = 'Signing in…';
+  try{
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    msg.textContent = '';
+    // Re-open the modal for this same player now that sign-in worked,
+    // rather than leaving them looking at a stale signed-out state.
+    if(openPlayerId) openRateModal(openPlayerId, openPlayerName);
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('rate-forgot-password').addEventListener('click', async ()=>{
+  const email = document.getElementById('rate-email').value.trim();
+  const msg = document.getElementById('rate-signin-msg');
+  if(!email){ msg.textContent = 'Enter your email above first, then tap this again.'; return; }
+  msg.textContent = 'Sending a reset link…';
+  try{
+    const resetUrl = new URL('account.html', window.location.href).href;
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: resetUrl });
+    if(error) throw error;
+    msg.textContent = 'Check your email for a link to set a new password.';
   }catch(e){ msg.textContent = e.message; }
 });
 
