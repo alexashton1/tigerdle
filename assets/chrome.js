@@ -18,6 +18,44 @@ const BADGE_SVG = `
   <path d="M32 2 L59 11 L59 39 C59 58 47 69 32 74 C17 69 5 58 5 39 L5 11 Z" fill="none" stroke="#14110d" stroke-width="2"/>
 </svg>`;
 
+/* Makes the site installable to a phone's home screen. Runs once,
+   on every page, via chrome.js — no need to edit each page's <head>
+   individually. Uses the same origin as everything else, so a
+   signed-in session carries over into the installed app exactly like
+   opening the site in a normal tab — there's no separate storage for
+   an "installed" version, it's the same website either way. */
+(function setupPWA(){
+  if(!document.querySelector('link[rel="manifest"]')){
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = 'manifest.json';
+    document.head.appendChild(manifestLink);
+  }
+  if(!document.querySelector('meta[name="theme-color"]')){
+    const themeColor = document.createElement('meta');
+    themeColor.name = 'theme-color';
+    themeColor.content = '#f5a300';
+    document.head.appendChild(themeColor);
+  }
+  // iOS Safari ignores the manifest for "Add to Home Screen" and needs
+  // these specific tags instead.
+  if(!document.querySelector('meta[name="apple-mobile-web-app-capable"]')){
+    const cap = document.createElement('meta');
+    cap.name = 'apple-mobile-web-app-capable';
+    cap.content = 'yes';
+    document.head.appendChild(cap);
+  }
+  if(!document.querySelector('meta[name="apple-mobile-web-app-title"]')){
+    const title = document.createElement('meta');
+    title.name = 'apple-mobile-web-app-title';
+    title.content = 'TIGERDLE';
+    document.head.appendChild(title);
+  }
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* not critical if this fails */ });
+  }
+})();
+
 function renderChrome(current){
   const header = document.getElementById('site-header');
   if(header){
@@ -34,6 +72,8 @@ function renderChrome(current){
               <a href="index.html" ${current==='home'?'class="current"':''}>Home</a>
               <a href="game.html" ${current==='play'?'class="current"':''}>Play</a>
               <a href="blog.html" ${current==='blog'?'class="current"':''}>Blog</a>
+              <a href="predictor.html" class="auth-nav-link${current==='predictor'?' current':''}" id="nav-predictor-link">Predictor</a>
+              <a href="leagues.html" class="auth-nav-link${current==='leagues'?' current':''}" id="nav-leagues-link">Leagues</a>
             </nav>
             <a href="account.html" class="account-btn ${current==='account'?'current':''}" id="header-account-btn">👤 Sign In</a>
           </div>
@@ -87,6 +127,15 @@ function renderChrome(current){
 async function updateAccountButtonAuthState(){
   const btn = document.getElementById('header-account-btn');
   if(!btn || typeof sb === 'undefined' || !sb.auth) return;
+
+  function revealAuthNavLinks(animate){
+    document.querySelectorAll('.auth-nav-link').forEach(link=>{
+      if(link.classList.contains('visible')) return; // already shown, never re-animate
+      link.classList.add('visible');
+      if(animate) link.classList.add('animate-in');
+    });
+  }
+
   try{
     const { data } = await sb.auth.getSession();
     const user = data?.session?.user;
@@ -95,8 +144,19 @@ async function updateAccountButtonAuthState(){
       btn.textContent = `👤 ${label}`;
       btn.title = `Signed in as ${user.email}`;
       btn.classList.add('signed-in');
+      // Already signed in when the page loaded — just show them, no
+      // animation needed since nothing is visibly "appearing" here.
+      revealAuthNavLinks(false);
     }
   }catch(e){ /* not critical — button just shows the default state */ }
+
+  // Signing in DURING this page view (magic link, password, etc.) is the
+  // moment worth the small entrance animation — it's the one time these
+  // links are genuinely appearing in front of the person, not just
+  // already being there when they arrived.
+  sb.auth.onAuthStateChange((event, session)=>{
+    if(event === 'SIGNED_IN' && session?.user) revealAuthNavLinks(true);
+  });
 }
 
 async function subscribeSubmit(){

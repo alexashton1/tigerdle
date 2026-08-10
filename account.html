@@ -22,6 +22,14 @@
     font-size:14px; padding:11px 13px; border-radius:8px; outline:none; margin-bottom:10px;
   }
   .account-card input:focus{ border-color:var(--amber); }
+
+  .wildcard-modal input{
+    width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper);
+    font-family:var(--body); font-size:14px; padding:12px 14px; border-radius:10px; outline:none;
+    transition:border-color .18s ease, box-shadow .18s ease;
+  }
+  .wildcard-modal input::placeholder{ color:var(--paper-dim); }
+  .wildcard-modal input:focus{ border-color:var(--amber); box-shadow:0 0 0 3px rgba(245,163,0,0.15); }
   .stat-summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0; text-align:center; }
   .stat-summary .num{ font-family:var(--display); font-size:26px; color:var(--amber); }
   .stat-summary .lab{ font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--paper-dim); margin-top:2px; }
