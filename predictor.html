@@ -485,7 +485,21 @@ function renderPositionPitch(breakdown, prediction){
     </div>`;
 }
 
-function renderScoreBreakdown(score, prediction){
+function buildResultShareText(score, fixture){
+  const highlight = buildResultHighlight(score);
+  const link = 'https://tigerdle.com/predictor.html';
+  const opponent = fixture ? fixture.opponent : 'the last one';
+  const uplift = wildcardUplift(score);
+  const wc = score.wildcard_applied ? WILDCARD_NAMES[score.wildcard_applied] : null;
+
+  let lines = [`I scored ${score.total_points}pts predicting Hull vs ${opponent} on TIGERDLE 🏆`];
+  if(highlight) lines.push(`⭐ ${highlight.replace(/<\/?b>/g, '')}`);
+  if(wc && uplift) lines.push(`${wc.icon} ${wc.name} was active too — worth an extra +${uplift}pts`);
+  lines.push(`Beat that: ${link}`);
+  return lines.join('\n');
+}
+
+function renderScoreBreakdown(score, prediction, fixture, resultIndex){
   const b = score.breakdown || {};
 
   const highlight = buildResultHighlight(score);
@@ -517,6 +531,8 @@ function renderScoreBreakdown(score, prediction){
       : `<div class="empty-state" style="padding:8px 0;">${label}: ${escapeHtml(detail.first_name)} ${escapeHtml(detail.last_name)} — didn't score.</div>`;
   }
 
+  const captureId = `result-pitch-${resultIndex}`;
+
   return `
     ${highlightHtml}
     ${wildcardHtml}
@@ -525,8 +541,12 @@ function renderScoreBreakdown(score, prediction){
     <h4 style="font-size:13px; color:var(--amber-soft); margin:14px 0 6px;">Goalscorers</h4>
     ${scorerLine(b.predicted_scorer, 'Predicted scorer') || '<div class="empty-state" style="padding:8px 0;">No scorer predicted.</div>'}
     ${scorerLine(b.first_scorer, 'First scorer') || ''}
-    <h4 style="font-size:13px; color:var(--amber-soft); margin:16px 0 10px;">Your team</h4>
-    ${renderPositionPitch(b, prediction)}
+    <h4 style="font-size:13px; color:var(--amber-soft); margin:16px 0 10px;" id="${captureId}-label">Your team</h4>
+    <div id="${captureId}">${renderPositionPitch(b, prediction)}</div>
+    <div style="display:flex; gap:8px; margin-top:16px;">
+      <button class="ghost-btn" style="flex:1;" data-result-share-text="${resultIndex}">📤 Share as text</button>
+      <button class="ghost-btn" style="flex:1;" data-result-share-image="${resultIndex}">📸 Share as image</button>
+    </div>
   `;
 }
 
@@ -574,8 +594,14 @@ async function loadPastResults(){
       detailEl.style.display = isOpen ? 'none' : 'block';
       if(!isOpen && !detailEl.dataset.rendered){
         const pred = (predictions||[]).find(p => p.fixture_id === scores[i].fixture_id);
-        detailEl.innerHTML = renderScoreBreakdown(scores[i], pred);
+        const fx = (fixtures||[]).find(f => f.id === scores[i].fixture_id);
+        detailEl.innerHTML = renderScoreBreakdown(scores[i], pred, fx, i);
         detailEl.dataset.rendered = '1';
+
+        const textBtn = detailEl.querySelector(`[data-result-share-text="${i}"]`);
+        const imageBtn = detailEl.querySelector(`[data-result-share-image="${i}"]`);
+        if(textBtn) textBtn.addEventListener('click', ()=> openShareModal(buildResultShareText(scores[i], fx)));
+        if(imageBtn) imageBtn.addEventListener('click', ()=> shareTeamImage(fx || {opponent:'Hull'}, `result-pitch-${i}`));
       }
     });
   });
@@ -1279,8 +1305,8 @@ document.getElementById('share-modal-overlay').addEventListener('click', (e)=>{ 
 /* ---------- share as image ---------- */
 let currentShareBlob = null;
 
-async function shareTeamImage(fixture){
-  const target = document.getElementById('pr-pitch-wrap');
+async function shareTeamImage(fixture, targetId){
+  const target = document.getElementById(targetId || 'pr-pitch-wrap');
   if(!target || typeof html2canvas === 'undefined'){ toast("Couldn't build the image — try again in a moment."); return; }
   toast('Building image…');
   try{
