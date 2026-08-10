@@ -157,8 +157,15 @@
 
   .prediction-summary{
     display:flex; align-items:center; gap:14px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);
-    font-family:var(--body); font-size:12.5px; color:var(--paper-dim); flex-wrap:wrap;
+    font-family:var(--body); font-size:12.5px; color:var(--paper-dim); flex-wrap:wrap; justify-content:space-between;
   }
+  .prediction-summary-left{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .summary-share-btn{
+    display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10.5px; color:var(--paper-dim);
+    background:var(--ink); border:1px solid var(--line); border-radius:999px; padding:4px 11px; cursor:pointer;
+    transition:all .15s ease; flex-shrink:0; white-space:nowrap;
+  }
+  .summary-share-btn:hover{ border-color:var(--amber-deep); color:var(--amber-soft); }
   .prediction-summary b{ color:var(--paper); }
   .prediction-summary .score-pill{
     font-family:var(--display); font-weight:400; font-size:15px; color:var(--amber); background:var(--ink);
@@ -643,7 +650,7 @@ async function loadFixtureList(){
       if(pred.hull_score != null && pred.opponent_score != null) parts.push(`<span>Your prediction: <span class="score-pill">${pred.hull_score}-${pred.opponent_score}</span></span>`);
       if(predicted) parts.push(`<span>⚽ <b>${escapeHtml(predicted.first_name)} ${escapeHtml(predicted.last_name)}</b> to score</span>`);
       if(first) parts.push(`<span>⚡ <b>${escapeHtml(first.first_name)} ${escapeHtml(first.last_name)}</b> first</span>`);
-      if(parts.length) summaryHtml = `<div class="prediction-summary">${parts.join('')}</div>`;
+      if(parts.length) summaryHtml = `<div class="prediction-summary"><div class="prediction-summary-left">${parts.join('')}</div><span class="summary-share-btn" data-share-fixture="${fx.id}">📤 Share</span></div>`;
     }
 
     return `
@@ -665,6 +672,14 @@ async function loadFixtureList(){
     pill.addEventListener('click', (e)=>{
       e.stopPropagation();
       openWildcardModal(pill.dataset.openWc, predictionByFixture.get(pill.dataset.openWc)?.wildcard || null, fixtures.find(f=>f.id===pill.dataset.openWc));
+    });
+  });
+  list.querySelectorAll('[data-share-fixture]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const fx = fixtures.find(f=>f.id===btn.dataset.shareFixture);
+      const pred = predictionByFixture.get(btn.dataset.shareFixture);
+      if(fx && pred) shareSavedPrediction(fx, pred);
     });
   });
   list.querySelectorAll('[data-fixture-id]').forEach(el=>{
@@ -1321,6 +1336,19 @@ function shareMyPrediction(fixture){
   const firstScorerPlayer = selectedFirstScorer ? allPlayersCache.find(p=>p.id===selectedFirstScorer) : null;
   const firstScorerLine = firstScorerPlayer ? `First scorer: ${firstScorerPlayer.first_name} ${firstScorerPlayer.last_name}\n` : '';
   const text = `My Hull City vs ${fixture.opponent} prediction (${formation}):\n${scoreLine}${firstScorerLine}${names.slice(0,11).join(', ')}\n\nPredict yours at tigerdle.com/predictor.html`;
+  openShareModal(text);
+}
+
+// Same idea as shareMyPrediction, but built entirely from a saved
+// prediction row rather than the live picker's in-progress state — safe
+// to call from the fixture list, where none of that picker DOM exists.
+function shareSavedPrediction(fixture, prediction){
+  const names = (prediction.lineup||[]).map(p => `${p.first_name} ${p.last_name}`);
+  const scoreLine = (prediction.hull_score!=null && prediction.opponent_score!=null)
+    ? `My score prediction: Hull ${prediction.hull_score}-${prediction.opponent_score} ${fixture.opponent}\n` : '';
+  const first = (prediction.scorers||[]).find(s=>s.type==='first');
+  const firstScorerLine = first ? `First scorer: ${first.first_name} ${first.last_name}\n` : '';
+  const text = `My Hull City vs ${fixture.opponent} prediction (${prediction.formation||''}):\n${scoreLine}${firstScorerLine}${names.slice(0,11).join(', ')}\n\nPredict yours at tigerdle.com/predictor.html`;
   openShareModal(text);
 }
 
