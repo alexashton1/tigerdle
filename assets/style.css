@@ -67,7 +67,7 @@ a{ color:var(--amber-soft); }
 .brand .logo{ font-family:var(--display); font-size:20px; color:var(--paper); letter-spacing:.02em; }
 .site-nav{ display:flex; gap:4px; flex-wrap:wrap; }
 .site-nav a.auth-nav-link{ display:none; opacity:0; transform:translateY(-4px); }
-.site-nav a.auth-nav-link.visible{ display:inline-block; }
+.site-nav a.auth-nav-link.visible{ display:inline-block; opacity:1; transform:translateY(0); }
 .site-nav a.auth-nav-link.animate-in{ animation:navLinkIn .45s ease forwards; }
 @keyframes navLinkIn{
   from{ opacity:0; transform:translateY(-4px); }
@@ -93,7 +93,11 @@ a{ color:var(--amber-soft); }
 @media (max-width:560px){
   .brandrow{ flex-wrap:wrap; justify-content:center; text-align:center; row-gap:10px; }
   .nav-group{ width:100%; justify-content:center; flex-wrap:wrap; gap:8px; }
-  .site-nav{ justify-content:center; width:100%; }
+  .site-nav{ justify-content:center; width:100%; flex-wrap:wrap; row-gap:8px; }
+}
+
+@media (max-width:400px){
+  .site-nav a{ padding:6px 10px; font-size:10px; }
 }
 
 .kicker{ font-family:var(--mono); font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--amber-soft); margin-bottom:4px; }

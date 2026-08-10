@@ -150,8 +150,20 @@ async function updateAccountButtonAuthState(){
   // here was the likely cause of the nav links being fine on the page
   // someone signed in on, but not reliably showing after navigating on to
   // a page with more of its own async work competing at load time.
+  function markSignedOut(){
+    btn.textContent = '👤 Sign In';
+    btn.title = '';
+    btn.classList.remove('signed-in');
+    document.querySelectorAll('.auth-nav-link').forEach(link=>{
+      link.classList.remove('visible', 'animate-in');
+    });
+  }
+
   sb.auth.onAuthStateChange((event, session)=>{
-    if(!session?.user) return;
+    if(!session?.user){
+      if(event === 'SIGNED_OUT') markSignedOut();
+      return;
+    }
     markSignedIn(session.user);
     // Only the live SIGNED_IN event is someone watching it happen —
     // arriving on a page already signed in shouldn't animate anything.
