@@ -48,6 +48,83 @@
     font-family:var(--display); display:flex; align-items:center; justify-content:center;
   }
   .subs-row{ text-align:center; }
+
+  .pitch-player{ cursor:pointer; }
+  .community-badge{
+    position:absolute; bottom:-4px; right:-6px; background:var(--ink-2); border:1.5px solid var(--amber-soft);
+    color:var(--amber-soft); font-family:var(--mono); font-size:9px; font-weight:700; border-radius:999px;
+    padding:1px 5px; line-height:1.3;
+  }
+  .rating-legend{ display:flex; justify-content:center; gap:20px; font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin:14px 0; }
+  .rating-legend span{ display:flex; align-items:center; gap:6px; }
+  .legend-swatch{ width:14px; height:14px; border-radius:50%; background:var(--amber); display:inline-block; }
+  .legend-swatch.community{ background:var(--ink-2); border:1.5px solid var(--amber-soft); width:12px; height:12px; }
+
+  .share-btn-row{ display:flex; gap:8px; max-width:420px; margin:6px auto 0; }
+  .share-half-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+    background:var(--ink-2); border:1px solid var(--amber-deep); border-radius:999px; padding:10px 12px;
+    font-family:var(--body); font-size:12.5px; color:var(--amber-soft); cursor:pointer; transition:all .15s ease;
+  }
+  .share-half-btn:hover{ border-color:var(--amber); background:var(--ink); }
+
+  .rate-modal-overlay, .share-modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(13,15,20,0.82); z-index:100;
+    align-items:flex-end; justify-content:center; backdrop-filter:blur(2px);
+  }
+  .rate-modal-overlay.open, .share-modal-overlay.open{ display:flex; }
+  @media(min-width:640px){ .rate-modal-overlay, .share-modal-overlay{ align-items:center; } }
+  .rate-modal, .share-modal{
+    background:var(--ink-2); border:1px solid var(--line); border-radius:16px 16px 0 0; padding:22px;
+    width:100%; max-width:460px; max-height:88vh; overflow-y:auto;
+  }
+  @media(min-width:640px){ .rate-modal, .share-modal{ border-radius:16px; } }
+  .rate-modal h3, .share-modal h3{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:21px; margin:0 0 2px; }
+  .rate-modal .player-role{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-bottom:16px; }
+
+  .rate-scale{ display:flex; gap:6px; justify-content:center; margin-bottom:16px; flex-wrap:wrap; }
+  .rate-chip{
+    width:36px; height:36px; border-radius:8px; background:var(--ink); border:1px solid var(--line); color:var(--paper);
+    font-family:var(--display); font-size:14px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:all .12s ease;
+  }
+  .rate-chip:hover{ border-color:var(--amber-deep); }
+  .rate-chip.rate-selected{ background:var(--amber); border-color:var(--amber); color:var(--ink); transform:scale(1.08); }
+
+  .rate-comment{
+    width:100%; background:var(--ink); border:1px solid var(--line); border-radius:8px; color:var(--paper);
+    font-family:var(--body); font-size:13px; padding:10px 12px; resize:none; margin-bottom:6px;
+  }
+  .rate-char-count{ text-align:right; font-family:var(--mono); font-size:10px; color:var(--paper-dim); margin-bottom:14px; }
+  .rate-modal-actions{ display:flex; gap:10px; }
+
+  .community-thoughts{ margin-top:16px; }
+  .thought-row{ padding:9px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .thought-row:last-child{ border-bottom:none; }
+  .thought-meta{ display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  .thought-rating{ font-family:var(--display); font-size:13px; color:var(--amber); background:var(--ink); border:1px solid var(--line); border-radius:5px; padding:0 6px; }
+  .thought-name{ font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); }
+  .thought-text{ color:var(--paper); }
+  .thoughts-see-more{
+    display:block; text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim);
+    margin-top:8px; cursor:pointer; text-decoration:underline; text-underline-offset:3px;
+  }
+  .thoughts-see-more:hover{ color:var(--amber-soft); }
+  .empty-state{ font-family:var(--body); font-size:13px; color:var(--paper-dim); padding:8px 0; }
+
+  .share-preview-text{
+    background:var(--ink); border:1px solid var(--line); border-radius:8px; padding:12px; font-family:var(--body);
+    font-size:12.5px; color:var(--paper-dim); white-space:pre-wrap; margin:12px 0 14px; line-height:1.5;
+  }
+  .share-modal-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:6px; }
+  .share-opt{
+    display:flex; flex-direction:column; align-items:center; gap:4px; background:var(--ink); border:1px solid var(--line);
+    border-radius:10px; padding:10px 4px; cursor:pointer; color:var(--paper); font-family:var(--mono); font-size:9.5px;
+    text-decoration:none; transition:all .15s ease;
+  }
+  .share-opt:hover{ border-color:var(--amber-deep); }
+  .share-opt-icon{ font-size:17px; }
+  .image-share-preview{ width:100%; max-height:220px; object-fit:contain; border-radius:8px; margin-bottom:14px; background:var(--ink); }
 </style>
 </head>
 <body>
@@ -69,7 +146,65 @@
 </div>
 <div id="site-footer"></div>
 
+<div class="rate-modal-overlay" id="rate-modal-overlay">
+  <div class="rate-modal">
+    <h3 id="rate-modal-title">Player</h3>
+    <p class="player-role" id="rate-modal-role"></p>
+
+    <div id="rate-signed-out" style="display:none; text-align:center; padding:10px 0 4px;">
+      <p style="font-size:12.5px; color:var(--paper-dim); margin-bottom:10px;">Sign in to add your own rating — free account, no password.</p>
+      <input type="email" id="rate-email" placeholder="you@email.com" style="width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:14px; padding:10px 12px; border-radius:7px; margin-bottom:10px;">
+      <button class="primary-btn" id="rate-send-link" style="width:100%;">Send sign-in link</button>
+      <div class="subscribe-msg" id="rate-signin-msg" style="text-align:center; margin-top:8px;"></div>
+    </div>
+
+    <div id="rate-form" style="display:none;">
+      <div class="rate-scale" id="rate-scale"></div>
+      <textarea class="rate-comment" id="rate-comment" rows="2" maxlength="200" placeholder="Say a bit about their game (optional)"></textarea>
+      <div class="rate-char-count" id="rate-char-count">0 / 200</div>
+      <div class="rate-modal-actions">
+        <button class="ghost-btn" id="rate-cancel" style="flex:1;">Cancel</button>
+        <button class="primary-btn" id="rate-submit" style="flex:1;">Submit rating</button>
+      </div>
+      <div class="subscribe-msg" id="rate-msg" style="text-align:center; margin-top:8px;"></div>
+    </div>
+
+    <div class="community-thoughts">
+      <h4 style="font-size:12.5px; color:var(--amber-soft); margin:4px 0 2px;">What others said</h4>
+      <div id="community-thoughts"></div>
+    </div>
+  </div>
+</div>
+
+<div class="share-modal-overlay" id="share-text-modal-overlay">
+  <div class="share-modal">
+    <h3>Share as text</h3>
+    <div class="share-preview-text" id="share-preview-text"></div>
+    <div class="share-modal-grid">
+      <a class="share-opt" id="share-x" target="_blank" rel="noopener"><span class="share-opt-icon">𝕏</span>X</a>
+      <a class="share-opt" id="share-whatsapp" target="_blank" rel="noopener"><span class="share-opt-icon">💬</span>WhatsApp</a>
+      <a class="share-opt" id="share-facebook" target="_blank" rel="noopener"><span class="share-opt-icon">📘</span>Facebook</a>
+      <div class="share-opt" id="share-copy"><span class="share-opt-icon">📋</span>Copy</div>
+    </div>
+    <button class="ghost-btn" id="share-text-close" style="width:100%; margin-top:10px;">Close</button>
+  </div>
+</div>
+
+<div class="share-modal-overlay" id="image-share-modal-overlay">
+  <div class="share-modal">
+    <h3>Share as image</h3>
+    <img class="image-share-preview" id="image-share-preview">
+    <div class="share-modal-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="share-opt" id="image-share-save"><span class="share-opt-icon">💾</span>Save</div>
+      <div class="share-opt" id="image-share-copy"><span class="share-opt-icon">📋</span>Copy</div>
+    </div>
+    <button class="ghost-btn" id="image-share-close" style="width:100%; margin-top:10px;">Close</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script src="assets/chrome.js"></script>
 <script>
@@ -95,8 +230,49 @@ function pitchSvg(){
     <rect x="38" y="122" width="24" height="6" fill="none" stroke="rgba(245,163,0,0.2)" stroke-width="0.3"/>
   </svg>`;
 }
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function toast(message){
+  const t = document.getElementById('toast');
+  if(!t) return;
+  t.textContent = message; t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+let currentUser = null;
+let currentMatchday = null;
+let ratingAverages = {}; // player_id -> { average, count }
+let openPlayerId = null;
+let openPlayerName = '';
+let selectedRating = null;
+let myRatingsThisMatch = {}; // player_id -> { rating, comment } — this user's own submissions
+let thoughtsExpanded = false;
+
+sb.auth.onAuthStateChange((event, session)=>{ currentUser = session?.user || null; });
+sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; });
+// Same fix as the rest of the site — catches the case where someone
+// signs in via a magic link in a separate tab/app, then switches back.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && !currentUser){
+    sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; });
+  }
+});
+
+async function loadRatingsForMatchday(matchdayId){
+  const { data } = await sb.from('player_rating_averages').select('*').eq('matchday_id', matchdayId);
+  ratingAverages = {};
+  (data||[]).forEach(row => { ratingAverages[row.player_id] = { average: row.average_rating, count: row.rating_count }; });
+  if(currentUser){
+    const { data: mine } = await sb.from('player_ratings').select('*').eq('matchday_id', matchdayId).eq('user_id', currentUser.id);
+    myRatingsThisMatch = {};
+    (mine||[]).forEach(r => { myRatingsThisMatch[r.player_id] = { rating: r.rating, comment: r.comment }; });
+  }
+}
 
 function renderMatchday(m){
+  currentMatchday = m;
   const content = document.getElementById('md-content');
   const starters = (m.lineup || []).filter(r => !r.is_sub);
   const subs = (m.lineup || []).filter(r => r.is_sub);
@@ -110,9 +286,10 @@ function renderMatchday(m){
   const playersHtml = starters.map((p, i)=>{
     const c = coords[i] || [50,50];
     const hasRating = p.rating !== null && p.rating !== undefined;
+    const community = ratingAverages[p.player_id];
     return `
-      <div class="pitch-player" style="left:${c[0]}%; top:${c[1]}%;">
-        <div class="pitch-dot ${hasRating?'':'no-rating'}">${hasRating ? p.rating : p.slot}</div>
+      <div class="pitch-player" data-player-id="${p.player_id}" data-player-name="${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}" style="left:${c[0]}%; top:${c[1]}%;">
+        <div class="pitch-dot ${hasRating?'':'no-rating'}">${hasRating ? p.rating : p.slot}${community ? `<span class="community-badge">${community.average}</span>` : ''}</div>
         <div class="pitch-name">${escapeHtml(p.last_name)}</div>
       </div>`;
   }).join('');
@@ -132,17 +309,178 @@ function renderMatchday(m){
       ${score}
       <div class="meta" style="margin-top:6px;">${m.formation}</div>
     </div>
-    <div class="pitch-wrap">
+    <div class="pitch-wrap" id="pitch-capture-area">
       ${pitchSvg()}
       <div class="pitch-players">${playersHtml}</div>
     </div>
+    ${hasAnyRating ? `
+    <div class="rating-legend">
+      <span><span class="legend-swatch"></span>Official rating</span>
+      <span><span class="legend-swatch community"></span>Community average</span>
+    </div>
+    <div class="share-btn-row">
+      <div class="share-half-btn" id="share-text-btn">📤 Share as text</div>
+      <div class="share-half-btn" id="share-image-btn">📸 Share as image</div>
+    </div>` : ''}
     ${subsHtml}
   `;
+
+  if(hasAnyRating){
+    content.querySelectorAll('[data-player-id]').forEach(el=>{
+      el.addEventListener('click', ()=> openRateModal(el.dataset.playerId, el.dataset.playerName));
+    });
+    const shareTextBtn = document.getElementById('share-text-btn');
+    const shareImageBtn = document.getElementById('share-image-btn');
+    if(shareTextBtn) shareTextBtn.addEventListener('click', openShareTextModal);
+    if(shareImageBtn) shareImageBtn.addEventListener('click', openShareImageModal);
+  }
 }
 
-function escapeHtml(s){
-  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+/* ---------- rate modal ---------- */
+async function openRateModal(playerId, playerName){
+  openPlayerId = playerId;
+  openPlayerName = playerName;
+  selectedRating = myRatingsThisMatch[playerId]?.rating || null;
+  thoughtsExpanded = false;
+
+  document.getElementById('rate-modal-title').textContent = playerName;
+  const community = ratingAverages[playerId];
+  document.getElementById('rate-modal-role').textContent = community
+    ? `Community average ${community.average} from ${community.count} rating${community.count===1?'':'s'}`
+    : 'No community ratings yet — be the first';
+
+  document.getElementById('rate-comment').value = myRatingsThisMatch[playerId]?.comment || '';
+  document.getElementById('rate-char-count').textContent = (myRatingsThisMatch[playerId]?.comment || '').length + ' / 200';
+  document.getElementById('rate-signed-out').style.display = currentUser ? 'none' : 'block';
+  document.getElementById('rate-form').style.display = currentUser ? 'block' : 'none';
+  renderRateScale();
+  await renderThoughts();
+  document.getElementById('rate-modal-overlay').classList.add('open');
 }
+function renderRateScale(){
+  const scale = document.getElementById('rate-scale');
+  scale.innerHTML = Array.from({length:10}, (_,i)=>i+1).map(n =>
+    `<div class="rate-chip ${selectedRating===n?'rate-selected':''}" data-rate="${n}">${n}</div>`
+  ).join('');
+  scale.querySelectorAll('[data-rate]').forEach(chip => {
+    chip.addEventListener('click', ()=>{ selectedRating = Number(chip.dataset.rate); renderRateScale(); });
+  });
+}
+async function renderThoughts(){
+  const { data } = await sb.from('player_ratings').select('*').eq('matchday_id', currentMatchday.id).eq('player_id', openPlayerId).not('comment', 'is', null).order('created_at', {ascending:false});
+  const thoughts = data || [];
+  // profiles isn't directly related to player_ratings in a way
+  // PostgREST can auto-join, so display names are fetched separately
+  // and merged here rather than relying on an embed that wouldn't work.
+  let namesById = {};
+  if(thoughts.length){
+    const { data: names } = await sb.from('public_display_names').select('user_id, display_name').in('user_id', thoughts.map(t=>t.user_id));
+    (names||[]).forEach(p => { namesById[p.user_id] = p.display_name; });
+  }
+  const visible = thoughtsExpanded ? thoughts : thoughts.slice(0, 2);
+  let html = visible.length ? visible.map(t => `
+    <div class="thought-row">
+      <div class="thought-meta"><span class="thought-rating">${t.rating}</span><span class="thought-name">${escapeHtml(namesById[t.user_id] || 'A Tiger')}</span></div>
+      <div class="thought-text">${escapeHtml(t.comment)}</div>
+    </div>`).join('') : `<div class="empty-state">No comments yet — yours could be the first.</div>`;
+  if(!thoughtsExpanded && thoughts.length > 2){
+    html += `<span class="thoughts-see-more" id="thoughts-expand">See all ${thoughts.length} comments →</span>`;
+  }
+  document.getElementById('community-thoughts').innerHTML = html;
+  const expandBtn = document.getElementById('thoughts-expand');
+  if(expandBtn) expandBtn.addEventListener('click', ()=>{ thoughtsExpanded = true; renderThoughts(); });
+}
+
+document.getElementById('rate-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='rate-modal-overlay') document.getElementById('rate-modal-overlay').classList.remove('open'); });
+document.getElementById('rate-cancel').addEventListener('click', ()=> document.getElementById('rate-modal-overlay').classList.remove('open'));
+document.getElementById('rate-comment').addEventListener('input', (e)=>{ document.getElementById('rate-char-count').textContent = e.target.value.length + ' / 200'; });
+
+document.getElementById('rate-send-link').addEventListener('click', async ()=>{
+  const email = document.getElementById('rate-email').value.trim();
+  const msg = document.getElementById('rate-signin-msg');
+  if(!email){ msg.textContent = 'Enter your email first.'; return; }
+  msg.textContent = 'Sending…';
+  try{
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.href } });
+    if(error) throw error;
+    msg.textContent = 'Check your email for the link, then come back and tap the player again.';
+  }catch(e){ msg.textContent = e.message; }
+});
+
+document.getElementById('rate-submit').addEventListener('click', async ()=>{
+  if(!selectedRating){ toast('Pick a rating first.'); return; }
+  const comment = document.getElementById('rate-comment').value.trim();
+  const msg = document.getElementById('rate-msg');
+  msg.textContent = 'Saving…';
+  try{
+    const { error } = await sb.from('player_ratings').upsert({
+      user_id: currentUser.id, matchday_id: currentMatchday.id, player_id: openPlayerId,
+      rating: selectedRating, comment: comment || null,
+    }, { onConflict: 'user_id,matchday_id,player_id' });
+    if(error) throw error;
+    myRatingsThisMatch[openPlayerId] = { rating: selectedRating, comment: comment || null };
+    await loadRatingsForMatchday(currentMatchday.id);
+    renderMatchday(currentMatchday);
+    toast('Rating saved — thanks!');
+    document.getElementById('rate-modal-overlay').classList.remove('open');
+  }catch(e){ msg.textContent = e.message; }
+});
+
+/* ---------- share as text ---------- */
+function buildShareText(){
+  const link = `${window.location.origin}${window.location.pathname}?matchday=${currentMatchday.id}`;
+  const myRated = Object.keys(myRatingsThisMatch);
+  if(myRated.length){
+    const lines = myRated.map(pid => {
+      const p = (currentMatchday.lineup||[]).find(x=>x.player_id===pid);
+      const r = myRatingsThisMatch[pid];
+      if(!p) return null;
+      return `⚽ ${p.first_name} ${p.last_name}: ${r.rating}/10${r.comment ? ' — "' + r.comment + '"' : ''}`;
+    }).filter(Boolean);
+    return `My ratings for Hull City vs ${currentMatchday.opponent}:\n\n${lines.join('\n')}\n\nAdd yours: ${link}`;
+  }
+  return `Rate how Hull City played vs ${currentMatchday.opponent} — add your player ratings here:\n${link}`;
+}
+function openShareTextModal(){
+  const text = buildShareText();
+  const link = `${window.location.origin}${window.location.pathname}?matchday=${currentMatchday.id}`;
+  document.getElementById('share-preview-text').textContent = text;
+  document.getElementById('share-x').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  document.getElementById('share-whatsapp').href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  document.getElementById('share-facebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}&quote=${encodeURIComponent(text)}`;
+  document.getElementById('share-text-modal-overlay').classList.add('open');
+}
+document.getElementById('share-text-close').addEventListener('click', ()=> document.getElementById('share-text-modal-overlay').classList.remove('open'));
+document.getElementById('share-text-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='share-text-modal-overlay') document.getElementById('share-text-modal-overlay').classList.remove('open'); });
+document.getElementById('share-copy').addEventListener('click', ()=>{
+  navigator.clipboard.writeText(buildShareText()).then(()=> toast('Copied to clipboard.')).catch(()=> toast('Copy not supported — select the text manually.'));
+});
+
+/* ---------- share as image ---------- */
+let currentImageBlob = null;
+async function openShareImageModal(){
+  toast('Building image…');
+  try{
+    const canvas = await html2canvas(document.getElementById('pitch-capture-area'), { backgroundColor: '#10231a', scale: 2 });
+    canvas.toBlob((blob)=>{
+      currentImageBlob = blob;
+      document.getElementById('image-share-preview').src = URL.createObjectURL(blob);
+      document.getElementById('image-share-modal-overlay').classList.add('open');
+    }, 'image/png');
+  }catch(e){ toast('Could not build the image right now.'); }
+}
+document.getElementById('image-share-close').addEventListener('click', ()=> document.getElementById('image-share-modal-overlay').classList.remove('open'));
+document.getElementById('image-share-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='image-share-modal-overlay') document.getElementById('image-share-modal-overlay').classList.remove('open'); });
+document.getElementById('image-share-save').addEventListener('click', ()=>{
+  if(!currentImageBlob) return;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(currentImageBlob); a.download = 'tigerdle-ratings.png'; a.click();
+  toast('Image saved.');
+});
+document.getElementById('image-share-copy').addEventListener('click', async ()=>{
+  if(!currentImageBlob) return;
+  try{ await navigator.clipboard.write([new ClipboardItem({'image/png': currentImageBlob})]); toast('Image copied.'); }
+  catch(e){ toast('Copy not supported in this browser — try Save.'); }
+});
 
 (async function(){
   const content = document.getElementById('md-content');
@@ -157,9 +495,17 @@ function escapeHtml(s){
     if(data.length > 1){
       pickerWrap.style.display = 'flex';
       picker.innerHTML = data.map((m,i)=>`<option value="${i}">vs ${escapeHtml(m.opponent)} — ${m.match_date}</option>`).join('');
-      picker.addEventListener('change', ()=> renderMatchday(data[Number(picker.value)]));
+      picker.addEventListener('change', async ()=>{ const m = data[Number(picker.value)]; await loadRatingsForMatchday(m.id); renderMatchday(m); });
     }
-    renderMatchday(data[0]);
+    // A shared link (?matchday=<id>) opens that specific match directly,
+    // rather than always defaulting to the latest one.
+    const requestedId = new URLSearchParams(window.location.search).get('matchday');
+    const requestedIndex = requestedId ? data.findIndex(m => m.id === requestedId) : -1;
+    const startIndex = requestedIndex !== -1 ? requestedIndex : 0;
+    if(picker && data.length > 1) picker.value = startIndex;
+
+    await loadRatingsForMatchday(data[startIndex].id);
+    renderMatchday(data[startIndex]);
   }catch(e){
     content.innerHTML = `<div class="empty-state">Couldn't load team news right now.</div>`;
   }
