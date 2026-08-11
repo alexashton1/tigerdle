@@ -33,6 +33,11 @@
   }
   .league-name{ font-family:var(--display); font-weight:400; font-size:16px; color:var(--paper); }
   .league-meta{ font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin-top:3px; }
+  .joined-tag{
+    display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10.5px;
+    color:var(--amber-soft); border:1px solid var(--amber-deep); border-radius:999px; padding:4px 11px;
+    background:rgba(245,163,0,0.08); white-space:nowrap;
+  }
   .league-code-badge{
     font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--amber-soft);
     background:var(--ink); border:1px solid var(--line); padding:5px 10px; border-radius:6px; cursor:pointer;
@@ -243,7 +248,7 @@ async function loadPublicLeagues(){
         <div class="league-name">${escapeHtml(l.name)}</div>
         <div class="league-meta">Public league${alreadyIn ? ' · already a member' : ''}</div>
       </div>
-      ${alreadyIn ? '<span class="fixture-status predicted">✓ Joined</span>' : `<button class="ghost-btn" data-join-public="${l.id}">Join</button>`}
+      ${alreadyIn ? '<span class="joined-tag">✓ Joined</span>' : `<button class="ghost-btn" data-join-public="${l.id}">Join</button>`}
     </div>`;
   }).join('');
   container.querySelectorAll('[data-join-public]').forEach(btn=>btn.addEventListener('click', async (e)=>{

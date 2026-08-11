@@ -91,13 +91,20 @@ a{ color:var(--amber-soft); }
 .nav-group{ display:flex; align-items:center; gap:16px; }
 
 @media (max-width:560px){
-  .brandrow{ flex-wrap:wrap; justify-content:center; text-align:center; row-gap:10px; }
-  .nav-group{ width:100%; justify-content:center; flex-wrap:wrap; gap:8px; }
-  .site-nav{ justify-content:center; width:100%; flex-wrap:wrap; row-gap:8px; }
+  .brandrow{ flex-wrap:wrap; justify-content:center; text-align:center; row-gap:8px; padding:8px 0; }
+  .badge-svg{ width:22px; height:26px; }
+  .brand .logo{ font-size:17px; }
+  .nav-group{ width:100%; justify-content:center; flex-wrap:wrap; gap:6px; }
+  .site-nav{ justify-content:center; width:100%; flex-wrap:wrap; row-gap:6px; gap:5px; }
+  .site-nav a{ padding:5px 10px; font-size:9.5px; }
+  .account-btn{ padding:5px 11px; font-size:9.5px; }
+  h1.title{ font-size:26px; margin-top:4px; }
+  .kicker{ font-size:9px; letter-spacing:.14em; }
+  .tagline{ font-size:12px; margin-top:5px; }
 }
 
 @media (max-width:400px){
-  .site-nav a{ padding:6px 10px; font-size:10px; }
+  .site-nav a{ padding:4px 9px; font-size:9px; }
 }
 
 .kicker{ font-family:var(--mono); font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--amber-soft); margin-bottom:4px; }
