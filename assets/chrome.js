@@ -172,7 +172,48 @@ async function updateAccountButtonAuthState(){
     // Only the live SIGNED_IN event is someone watching it happen —
     // arriving on a page already signed in shouldn't animate anything.
     revealAuthNavLinks(event === 'SIGNED_IN');
+    checkForNewAchievements(session.user.id);
   });
+}
+
+// Builds its own toast element rather than relying on one already being
+// on the page — not every page has one, and achievements can genuinely
+// be earned from any of them (a game, a prediction, joining a league),
+// so this needs to work everywhere without assuming anything about
+// what markup that particular page happens to already have.
+function showAchievementToast(icon, name, tier){
+  let el = document.getElementById('achievement-toast');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'achievement-toast';
+    el.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120%); z-index:200; background:var(--ink-2); border:1px solid var(--amber); border-radius:12px; padding:12px 20px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 28px rgba(0,0,0,0.5); transition:transform .35s ease; max-width:90vw;';
+    document.body.appendChild(el);
+  }
+  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
+  el.innerHTML = `<span style="font-size:26px;">${icon}</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">Achievement unlocked — ${tierLabel}</span><span style="color:var(--paper); font-size:14px; font-weight:600;">${name}</span></span>`;
+  requestAnimationFrame(()=>{ el.style.transform = 'translateX(-50%) translateY(0)'; });
+  clearTimeout(showAchievementToast._t);
+  showAchievementToast._t = setTimeout(()=>{ el.style.transform = 'translateX(-50%) translateY(120%)'; }, 4200);
+}
+
+// Runs on every page while signed in — achievements can be earned from
+// any of them, so notification can't be tied to just one place (like
+// only the Achievements page itself, which someone might rarely visit).
+async function checkForNewAchievements(userId){
+  try{
+    await sb.rpc('calculate_achievements', { uid: userId });
+    const { data: unseen } = await sb.from('user_achievements').select('achievement_key').eq('user_id', userId).eq('seen', false);
+    if(!unseen || !unseen.length) return;
+
+    const keys = unseen.map(u => u.achievement_key);
+    const { data: defs } = await sb.from('achievement_definitions').select('*').in('key', keys);
+    // Newest/highest tiers first feels better than an arbitrary order
+    // when several unlock at once.
+    (defs||[]).sort((a,b)=>a.sort_order-b.sort_order).forEach((d, i)=>{
+      setTimeout(()=> showAchievementToast(d.icon, d.name, d.tier), i * 4500);
+    });
+    await sb.from('user_achievements').update({ seen: true }).eq('user_id', userId).in('achievement_key', keys);
+  }catch(e){ /* not critical — worst case, it shows next page load instead */ }
 }
 
 async function subscribeSubmit(){
