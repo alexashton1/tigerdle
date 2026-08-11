@@ -182,6 +182,17 @@ async function updateAccountButtonAuthState(){
 // so this needs to work everywhere without assuming anything about
 // what markup that particular page happens to already have.
 function showAchievementToast(icon, name, tier){
+  const el = getOrCreateAchievementToastEl();
+  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
+  el.innerHTML = `<span style="font-size:26px;">${icon}</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">Achievement unlocked — ${tierLabel}</span><span style="color:var(--paper); font-size:14px; font-weight:600;">${name}</span></span>`;
+  animateAchievementToast(el);
+}
+function showAchievementSummaryToast(count){
+  const el = getOrCreateAchievementToastEl();
+  el.innerHTML = `<span style="font-size:26px;">🎉</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">${count} achievements unlocked</span><span style="color:var(--paper); font-size:14px; font-weight:600;">See them all on your Achievements page</span></span>`;
+  animateAchievementToast(el);
+}
+function getOrCreateAchievementToastEl(){
   let el = document.getElementById('achievement-toast');
   if(!el){
     el = document.createElement('div');
@@ -189,11 +200,12 @@ function showAchievementToast(icon, name, tier){
     el.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120%); z-index:200; background:var(--ink-2); border:1px solid var(--amber); border-radius:12px; padding:12px 20px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 28px rgba(0,0,0,0.5); transition:transform .35s ease; max-width:90vw;';
     document.body.appendChild(el);
   }
-  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  el.innerHTML = `<span style="font-size:26px;">${icon}</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">Achievement unlocked — ${tierLabel}</span><span style="color:var(--paper); font-size:14px; font-weight:600;">${name}</span></span>`;
+  return el;
+}
+function animateAchievementToast(el){
   requestAnimationFrame(()=>{ el.style.transform = 'translateX(-50%) translateY(0)'; });
-  clearTimeout(showAchievementToast._t);
-  showAchievementToast._t = setTimeout(()=>{ el.style.transform = 'translateX(-50%) translateY(120%)'; }, 4200);
+  clearTimeout(animateAchievementToast._t);
+  animateAchievementToast._t = setTimeout(()=>{ el.style.transform = 'translateX(-50%) translateY(120%)'; }, 4200);
 }
 
 // Runs on every page while signed in — achievements can be earned from
@@ -206,13 +218,27 @@ async function checkForNewAchievements(userId){
     if(!unseen || !unseen.length) return;
 
     const keys = unseen.map(u => u.achievement_key);
-    const { data: defs } = await sb.from('achievement_definitions').select('*').in('key', keys);
-    // Newest/highest tiers first feels better than an arbitrary order
-    // when several unlock at once.
-    (defs||[]).sort((a,b)=>a.sort_order-b.sort_order).forEach((d, i)=>{
-      setTimeout(()=> showAchievementToast(d.icon, d.name, d.tier), i * 4500);
-    });
+    // Marked seen immediately, before any toast is shown — not after.
+    // Showing them first and marking seen last left a window where
+    // navigating to a new page quickly could re-fetch the same
+    // still-unseen rows and show them a second time. This closes that
+    // gap down to a single database round trip instead of the whole
+    // staggered toast sequence.
     await sb.from('user_achievements').update({ seen: true }).eq('user_id', userId).in('achievement_key', keys);
+
+    const { data: defs } = await sb.from('achievement_definitions').select('*').in('key', keys);
+    const sorted = (defs||[]).sort((a,b)=>a.sort_order-b.sort_order);
+    // More than a few at once — most likely a first login after a
+    // backfill catches someone up on a lot of history at once — reads
+    // better as one summary than a long, slow drip of individual
+    // toasts stacking up over the better part of a minute.
+    if(sorted.length > 3){
+      showAchievementSummaryToast(sorted.length);
+    } else {
+      sorted.forEach((d, i)=>{
+        setTimeout(()=> showAchievementToast(d.icon, d.name, d.tier), i * 4500);
+      });
+    }
   }catch(e){ /* not critical — worst case, it shows next page load instead */ }
 }
 
