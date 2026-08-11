@@ -300,11 +300,57 @@ async function openLeagueDetail(leagueId){
     const userIds = leaderboard.map(r=>r.user_id);
     const { data: profiles } = await sb.from('profiles').select('*').in('user_id', userIds);
     const nameFor = (uid) => uid === currentUser.id ? 'You' : (profiles||[]).find(p=>p.user_id===uid)?.display_name || 'Player';
+
+    // Resolving an equipped badge icon needs two different lookups —
+    // a specific achievement is just an icon lookup, but "status" needs
+    // that user's total achievement points worked out first. Both are
+    // done here in one pass rather than per-row, so a big leaderboard
+    // doesn't fire off a query per person.
+    const badgeIcon = {};
+    const equippedByUser = {};
+    (profiles||[]).forEach(p => { if(p.equipped_badge) equippedByUser[p.user_id] = p.equipped_badge; });
+    const needsStatus = Object.values(equippedByUser).some(b => b === 'status');
+    const needsAchievement = Object.values(equippedByUser).some(b => b !== 'status');
+
+    if(needsStatus || needsAchievement){
+      const { data: defs } = await sb.from('achievement_definitions').select('key, icon, points');
+      const defsByKey = {};
+      (defs||[]).forEach(d => { defsByKey[d.key] = d; });
+
+      if(needsAchievement){
+        Object.keys(equippedByUser).forEach(uid => {
+          const key = equippedByUser[uid];
+          if(key !== 'status' && defsByKey[key]) badgeIcon[uid] = defsByKey[key].icon;
+        });
+      }
+      if(needsStatus){
+        const statusUserIds = Object.keys(equippedByUser).filter(uid => equippedByUser[uid] === 'status');
+        const { data: earned } = await sb.from('user_achievements').select('user_id, achievement_key').in('user_id', statusUserIds);
+        const pointsByUser = {};
+        (earned||[]).forEach(e => {
+          const pts = defsByKey[e.achievement_key]?.points || 0;
+          pointsByUser[e.user_id] = (pointsByUser[e.user_id] || 0) + pts;
+        });
+        const STATUS_TIERS = [
+          { icon:'🌱', threshold:0 }, { icon:'📈', threshold:150 }, { icon:'⭐', threshold:450 },
+          { icon:'🎖️', threshold:1000 }, { icon:'👑', threshold:2200 },
+        ];
+        statusUserIds.forEach(uid => {
+          const points = pointsByUser[uid] || 0;
+          let current = STATUS_TIERS[0];
+          STATUS_TIERS.forEach(t => { if(points >= t.threshold) current = t; });
+          badgeIcon[uid] = current.icon;
+        });
+      }
+    }
+
+    const badgeFor = (uid) => badgeIcon[uid] ? `<span class="mock-badge-icon" style="width:18px; height:18px; border-radius:50%; background:var(--ink); border:1.5px solid var(--amber); color:var(--amber-soft); font-size:9px; display:inline-flex; align-items:center; justify-content:center; margin-right:5px;">${badgeIcon[uid]}</span>` : '';
+
     leaderboardHtml = `
       <div class="admin-list">
         ${leaderboard.map((row, i)=>`
           <div class="admin-row" style="${i===0 ? 'border:1px solid var(--amber); border-radius:8px; padding:10px 12px;' : ''}">
-            <div>${i===0?'🏆 ':''}${escapeHtml(nameFor(row.user_id))}${row.user_id===currentUser.id?' <span class="league-meta">(you)</span>':''}
+            <div>${i===0?'🏆 ':''}${badgeFor(row.user_id)}${escapeHtml(nameFor(row.user_id))}${row.user_id===currentUser.id?' <span class="league-meta">(you)</span>':''}
               <span class="league-meta" style="display:block;">${row.fixtures_scored} fixture${row.fixtures_scored===1?'':'s'} scored</span>
             </div>
             <div style="font-family:var(--display); font-size:20px; color:var(--amber);">${row.total_points}</div>

@@ -43,7 +43,8 @@
   .mode-stat-row div{ text-align:center; }
   .mode-stat-row .num{ font-family:var(--display); font-size:19px; color:var(--amber-soft); }
   .mode-stat-row .lab{ font-family:var(--mono); font-size:8.5px; text-transform:uppercase; color:var(--paper-dim); }
-  .signed-in-bar{ display:flex; align-items:center; justify-content:space-between; max-width:520px; margin:0 auto 18px; font-size:12.5px; color:var(--paper-dim); }
+  .signed-in-bar{ display:flex; align-items:center; justify-content:space-between; max-width:520px; margin:0 auto 18px; font-size:12.5px; color:var(--paper-dim); flex-wrap:wrap; gap:10px; }
+  @media (max-width:420px){ .signed-in-bar{ justify-content:center; text-align:center; } }
   .cta-btn{
     display:block; max-width:520px; margin:16px auto 0; padding:20px 22px;
     background:linear-gradient(135deg, var(--amber) 0%, var(--amber-deep) 100%);
@@ -103,13 +104,22 @@
   <div id="signed-in-view" style="display:none;">
     <div class="signed-in-bar">
       <span id="acc-email-display"></span>
-      <div style="display:flex; gap:14px; align-items:center;">
-        <span id="acc-settings-open" style="cursor:pointer; font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;">⚙️ Settings</span>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="ghost-btn" id="acc-settings-open">⚙️ Settings</button>
         <button class="ghost-btn" id="acc-sign-out">Sign out</button>
       </div>
     </div>
 
     <div id="stats-dashboard"></div>
+
+    <a href="achievements.html" style="display:flex; align-items:center; gap:14px; padding:16px 18px; background:var(--ink-2); border:1px solid var(--line); border-radius:12px; text-decoration:none; transition:all .15s ease; margin-bottom:20px;" onmouseover="this.style.borderColor='var(--amber-deep)'" onmouseout="this.style.borderColor='var(--line)'">
+      <span style="font-size:24px; flex-shrink:0;">🏅</span>
+      <span style="flex:1; min-width:0;">
+        <span style="display:block; font-family:var(--display); font-weight:400; font-size:16px; color:var(--paper);">Your achievements</span>
+        <span style="display:block; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:2px;">Every game counts — see what you've earned</span>
+      </span>
+      <span style="font-size:20px; color:var(--amber); flex-shrink:0;">→</span>
+    </a>
 
     <a href="predictor.html" class="cta-btn">
       <span class="cta-title">🔮 Predict Hull's team and score →</span>
@@ -123,12 +133,15 @@
 </div>
 
 <div class="wildcard-modal-overlay" id="acc-settings-modal-overlay">
-  <div class="wildcard-modal" style="max-width:440px;">
-    <h3>Settings</h3>
-    <p style="font-size:12.5px; color:var(--paper-dim); margin:0 0 16px;">Everything here is optional — nothing changes unless you specifically ask it to.</p>
+  <div class="wildcard-modal" style="max-width:420px;">
+    <h3 style="margin-bottom:2px;">⚙️ Settings</h3>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 22px;">Everything here is optional.</p>
 
-    <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">Display name</div>
-    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 8px;">What league-mates see — never your email.</p>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+      <span style="font-size:15px;">🏷️</span>
+      <span style="font-family:var(--display); font-size:17px; color:var(--amber);">Display name</span>
+    </div>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 10px;">What league-mates see — never your email.</p>
     <input type="text" id="acc-display-name" placeholder="e.g. TigerFan42" maxlength="24">
     <div style="display:flex; gap:8px; margin-top:8px;">
       <button class="primary-btn" id="acc-save-name" style="flex:1;">Save name</button>
@@ -136,10 +149,13 @@
     </div>
     <div class="subscribe-msg" id="acc-name-msg" style="text-align:center; margin-top:8px;"></div>
 
-    <div style="border-top:1px dashed var(--line); margin:18px 0 16px;"></div>
+    <hr style="border:none; border-top:1px solid var(--line); margin:24px 0;">
 
-    <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-bottom:6px;">🔐 Password</div>
-    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 8px;">The email link still works everywhere with no setup — this is purely an extra option on top of it.</p>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+      <span style="font-size:15px;">🔐</span>
+      <span style="font-family:var(--display); font-size:17px; color:var(--amber);">Password</span>
+    </div>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 10px;">The email link still works everywhere with no setup — this is purely an extra option on top of it.</p>
     <div id="acc-recovery-banner" style="display:none; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12.5px; color:var(--amber-soft);">
       🔑 Enter a new password below to finish resetting it.
     </div>

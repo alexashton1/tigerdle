@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Achievements — TIGERDLE</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .account-card{ background:var(--ink-2); border:1px solid var(--line); border-radius:12px; padding:24px; max-width:420px; margin:24px auto; }
+  .account-card h2{ font-family:var(--display); font-weight:400; font-size:22px; color:var(--amber); margin:0 0 10px; text-align:center; }
+  .account-card p{ font-size:13.5px; color:var(--paper-dim); text-align:center; margin:0 0 18px; line-height:1.5; }
+  .account-card input{
+    width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper);
+    font-size:14px; padding:11px 13px; border-radius:8px; outline:none; margin-bottom:10px;
+  }
+  .account-card input:focus{ border-color:var(--amber); }
+
+  .status-card{
+    background:linear-gradient(135deg, rgba(245,163,0,0.12), rgba(245,163,0,0.02)); border:1px solid var(--amber-deep);
+    border-radius:16px; padding:22px; margin-bottom:26px; text-align:center;
+  }
+  .status-tier-icon{ font-size:38px; margin-bottom:6px; }
+  .status-tier-name{ font-family:var(--display); font-weight:400; font-size:26px; color:var(--amber); }
+  .status-points{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:4px; }
+  .status-bar-track{ height:8px; background:var(--ink); border-radius:99px; overflow:hidden; margin:14px auto 6px; max-width:320px; }
+  .status-bar-fill{ height:100%; background:linear-gradient(90deg, var(--amber-deep), var(--amber)); border-radius:99px; transition:width .4s ease; }
+  .status-next{ font-family:var(--mono); font-size:10px; color:var(--paper-dim); }
+
+  .achieve-category{ margin-bottom:26px; }
+  .achieve-category-title{
+    font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--amber-soft);
+    margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--line);
+  }
+  .badge-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(126px,1fr)); gap:12px; }
+  .badge-tile{
+    text-align:center; padding:16px 8px; border-radius:12px; background:var(--ink-2); border:1px solid var(--line);
+    cursor:pointer; transition:all .15s ease; position:relative;
+  }
+  .badge-tile:hover:not(.locked){ border-color:var(--amber-deep); transform:translateY(-2px); }
+  .badge-tile.locked{ opacity:.35; filter:grayscale(1); cursor:default; }
+  .badge-tile.equipped{ border-color:var(--amber); box-shadow:0 0 0 2px rgba(245,163,0,0.25); }
+  .badge-icon{ font-size:26px; margin-bottom:6px; display:block; }
+  .badge-name{ font-family:var(--body); font-size:11px; color:var(--paper); font-weight:600; line-height:1.3; }
+  .badge-tier-row{ display:flex; justify-content:center; gap:3px; margin-top:6px; }
+  .tier-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-3); border:1px solid var(--line); }
+  .tier-dot.bronze.reached{ background:#b5713a; border-color:#b5713a; }
+  .tier-dot.silver.reached{ background:#c4c4c4; border-color:#c4c4c4; }
+  .tier-dot.gold.reached{ background:var(--amber); border-color:var(--amber); }
+  .tier-dot.platinum.reached{ background:#8ecfff; border-color:#8ecfff; box-shadow:0 0 4px rgba(142,207,255,0.6); }
+  .badge-desc{ font-family:var(--mono); font-size:8.5px; color:var(--paper-dim); margin-top:5px; line-height:1.4; }
+  .equipped-tag{
+    position:absolute; top:-7px; right:6px; background:var(--amber); color:var(--ink); font-family:var(--mono);
+    font-size:8px; font-weight:700; padding:2px 6px; border-radius:999px; text-transform:uppercase;
+  }
+  .empty-state{ font-family:var(--body); font-size:13px; color:var(--paper-dim); padding:8px 0; text-align:center; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="wrap">
+  <header style="padding:20px 0 4px; text-align:center;">
+    <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
+    <h1 class="title" style="font-size:clamp(28px,7vw,38px);">Achievements</h1>
+    <p class="tagline">Every game contributes. Entirely private unless you choose otherwise.</p>
+  </header>
+
+  <div id="signed-out-view">
+    <div class="account-card">
+      <h2>Sign in to see yours</h2>
+      <p>Free account, no password needed — enter your email and we'll send a one-click sign-in link.</p>
+      <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
+      <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
+      <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div id="signed-in-view" style="display:none;">
+    <div class="status-card" id="status-card"></div>
+    <div id="achieve-container"></div>
+
+    <div style="margin-top:30px;">
+      <h3 style="font-family:var(--display); font-weight:400; color:var(--amber); font-size:19px; margin-bottom:4px;">What shows next to your name</h3>
+      <p style="font-size:12px; color:var(--paper-dim); margin:0 0 14px;">Private by default — nothing shows unless you specifically choose it.</p>
+      <div class="badge-grid" id="equip-choice" style="max-width:280px;"></div>
+    </div>
+  </div>
+</div>
+<div id="site-footer"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('achievements');
+
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function toast(message){
+  const t = document.getElementById('toast');
+  t.textContent = message; t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+const STATUS_TIERS = [
+  { name:'New Fan', icon:'🌱', threshold:0 },
+  { name:'Rising Fan', icon:'📈', threshold:150 },
+  { name:'Regular', icon:'⭐', threshold:450 },
+  { name:'Veteran', icon:'🎖️', threshold:1000 },
+  { name:'Legend', icon:'👑', threshold:2200 },
+];
+
+let currentUser = null;
+let allDefinitions = [];
+let earnedKeys = new Set();
+let equippedBadge = null; // null | 'status' | an achievement_key
+
+function currentStatus(points){
+  let current = STATUS_TIERS[0];
+  for(const tier of STATUS_TIERS){ if(points >= tier.threshold) current = tier; }
+  return current;
+}
+function nextStatus(points){
+  return STATUS_TIERS.find(t => t.threshold > points) || null;
+}
+function totalPoints(){
+  return allDefinitions.filter(d => earnedKeys.has(d.key)).reduce((sum, d) => sum + d.points, 0);
+}
+
+function renderStatusCard(){
+  const points = totalPoints();
+  const current = currentStatus(points);
+  const next = nextStatus(points);
+  const progressPct = next ? Math.round(100 * (points - current.threshold) / (next.threshold - current.threshold)) : 100;
+  document.getElementById('status-card').innerHTML = `
+    <div class="status-tier-icon">${current.icon}</div>
+    <div class="status-tier-name">${current.name}</div>
+    <div class="status-points">${points} achievement points earned</div>
+    <div class="status-bar-track"><div class="status-bar-fill" style="width:${progressPct}%;"></div></div>
+    <div class="status-next">${next ? `${next.threshold - points} points to ${next.name} ${next.icon}` : 'Highest status reached — Legend'}</div>
+  `;
+}
+
+function renderAchievements(){
+  const container = document.getElementById('achieve-container');
+  if(!allDefinitions.length){ container.innerHTML = `<div class="empty-state">No achievements set up yet.</div>`; return; }
+
+  // Group by category, then by name within category (so tiers of the
+  // same badge — bronze/silver/gold — collapse into one tile showing
+  // whichever's highest, not three separate tiles).
+  const byCategory = {};
+  allDefinitions.forEach(d => {
+    byCategory[d.category] = byCategory[d.category] || {};
+    byCategory[d.category][d.name] = byCategory[d.category][d.name] || [];
+    byCategory[d.category][d.name].push(d);
+  });
+
+  container.innerHTML = Object.keys(byCategory).map(category => {
+    const names = byCategory[category];
+    return `
+      <div class="achieve-category">
+        <div class="achieve-category-title">${escapeHtml(category)}</div>
+        <div class="badge-grid">
+          ${Object.keys(names).map(name => {
+            const tiers = names[name]; // already in sort_order, i.e. bronze->platinum
+            const highestReached = tiers.filter(t => earnedKeys.has(t.key)).pop();
+            const isLocked = !highestReached;
+            const display = isLocked ? tiers[0] : highestReached;
+            const isEquipped = equippedBadge === display.key || (!isLocked && equippedBadge === highestReached.key);
+            return `<div class="badge-tile ${isLocked?'locked':''} ${isEquipped?'equipped':''}" ${isLocked?'':`data-key="${highestReached.key}" data-icon="${display.icon}" data-name="${escapeHtml(name)}"`}>
+              ${isEquipped ? '<span class="equipped-tag">Equipped</span>' : ''}
+              <span class="badge-icon">${display.icon}</span>
+              <div class="badge-name">${escapeHtml(name)}</div>
+              <div class="badge-tier-row">
+                ${tiers.map(t => `<span class="tier-dot ${t.tier} ${earnedKeys.has(t.key)?'reached':''}"></span>`).join('')}
+              </div>
+              <div class="badge-desc">${isLocked ? escapeHtml(tiers[0].description) : (display.tier.charAt(0).toUpperCase()+display.tier.slice(1)) + ' — ' + escapeHtml(display.description)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  container.querySelectorAll('.badge-tile[data-key]').forEach(tile=>{
+    tile.addEventListener('click', ()=> equip(tile.dataset.key, tile.dataset.icon, tile.dataset.name));
+  });
+}
+
+function renderEquipChoice(){
+  const points = totalPoints();
+  const current = currentStatus(points);
+  document.getElementById('equip-choice').innerHTML = `
+    <div class="badge-tile ${equippedBadge===null?'equipped':''}" id="equip-none-option">
+      ${equippedBadge===null ? '<span class="equipped-tag">Equipped</span>' : ''}
+      <span class="badge-icon">🙈</span>
+      <div class="badge-name">Stay private</div>
+      <div class="badge-desc">Nothing shown</div>
+    </div>
+    <div class="badge-tile ${equippedBadge==='status'?'equipped':''}" id="equip-status-option">
+      ${equippedBadge==='status' ? '<span class="equipped-tag">Equipped</span>' : ''}
+      <span class="badge-icon">${current.icon}</span>
+      <div class="badge-name">${current.name}</div>
+      <div class="badge-desc">Your overall status</div>
+    </div>
+  `;
+  document.getElementById('equip-none-option').addEventListener('click', ()=> equip(null, null, null));
+  document.getElementById('equip-status-option').addEventListener('click', ()=> equip('status', current.icon, current.name));
+}
+
+async function equip(key, icon, name){
+  equippedBadge = key;
+  try{
+    await sb.from('profiles').update({ equipped_badge: key }).eq('user_id', currentUser.id);
+  }catch(e){ toast("Couldn't save that — try again."); }
+  renderAchievements();
+  renderEquipChoice();
+  if(key === null) toast('Nothing equipped — you stay private.');
+  else toast(`${icon} ${name} equipped — this now shows next to your name.`);
+}
+
+async function boot(user){
+  currentUser = user;
+  document.getElementById('signed-out-view').style.display = 'none';
+  document.getElementById('signed-in-view').style.display = 'block';
+
+  const { data: defs } = await sb.from('achievement_definitions').select('*').order('sort_order', {ascending:true});
+  allDefinitions = defs || [];
+
+  // Recalculates against real, current data every time this page is
+  // opened — nothing here is stale, and nothing already earned can
+  // ever be un-earned by this running again.
+  await sb.rpc('calculate_achievements', { uid: currentUser.id });
+
+  const { data: earned } = await sb.from('user_achievements').select('achievement_key').eq('user_id', currentUser.id);
+  earnedKeys = new Set((earned||[]).map(e => e.achievement_key));
+
+  const { data: profile } = await sb.from('profiles').select('equipped_badge').eq('user_id', currentUser.id).single();
+  equippedBadge = profile?.equipped_badge || null;
+
+  renderStatusCard();
+  renderAchievements();
+  renderEquipChoice();
+}
+
+document.getElementById('acc-send-link').addEventListener('click', async ()=>{
+  const email = document.getElementById('acc-email').value.trim();
+  const msg = document.getElementById('acc-msg');
+  if(!email){ msg.textContent = 'Enter your email first.'; return; }
+  msg.textContent = 'Sending…';
+  try{
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href.split('#')[0] } });
+    if(error) throw error;
+    msg.textContent = 'Check your email for a sign-in link.';
+  }catch(e){ msg.textContent = e.message; }
+});
+
+sb.auth.onAuthStateChange((event, session)=>{ if(session?.user) boot(session.user); });
+sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.user); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && !currentUser){
+    sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.user); });
+  }
+});
+</script>
+</body>
+</html>
