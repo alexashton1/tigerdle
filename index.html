@@ -15,10 +15,24 @@
 <meta name="twitter:title" content="TIGERDLE — The Hull City Wordle">
 <meta name="twitter:description" content="TIGERDLE is the Hull City Wordle — a free daily word puzzle plus three more Hull City guessing games.">
 <meta name="twitter:image" content="https://tigerdle.com/social-card.png">
+<link rel="canonical" href="https://tigerdle.com/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "TIGERDLE",
+  "url": "https://tigerdle.com/",
+  "logo": "https://tigerdle.com/apple-touch-icon.png",
+  "description": "TIGERDLE is a free, fan-made daily puzzle site for Hull City AFC supporters — four Hull City guessing games plus a match predictor and leagues. Not affiliated with Hull City AFC.",
+  "sameAs": [
+  ]
+}
+</script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -62,7 +76,12 @@
 </head>
 <body>
 <div id="site-header"></div>
-<div class="wrap">
+<noscript>
+  <nav style="text-align:center; padding:12px; font-family:sans-serif; font-size:13px;">
+    <a href="index.html">Home</a> · <a href="game.html">Play</a> · <a href="blog.html">Blog</a> · <a href="about.html">About</a>
+  </nav>
+</noscript>
+<main class="wrap">
   <header style="padding:20px 0 4px; text-align:center;">
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title">TIGERDLE</h1>
@@ -109,9 +128,17 @@
     <span class="predictor-cta-sub">Free account needed — no password, just your email. Takes 10 seconds.</span>
   </a>
 
+  <div class="section-head"><h2>What is TIGERDLE?</h2></div>
+  <p style="font-size:13.5px; color:var(--paper-dim); line-height:1.7; margin-top:8px;">
+    TIGERDLE is a free, fan-made puzzle site for Hull City AFC supporters. Every day brings four separate games — a Wordle-style surname guesser, a squad-and-legends matching game, a clue-by-clue mystery player, and a goal reveal where you guess the opponent. None of it needs an account or costs anything.
+  </p>
+  <p style="font-size:13.5px; color:var(--paper-dim); line-height:1.7; margin-top:10px;">
+    Signed-in supporters can go further with the Predictor — picking Hull's starting XI, calling the scoreline, and predicting who scores, scored automatically after every match — plus private or public leagues to compete with friends. TIGERDLE isn't affiliated with Hull City AFC; it's built independently by a fan, for fans.
+  </p>
+
   <div class="section-head"><h2>Latest from the blog</h2><a href="blog.html">View all →</a></div>
   <div class="postlist" id="latest-posts" style="margin-top:14px;"></div>
-</div>
+</main>
 <div id="site-footer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>

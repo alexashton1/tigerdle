@@ -104,6 +104,10 @@ function renderChrome(current){
         ${socialLinks.length ? `<div class="social-row">${socialLinks.join('')}</div>` : ''}
         <footer class="sitefoot">
           TIGERDLE · built for the amber &amp; black · not affiliated with Hull City AFC
+          <br>
+          <a href="about.html" class="footer-link">About &amp; FAQ</a> ·
+          <a href="privacy.html" class="footer-link">Privacy</a> ·
+          <a href="terms.html" class="footer-link">Terms</a>
           ${typeof TIP_JAR_URL !== 'undefined' && TIP_JAR_URL && !TIP_JAR_URL.includes('YOUR-USERNAME')
             ? `<br><a class="tipjar-link" href="${TIP_JAR_URL}" target="_blank" rel="noopener">☕ Buy me a coffee</a>`
             : ''}
