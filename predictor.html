@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
 <style>
   .account-card{ background:var(--ink-2); border:1px solid var(--line); border-radius:12px; padding:24px; max-width:420px; margin:24px auto; }
@@ -217,16 +218,74 @@
   .share-opt:hover{ border-color:var(--amber-deep); }
   .share-opt-icon{ font-size:22px; }
 </style>
+<style>
+  /* New direction, layered on top of the styles above rather than
+     replacing them, same technique as the homepage, using the real
+     classes loadFixtureList() actually generates. */
+  .tigerdle-v2 .leagues-link{ margin-top:8px; }
+
+  .tigerdle-v2 .account-card{
+    background:#191410; border:1px solid rgba(245,163,0,0.15); border-radius:16px; padding:24px; max-width:420px; margin:24px auto;
+  }
+  .tigerdle-v2 .account-card h2{ font-family:'Anton', sans-serif; font-weight:400; color:var(--v2-amber); }
+  .tigerdle-v2 .account-card p{ font-family:'Manrope', sans-serif; color:var(--v2-dim); }
+  .tigerdle-v2 .account-card input{ font-family:'Manrope', sans-serif; background:var(--v2-ink); border:1px solid #332a1f; color:var(--v2-cream); }
+  .tigerdle-v2 .account-card input:focus{ border-color:var(--v2-amber); }
+
+  .tigerdle-v2 .fixture-card{
+    background:#191410; border:1.5px solid transparent; border-radius:14px; padding:16px 18px; margin-bottom:12px;
+    transition:border-color .25s ease, transform .25s cubic-bezier(.2,.8,.3,1.15);
+  }
+  .tigerdle-v2 .fixture-card:hover{ border-color:transparent; transform:translateY(-2px); }
+  .tigerdle-v2 .fixture-card.fixture-next{ border-color:var(--v2-amber); box-shadow:0 6px 20px rgba(245,163,0,0.15); }
+  .tigerdle-v2 .fixture-card.fixture-locked{ opacity:.5; }
+  .tigerdle-v2 .fixture-card.fixture-locked:hover{ transform:none; }
+  .tigerdle-v2 .next-badge{
+    display:inline-block; font-family:'IBM Plex Mono', monospace; font-size:9px; font-weight:700; letter-spacing:.06em;
+    background:var(--v2-amber); color:var(--v2-ink); padding:2px 8px; border-radius:999px; margin-bottom:5px;
+  }
+  .tigerdle-v2 .fixture-main{ font-family:'Anton', sans-serif; font-weight:400; font-size:16px; color:var(--v2-cream); }
+  .tigerdle-v2 .fixture-meta{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--v2-dim); margin-top:3px; }
+  .tigerdle-v2 .fixture-status{ font-family:'IBM Plex Mono', monospace; font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .tigerdle-v2 .fixture-status.locked{ background:var(--v2-ink); border:1px solid #332a1f; color:var(--v2-dim); font-size:9px; text-align:right; }
+  .tigerdle-v2 .fixture-status.predicted{ background:#4a7c3f; color:var(--v2-cream); }
+  .tigerdle-v2 .fixture-status.not-predicted{ background:var(--v2-ink); border:1px solid #332a1f; color:var(--v2-dim); }
+
+  .tigerdle-v2 .wc-pill{
+    display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:10.5px;
+    background:var(--v2-ink); border:1px solid #332a1f; color:var(--v2-dim); padding:4px 10px 4px 8px;
+    border-radius:999px; cursor:pointer; margin-top:9px; white-space:nowrap; transition:all .2s ease;
+  }
+  .tigerdle-v2 .wc-pill:hover{ border-color:var(--v2-amber-deep); color:var(--v2-cream); }
+  .tigerdle-v2 .wc-pill.wc-pill-active{ background:rgba(245,163,0,0.12); border-color:var(--v2-amber); color:var(--v2-amber); font-weight:600; }
+
+  .tigerdle-v2 .prediction-summary{
+    font-family:'Manrope', sans-serif; font-size:12.5px; color:var(--v2-dim);
+    border-top:1px dashed #332a1f;
+  }
+  .tigerdle-v2 .prediction-summary b{ color:var(--v2-cream); }
+  .tigerdle-v2 .prediction-summary .score-pill{
+    font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:14px; color:var(--v2-amber); background:var(--v2-ink);
+    border:1px solid #332a1f; border-radius:6px; padding:1px 9px;
+  }
+  .tigerdle-v2 .summary-share-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--v2-dim);
+    background:var(--v2-ink); border:1px solid #332a1f; border-radius:999px; padding:4px 11px; transition:all .2s ease;
+  }
+  .tigerdle-v2 .summary-share-btn:hover{ border-color:var(--v2-amber-deep); color:var(--v2-amber); }
+
+  .tigerdle-v2 .empty-state{ font-family:'Manrope', sans-serif; color:var(--v2-dim); }
+</style>
 </head>
 <body>
 <div id="site-header"></div>
-<div class="wrap">
-  <header style="padding:20px 0 4px; text-align:center;">
+<div class="wrap tigerdle-v2">
+  <div class="stripe-hero">
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title" style="font-size:clamp(28px,7vw,40px);">Predictor</h1>
     <p class="tagline">Pick your team and score before kickoff. See how your prediction compares to everyone else's.</p>
-    <a href="leagues.html" style="display:inline-block; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--amber-soft); text-decoration:none;">🏆 My leagues →</a>
-  </header>
+    <a href="leagues.html" class="leagues-link">🏆 My leagues &rarr;</a>
+  </div>
 
   <div id="signed-out-view">
     <div class="account-card">

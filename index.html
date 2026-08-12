@@ -81,43 +81,85 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
 <style>
-  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin:28px 0 4px; }
-  .section-head h2{ font-family:var(--display); font-weight:400; font-size:21px; color:var(--amber); margin:0; }
-  .section-head a{ font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); text-decoration:none; }
-  .section-head a:hover{ color:var(--amber-soft); }
-  .team-news-btn{
-    display:flex; align-items:center; gap:14px;
-    padding:16px 18px; background:var(--ink-2); border:1px solid var(--line);
-    border-radius:12px; text-decoration:none; transition:all .15s ease;
+  .flipboard-wrap{ margin-top:22px; opacity:0; animation:v2RiseIn .55s .42s ease forwards; }
+  .flipboard-label{ font-family:'IBM Plex Mono', monospace; font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--v2-dim); margin-bottom:8px; }
+  .flipboard{ display:inline-flex; gap:4px; }
+  .flip-digit{
+    position:relative; width:32px; height:44px; background:#0a0704; border-radius:4px; overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(245,163,0,0.18), 0 3px 10px rgba(0,0,0,.4);
   }
-  .team-news-btn:hover{ border-color:var(--amber); background:var(--ink-3); }
-  .team-news-icon{ font-size:24px; flex-shrink:0; }
-  .team-news-text{ flex:1; min-width:0; }
-  .team-news-title{ display:block; font-family:var(--display); font-weight:400; font-size:16px; color:var(--paper); }
-  .team-news-detail{ display:block; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:2px; }
-  .team-news-arrow{ font-size:20px; color:var(--amber); flex-shrink:0; transition:transform .15s ease; }
-  .team-news-btn:hover .team-news-arrow{ transform:translateX(3px); }
+  .flip-digit .face{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:22px; color:var(--v2-amber);
+    background:linear-gradient(180deg, #191410 0%, #0a0704 100%); transform-style:preserve-3d; backface-visibility:hidden;
+  }
+  .flip-digit .face::after{ content:''; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(0,0,0,.6); }
+  .flip-digit .face.flipping{ animation:v2DigitFlip .32s cubic-bezier(.4,0,.6,1); }
+  @keyframes v2DigitFlip{ 0%{ transform:rotateX(0deg); } 50%{ transform:rotateX(-90deg); } 51%{ transform:rotateX(90deg); } 100%{ transform:rotateX(0deg); } }
 
-  .play-cta-btn{
-    display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, var(--amber) 0%, var(--amber-deep) 100%);
-    color:var(--ink); font-family:var(--display); font-weight:400; font-size:17px; padding:13px 28px; border-radius:999px;
-    text-decoration:none; box-shadow:0 8px 22px rgba(245,163,0,0.3); transition:all .2s ease; margin-top:14px;
+  .tigerdle-v2 .play-cta-btn{
+    display:inline-flex; align-items:center; gap:8px; background:var(--v2-amber); color:var(--v2-ink); font-family:'Anton', sans-serif;
+    font-weight:400; font-size:15px; padding:12px 26px; border-radius:999px; text-decoration:none; margin-top:20px;
+    box-shadow:0 8px 22px rgba(245,163,0,0.28); transition:transform .25s cubic-bezier(.2,.9,.3,1.3), box-shadow .25s ease;
+    opacity:0; animation:v2RiseIn .55s .54s ease forwards;
   }
-  .play-cta-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(245,163,0,0.4); }
-  .play-cta-sub{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:8px; }
+  .tigerdle-v2 .play-cta-btn:hover{ transform:translateY(-3px) scale(1.02); box-shadow:0 13px 30px rgba(245,163,0,0.4); }
+  .tigerdle-v2 .play-cta-sub{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--v2-dim); margin-top:8px; opacity:0; animation:v2RiseIn .55s .62s ease forwards; }
 
-  /* Trimmed to sit at the same visual weight as the game-card grid and
-     the Team News teaser around it, not louder than either. */
-  .predictor-showcase{
-    background:var(--ink-2); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-top:14px; text-align:center;
+  .tigerdle-v2 .cardgrid{ display:grid; grid-template-columns:repeat(2,1fr); gap:11px; }
+  .tigerdle-v2 .game-card{
+    position:relative; background:#191410; border:none; border-radius:14px; padding:18px 15px; text-decoration:none; color:var(--v2-cream);
+    overflow:hidden; transition:transform .3s cubic-bezier(.2,.8,.3,1.15), background .3s ease;
+    display:block; aspect-ratio:auto; text-align:left; gap:0;
   }
-  .predictor-showcase h2{ font-family:var(--display); font-weight:400; font-size:19px; color:var(--amber); margin:6px 0 6px; }
-  .predictor-showcase p.lead{ font-size:12.5px; color:var(--paper-dim); max-width:400px; margin:0 auto 14px; line-height:1.55; }
-  .predict-now-btn{
-    display:inline-flex; align-items:center; gap:7px; background:var(--amber); color:var(--ink); border:none;
-    font-family:var(--display); font-weight:400; font-size:15px; padding:10px 22px; border-radius:999px; cursor:pointer; transition:all .2s ease;
+  .tigerdle-v2 .game-card::before{
+    content:''; position:absolute; inset:0; opacity:0; transition:opacity .3s ease;
+    background:radial-gradient(circle at 30% 20%, rgba(245,163,0,0.15), transparent 65%);
   }
-  .predict-now-btn:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(245,163,0,0.3); }
+  .tigerdle-v2 .game-card:hover{ transform:translateY(-3px); background:#211a13; }
+  .tigerdle-v2 .game-card:hover::before{ opacity:1; }
+  .tigerdle-v2 .game-card.completed{ box-shadow:inset 0 0 0 1.5px var(--v2-amber-deep); background:#211a13; }
+  .tigerdle-v2 .game-card .icon{ font-size:22px; margin-bottom:8px; display:block; line-height:1; }
+  .tigerdle-v2 .game-card .ct{ font-family:'Anton', sans-serif; font-weight:400; font-size:15px; letter-spacing:.01em; }
+  .tigerdle-v2 .game-card .cd{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--v2-dim); margin-top:3px; }
+  .tigerdle-v2 .game-card .check-badge{
+    position:absolute; top:10px; right:10px; width:20px; height:20px; border-radius:50%;
+    background:var(--v2-amber); color:var(--v2-ink); font-size:11px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 2px 6px rgba(0,0,0,.4);
+  }
+
+  .tigerdle-v2 .team-news-btn{
+    display:flex; align-items:center; gap:14px; padding:16px 18px; background:#191410; border:1px solid transparent;
+    border-radius:14px; text-decoration:none; transition:all .25s cubic-bezier(.2,.8,.3,1.15); color:var(--v2-cream);
+  }
+  .tigerdle-v2 .team-news-btn:hover{ border-color:rgba(245,163,0,0.3); transform:translateY(-2px); }
+  .tigerdle-v2 .team-news-icon{ font-size:22px; flex-shrink:0; }
+  .tigerdle-v2 .team-news-text{ flex:1; min-width:0; }
+  .tigerdle-v2 .team-news-title{ display:block; font-family:'Anton', sans-serif; font-weight:400; font-size:15px; color:var(--v2-cream); }
+  .tigerdle-v2 .team-news-detail{ display:block; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--v2-dim); margin-top:2px; }
+  .tigerdle-v2 .team-news-arrow{ font-size:18px; color:var(--v2-amber); flex-shrink:0; transition:transform .25s ease; }
+  .tigerdle-v2 .team-news-btn:hover .team-news-arrow{ transform:translateX(3px); }
+
+  .tigerdle-v2 .predictor-showcase{
+    background:linear-gradient(160deg, #1c150e, #191410); border:1px solid rgba(245,163,0,0.2); border-radius:16px;
+    padding:22px 18px; text-align:center; margin-top:2px;
+  }
+  .tigerdle-v2 .predictor-showcase h2{ font-family:'Anton', sans-serif; font-weight:400; font-size:20px; color:var(--v2-amber); margin:6px 0 8px; }
+  .tigerdle-v2 .predictor-showcase p.lead{ font-size:13px; color:var(--v2-dim); max-width:360px; margin:0 auto 14px; line-height:1.55; }
+  .tigerdle-v2 .predict-now-btn{
+    display:inline-flex; align-items:center; gap:8px; background:transparent; color:var(--v2-amber); border:1.5px solid var(--v2-amber);
+    font-family:'Anton', sans-serif; font-weight:400; font-size:14px; padding:10px 22px; border-radius:999px; cursor:pointer;
+    transition:all .25s cubic-bezier(.2,.9,.3,1.3);
+  }
+  .tigerdle-v2 .predict-now-btn:hover{ background:var(--v2-amber); color:var(--v2-ink); transform:translateY(-2px); }
+
+  .tigerdle-v2 p{ font-family:'Manrope', sans-serif; }
+
+  .tigerdle-v2 .faq-item h3{ font-family:'Manrope', sans-serif; font-weight:700; font-size:14px; color:var(--v2-cream); margin:0 0 4px; }
+  .tigerdle-v2 .faq-item p{ font-size:12.5px; color:var(--v2-dim); margin:0; line-height:1.6; }
+  .tigerdle-v2 .faq-more{ display:block; text-align:center; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--v2-amber); text-decoration:underline; text-underline-offset:3px; margin-top:16px; }
+  .tigerdle-v2 .contact-line{ text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--v2-dim); margin-top:16px; }
+  .tigerdle-v2 .contact-line a{ color:var(--v2-amber); }
 
   .signup-modal-overlay{
     display:none; position:fixed; inset:0; background:rgba(13,15,20,0.82); z-index:100;
@@ -126,21 +168,30 @@
   .signup-modal-overlay.open{ display:flex; }
   @media(min-width:640px){ .signup-modal-overlay{ align-items:center; } }
   .signup-modal{
-    background:var(--ink-2); border:1px solid var(--line); border-radius:16px 16px 0 0; padding:26px;
-    width:100%; max-width:400px; text-align:center;
+    background:#191410; border:1px solid rgba(245,163,0,0.2); border-radius:16px 16px 0 0; padding:26px;
+    width:100%; max-width:400px; text-align:center; font-family:'Manrope', sans-serif;
   }
   @media(min-width:640px){ .signup-modal{ border-radius:16px; } }
   .signup-modal .icon{ font-size:36px; margin-bottom:6px; }
-  .signup-modal h3{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:22px; margin:0 0 6px; }
-  .signup-modal p{ font-size:13px; color:var(--paper-dim); margin:0 0 18px; line-height:1.6; }
+  .signup-modal h3{ font-family:'Anton', sans-serif; font-weight:400; color:#F5A300; font-size:22px; margin:0 0 6px; }
+  .signup-modal p{ font-size:13px; color:#a89a84; margin:0 0 18px; line-height:1.6; }
   .signup-modal input{
-    width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:15px;
-    padding:13px 16px; border-radius:10px; outline:none; text-align:center; transition:border-color .15s ease;
+    width:100%; background:#120E0B; border:1px solid #332a1f; color:#F2EDE3; font-size:15px;
+    padding:13px 16px; border-radius:10px; outline:none; text-align:center; transition:border-color .15s ease; font-family:'Manrope', sans-serif;
   }
-  .signup-modal input:focus{ border-color:var(--amber); }
-  .signup-modal-close{ position:absolute; top:10px; right:14px; font-family:var(--mono); font-size:16px; color:var(--paper-dim); cursor:pointer; }
+  .signup-modal input:focus{ border-color:#F5A300; }
+  .signup-modal-close{ position:absolute; top:10px; right:14px; font-family:'IBM Plex Mono', monospace; font-size:16px; color:#a89a84; cursor:pointer; }
   .signup-modal-inner{ position:relative; }
+
+  @media (max-width:420px){
+    .flip-digit{ width:27px; height:38px; }
+    .flip-digit .face{ font-size:18px; }
+    .tigerdle-v2 .cardgrid{ gap:9px; }
+    .tigerdle-v2 .game-card{ padding:15px 12px; }
+  }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-7L95ER8N3S"></script>
 <script>
@@ -158,14 +209,18 @@
     <br>TIGERDLE is a free, fan-made Hull City AFC puzzle and predictor site, not affiliated with the club. Contact: hello@tigerdle.com
   </nav>
 </noscript>
-<main class="wrap">
-  <header style="padding:20px 0 4px; text-align:center;">
+<main class="wrap tigerdle-v2">
+  <div class="stripe-hero">
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title">TIGERDLE</h1>
     <p class="tagline">The Hull City Wordle, plus three more daily Hull City guessing games. Match memories and the odd rant, for Tigers who bleed amber &amp; black.</p>
+    <div class="flipboard-wrap">
+      <div class="flipboard-label">Puzzles solved since launch</div>
+      <div class="flipboard" id="flipboard"></div>
+    </div>
     <a href="game.html" class="play-cta-btn">&#9654; Play Today's Puzzle</a>
     <div class="play-cta-sub">New puzzle every day, completely free</div>
-  </header>
+  </div>
 
   <div class="section-head"><h2>Today's puzzles</h2></div>
   <div class="cardgrid">
@@ -207,45 +262,45 @@
     <h2>Predict Hull's Season</h2>
     <p class="lead">Pick the starting XI, call the scoreline, and predict who scores, every single match. Points calculated automatically, with leagues to run alongside friends.</p>
     <button class="predict-now-btn" id="predict-now-btn">🔮 Start Predicting</button>
-    <div style="font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin-top:10px;">Just your email. No password. Takes 10 seconds.</div>
+    <div style="font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--v2-dim); margin-top:10px;">Just your email. No password. Takes 10 seconds.</div>
   </div>
 
   <div class="section-head"><h2>What is TIGERDLE?</h2></div>
-  <p style="font-size:13.5px; color:var(--paper-dim); line-height:1.7; margin-top:8px;">
+  <p style="font-size:13.5px; color:var(--v2-dim); line-height:1.7; margin-top:8px;">
     TIGERDLE is a free, fan-made puzzle site for Hull City AFC supporters. Every day brings four separate games: a Wordle-style surname guesser, a squad-and-legends matching game, a clue-by-clue mystery player, and a goal reveal where you guess the opponent. None of it needs an account or costs anything.
   </p>
-  <p style="font-size:13.5px; color:var(--paper-dim); line-height:1.7; margin-top:10px;">
+  <p style="font-size:13.5px; color:var(--v2-dim); line-height:1.7; margin-top:10px;">
     Signed-in supporters can go further with the Predictor, picking Hull's starting XI, calling the scoreline, and predicting who scores. Points are scored automatically after every match, and there are private or public leagues to compete with friends. TIGERDLE isn't affiliated with Hull City AFC; it's built independently by a fan, for fans.
   </p>
 
   <div class="section-head"><h2>Frequently asked questions</h2></div>
   <div style="margin-top:8px;">
-    <div style="margin-bottom:18px;">
-      <h3 style="font-family:var(--body); font-size:15px; color:var(--paper); margin:0 0 5px;">What is TIGERDLE?</h3>
-      <p style="font-size:13.5px; color:var(--paper-dim); margin:0; line-height:1.7;">TIGERDLE is a free daily puzzle site for Hull City AFC fans. It includes four separate daily guessing games, plus a season-long match predictor and leagues to compete with friends.</p>
+    <div class="faq-item">
+      <h3>What is TIGERDLE?</h3>
+      <p>TIGERDLE is a free daily puzzle site for Hull City AFC fans. It includes four separate daily guessing games, plus a season-long match predictor and leagues to compete with friends.</p>
     </div>
-    <div style="margin-bottom:18px;">
-      <h3 style="font-family:var(--body); font-size:15px; color:var(--paper); margin:0 0 5px;">How do you play the daily games?</h3>
-      <p style="font-size:13.5px; color:var(--paper-dim); margin:0; line-height:1.7;">Each day brings a new puzzle in TIGERDLE, the Hull City Wordle: guess a 5-letter Hull City surname in six tries, with tiles showing how close each guess was. Three more daily games sit alongside it: squad legends, a mystery player revealed through clues, and a matchday goal photo revealed by guessing the opponent.</p>
+    <div class="faq-item">
+      <h3>How do you play the daily games?</h3>
+      <p>Each day brings a new puzzle in TIGERDLE, the Hull City Wordle: guess a 5-letter Hull City surname in six tries, with tiles showing how close each guess was. Three more daily games sit alongside it: squad legends, a mystery player revealed through clues, and a matchday goal photo revealed by guessing the opponent.</p>
     </div>
-    <div style="margin-bottom:18px;">
-      <h3 style="font-family:var(--body); font-size:15px; color:var(--paper); margin:0 0 5px;">When does a new puzzle come out?</h3>
-      <p style="font-size:13.5px; color:var(--paper-dim); margin:0; line-height:1.7;">A new TIGERDLE puzzle is released every day. All four daily games refresh together, so there's a fresh challenge in each one, every single day.</p>
+    <div class="faq-item">
+      <h3>When does a new puzzle come out?</h3>
+      <p>A new TIGERDLE puzzle is released every day. All four daily games refresh together, so there's a fresh challenge in each one, every single day.</p>
     </div>
-    <div style="margin-bottom:18px;">
-      <h3 style="font-family:var(--body); font-size:15px; color:var(--paper); margin:0 0 5px;">Are the answers only Hull City players?</h3>
-      <p style="font-size:13.5px; color:var(--paper-dim); margin:0; line-height:1.7;">Yes, every TIGERDLE answer is a genuine Hull City AFC player, past or present. The games draw from the club's full history, not just the current squad.</p>
+    <div class="faq-item">
+      <h3>Are the answers only Hull City players?</h3>
+      <p>Yes, every TIGERDLE answer is a genuine Hull City AFC player, past or present. The games draw from the club's full history, not just the current squad.</p>
     </div>
-    <div style="margin-bottom:18px;">
-      <h3 style="font-family:var(--body); font-size:15px; color:var(--paper); margin:0 0 5px;">Is TIGERDLE free?</h3>
-      <p style="font-size:13.5px; color:var(--paper-dim); margin:0; line-height:1.7;">Yes, TIGERDLE is completely free with no ads and nothing to buy. The daily games need no account at all, and the predictor and leagues only need a free email sign-in.</p>
+    <div class="faq-item">
+      <h3>Is TIGERDLE free?</h3>
+      <p>Yes, TIGERDLE is completely free with no ads and nothing to buy. The daily games need no account at all, and the predictor and leagues only need a free email sign-in.</p>
     </div>
-    <div style="margin-bottom:8px;">
-      <h3 style="font-family:var(--body); font-size:15px; color:var(--paper); margin:0 0 5px;">Is TIGERDLE official or affiliated with Hull City AFC?</h3>
-      <p style="font-size:13.5px; color:var(--paper-dim); margin:0; line-height:1.7;">No, TIGERDLE is an independent, unofficial fan project built by a single Hull City supporter. It has no connection to Hull City AFC, its staff, or its official channels.</p>
+    <div class="faq-item">
+      <h3>Is TIGERDLE official or affiliated with Hull City AFC?</h3>
+      <p>No, TIGERDLE is an independent, unofficial fan project built by a single Hull City supporter. It has no connection to Hull City AFC, its staff, or its official channels.</p>
     </div>
-    <a href="about.html" style="display:block; text-align:center; font-family:var(--mono); font-size:11px; color:var(--amber-soft); text-decoration:underline; text-underline-offset:3px; margin-top:14px;">More questions? See the full FAQ &amp; About page &rarr;</a>
-    <p style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:16px;">Bug to report, or something to suggest? Email <a href="mailto:hello@tigerdle.com" style="color:var(--amber-soft);">hello@tigerdle.com</a></p>
+    <a href="about.html" class="faq-more">More questions? See the full FAQ &amp; About page &rarr;</a>
+    <p class="contact-line">Bug to report, or something to suggest? Email <a href="mailto:hello@tigerdle.com">hello@tigerdle.com</a></p>
   </div>
 </main>
 
@@ -362,6 +417,45 @@ document.getElementById('signup-send-btn').addEventListener('click', async ()=>{
     document.getElementById('team-news-heading').style.display = 'flex';
     document.getElementById('team-teaser').style.display = 'flex';
   }catch(e){ /* teaser just stays hidden if this fails, not critical */ }
+})();
+</script>
+<script>
+// Split-flap digit reveal, evoking real stadium scoreboards, not a
+// generic web spinner. Each digit settles through a couple of quick
+// flips before landing on the real figure, staggered left to right.
+function buildFlipboard(targetNumber){
+  const board = document.getElementById('flipboard');
+  if(!board) return;
+  const digits = String(targetNumber).split('');
+  board.innerHTML = digits.map(()=>`<div class="flip-digit"><div class="face">0</div></div>`).join('');
+  const cells = board.querySelectorAll('.flip-digit .face');
+
+  cells.forEach((cell, i)=>{
+    const target = digits[i];
+    const spins = [Math.floor(Math.random()*10), Math.floor(Math.random()*10), target];
+    let step = 0;
+    setTimeout(()=>{
+      function doFlip(){
+        cell.classList.add('flipping');
+        setTimeout(()=>{ cell.textContent = spins[step]; }, 160);
+        setTimeout(()=>{
+          cell.classList.remove('flipping');
+          step++;
+          if(step < spins.length) setTimeout(doFlip, 70);
+        }, 320);
+      }
+      doFlip();
+    }, i * 90);
+  });
+}
+(async function(){
+  try{
+    // site_puzzle_stats is a narrow public view exposing only this one
+    // aggregate total, never any individual user's play count.
+    const { data, error } = await sb.from('site_puzzle_stats').select('total_puzzles_played').single();
+    if(error || !data) return;
+    buildFlipboard(data.total_puzzles_played);
+  }catch(e){ /* flip-board just stays blank if this fails, not critical */ }
 })();
 </script>
 </body>
