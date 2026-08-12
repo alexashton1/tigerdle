@@ -280,7 +280,7 @@ footer.sitefoot{ text-align:center; font-family:var(--mono); font-size:10.5px; c
   font-family:'Manrope', sans-serif;
 }
 .stripe-hero{
-  position:relative; margin:0 -18px; padding:44px 20px 32px; text-align:center; overflow:hidden;
+  position:relative; margin:0 -18px; padding:44px 20px 20px; text-align:center; overflow:hidden;
   background:repeating-linear-gradient(115deg, var(--v2-ink) 0px, var(--v2-ink) 46px, var(--v2-stripe-dark) 46px, var(--v2-stripe-dark) 92px);
 }
 .stripe-hero::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(18,14,11,0.15) 0%, rgba(18,14,11,0.75) 75%, var(--v2-ink) 100%); }
@@ -302,7 +302,7 @@ footer.sitefoot{ text-align:center; font-family:var(--mono); font-size:10.5px; c
 .tigerdle-v2 .leagues-link:hover{ text-decoration:underline; }
 @keyframes v2RiseIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:translateY(0); } }
 
-.tigerdle-v2 .section-head{ display:flex; align-items:baseline; gap:11px; margin:40px 0 16px; justify-content:flex-start; }
+.tigerdle-v2 .section-head{ display:flex; align-items:center; gap:11px; margin:28px 0 16px; justify-content:flex-start; }
 .tigerdle-v2 .section-head h2{ font-family:'Anton', sans-serif; font-weight:400; font-size:19px; color:var(--v2-cream); margin:0; letter-spacing:.01em; }
 .tigerdle-v2 .section-head::before{ content:''; width:16px; height:4px; background:var(--v2-amber); border-radius:2px; flex-shrink:0; order:-1; }
 .tigerdle-v2 .section-head a{ font-family:'IBM Plex Mono', monospace; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--v2-dim); text-decoration:none; margin-left:auto; }
