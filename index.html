@@ -271,6 +271,13 @@
 <script src="assets/chrome.js"></script>
 <script>renderChrome('home');</script>
 <script>
+let currentUser = null;
+// Same single-source-of-truth pattern used in chrome.js, relying only
+// on onAuthStateChange (which reliably reports the existing session
+// automatically) rather than mixing it with a separate getSession()
+// call that could race on a page with other things loading at once.
+sb.auth.onAuthStateChange((event, session)=>{ currentUser = session?.user || null; });
+
 function openSignupModal(){
   document.getElementById('signup-modal-overlay').classList.add('open');
   document.getElementById('signup-form-state').style.display = 'block';
@@ -281,7 +288,12 @@ function openSignupModal(){
 function closeSignupModal(){
   document.getElementById('signup-modal-overlay').classList.remove('open');
 }
-document.getElementById('predict-now-btn').addEventListener('click', openSignupModal);
+document.getElementById('predict-now-btn').addEventListener('click', ()=>{
+  // Already signed in, go straight to the Predictor, no need to ask
+  // for an email they've already given.
+  if(currentUser){ window.location.href = 'predictor.html'; return; }
+  openSignupModal();
+});
 document.getElementById('signup-modal-close').addEventListener('click', closeSignupModal);
 document.getElementById('signup-close-2').addEventListener('click', closeSignupModal);
 document.getElementById('signup-modal-overlay').addEventListener('click', (e)=>{
