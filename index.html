@@ -137,8 +137,38 @@
     Signed-in supporters can go further with the Predictor, picking Hull's starting XI, calling the scoreline, and predicting who scores. Points are scored automatically after every match, and there are private or public leagues to compete with friends. TIGERDLE isn't affiliated with Hull City AFC; it's built independently by a fan, for fans.
   </p>
 
-  <div class="section-head"><h2>Latest from the blog</h2><a href="blog.html">View all →</a></div>
-  <div class="postlist" id="latest-posts" style="margin-top:14px;"></div>
+  <div class="section-head"><h2>Quick answers</h2></div>
+  <div style="margin-top:8px;">
+    <details style="margin-bottom:10px; background:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:12px 16px;">
+      <summary style="font-family:var(--body); font-size:14px; color:var(--paper); cursor:pointer;">Do I need to sign in to play?</summary>
+      <p style="font-size:13px; color:var(--paper-dim); margin:10px 0 0; line-height:1.6;">Not for the four daily games, those work immediately, no account needed. Signing in (just an email link) unlocks the predictor and leagues.</p>
+    </details>
+    <details style="margin-bottom:10px; background:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:12px 16px;">
+      <summary style="font-family:var(--body); font-size:14px; color:var(--paper); cursor:pointer;">Does it cost anything?</summary>
+      <p style="font-size:13px; color:var(--paper-dim); margin:10px 0 0; line-height:1.6;">No. Everything's free, no ads, nothing to buy. The daily games need no account; the predictor and leagues need a free one.</p>
+    </details>
+    <details style="margin-bottom:10px; background:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:12px 16px;">
+      <summary style="font-family:var(--body); font-size:14px; color:var(--paper); cursor:pointer;">Is TIGERDLE affiliated with Hull City AFC?</summary>
+      <p style="font-size:13px; color:var(--paper-dim); margin:10px 0 0; line-height:1.6;">No. This is an independent, unofficial fan project with no connection to the club, its staff, or its official channels.</p>
+    </details>
+    <a href="about.html" style="display:block; text-align:center; font-family:var(--mono); font-size:11px; color:var(--amber-soft); text-decoration:underline; text-underline-offset:3px; margin-top:14px;">See the full FAQ &amp; About page &rarr;</a>
+  </div>
+
+  <div class="section-head"><h2>More information</h2></div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:10px; margin-top:8px;">
+    <a href="about.html" style="display:flex; align-items:center; gap:8px; background:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; text-decoration:none; transition:border-color .15s ease;" onmouseover="this.style.borderColor='var(--amber-deep)'" onmouseout="this.style.borderColor='var(--line)'">
+      <span style="font-size:17px;">ℹ️</span><span style="font-family:var(--body); font-size:13px; color:var(--paper);">About</span>
+    </a>
+    <a href="privacy.html" style="display:flex; align-items:center; gap:8px; background:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; text-decoration:none; transition:border-color .15s ease;" onmouseover="this.style.borderColor='var(--amber-deep)'" onmouseout="this.style.borderColor='var(--line)'">
+      <span style="font-size:17px;">🔒</span><span style="font-family:var(--body); font-size:13px; color:var(--paper);">Privacy</span>
+    </a>
+    <a href="terms.html" style="display:flex; align-items:center; gap:8px; background:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; text-decoration:none; transition:border-color .15s ease;" onmouseover="this.style.borderColor='var(--amber-deep)'" onmouseout="this.style.borderColor='var(--line)'">
+      <span style="font-size:17px;">📄</span><span style="font-family:var(--body); font-size:13px; color:var(--paper);">Terms</span>
+    </a>
+    <a href="mailto:tigerdle.tigerdle@gmail.com" style="display:flex; align-items:center; gap:8px; background:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; text-decoration:none; transition:border-color .15s ease;" onmouseover="this.style.borderColor='var(--amber-deep)'" onmouseout="this.style.borderColor='var(--line)'">
+      <span style="font-size:17px;">✉️</span><span style="font-family:var(--body); font-size:13px; color:var(--paper);">Contact</span>
+    </a>
+  </div>
 </main>
 <div id="site-footer"></div>
 
@@ -169,28 +199,6 @@
 })();
 </script>
 <script>
-(async function(){
-  const listEl = document.getElementById('latest-posts');
-  try{
-    const { data, error } = await sb.from('posts').select('*').eq('published', true).order('published_at', {ascending:false}).limit(3);
-    if(error || !data || !data.length){
-      listEl.innerHTML = `<div class="empty-state">No posts yet, check back soon, or subscribe below to get the first one.</div>`;
-      return;
-    }
-    listEl.innerHTML = data.map(p=>`
-      <a class="postcard" href="post.html?slug=${encodeURIComponent(p.slug)}">
-        <div class="pdate">${new Date(p.published_at).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}</div>
-        <h2>${escapeHtml(p.title)}</h2>
-        <p>${escapeHtml(p.excerpt||'')}</p>
-      </a>`).join('');
-  }catch(e){
-    listEl.innerHTML = `<div class="empty-state">Couldn't load posts right now.</div>`;
-  }
-})();
-function escapeHtml(s){
-  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
 (async function(){
   try{
     const { data, error } = await sb.from('matchdays').select('*').order('match_date', {ascending:false}).limit(1);
