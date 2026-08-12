@@ -184,12 +184,12 @@ async function updateAccountButtonAuthState(){
 function showAchievementToast(icon, name, tier){
   const el = getOrCreateAchievementToastEl();
   const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  el.innerHTML = `<span style="font-size:26px;">${icon}</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">Achievement unlocked: ${tierLabel}</span><span style="color:var(--paper); font-size:14px; font-weight:600;">${name}</span></span>`;
+  el.querySelector('#achievement-toast-content').innerHTML = `<span style="font-size:26px;">${icon}</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">Achievement unlocked: ${tierLabel}</span><span style="color:var(--paper); font-size:14px; font-weight:600;">${name}</span></span>`;
   animateAchievementToast(el);
 }
 function showAchievementSummaryToast(count){
   const el = getOrCreateAchievementToastEl();
-  el.innerHTML = `<span style="font-size:26px;">🎉</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">${count} achievements unlocked</span><span style="color:var(--paper); font-size:14px; font-weight:600;">See them all on your Achievements page</span></span>`;
+  el.querySelector('#achievement-toast-content').innerHTML = `<span style="font-size:26px;">🎉</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">${count} achievements unlocked</span><span style="color:var(--paper); font-size:14px; font-weight:600;">See them all on your Achievements page</span></span>`;
   animateAchievementToast(el);
 }
 function getOrCreateAchievementToastEl(){
@@ -197,10 +197,23 @@ function getOrCreateAchievementToastEl(){
   if(!el){
     el = document.createElement('div');
     el.id = 'achievement-toast';
-    el.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120%); z-index:200; background:var(--ink-2); border:1px solid var(--amber); border-radius:12px; padding:12px 20px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 28px rgba(0,0,0,0.5); transition:transform .35s ease; max-width:90vw;';
+    el.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120%); z-index:200; background:var(--ink-2); border:1px solid var(--amber); border-radius:12px; padding:12px 34px 12px 20px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 28px rgba(0,0,0,0.5); transition:transform .35s ease; max-width:90vw; cursor:pointer;';
+    el.innerHTML = `
+      <div id="achievement-toast-content" style="display:flex; align-items:center; gap:12px;"></div>
+      <span id="achievement-toast-close" style="position:absolute; top:6px; right:9px; font-family:var(--mono); font-size:14px; color:var(--paper-dim); line-height:1; cursor:pointer; padding:2px;">&times;</span>
+    `;
+    // Clicking anywhere on the toast dismisses it early, not just the
+    // close button specifically. The whole thing is an obvious target.
+    el.addEventListener('click', dismissAchievementToast);
     document.body.appendChild(el);
   }
   return el;
+}
+function dismissAchievementToast(){
+  const el = document.getElementById('achievement-toast');
+  if(!el) return;
+  el.style.transform = 'translateX(-50%) translateY(120%)';
+  clearTimeout(animateAchievementToast._t);
 }
 function animateAchievementToast(el){
   requestAnimationFrame(()=>{ el.style.transform = 'translateX(-50%) translateY(0)'; });

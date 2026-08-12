@@ -55,6 +55,24 @@ renderChrome('blog');
     const { data, error } = await sb.from('posts').select('*').eq('slug', slug).eq('published', true).single();
     if(error || !data){ root.innerHTML = `<div class="empty-state">Post not found.</div>`; return; }
     document.title = data.title + ': TIGERDLE';
+
+    // Article schema, built from the same post data already fetched
+    // above, so search engines and AI assistants can properly attribute
+    // and date each post individually, not just see plain text.
+    const schemaEl = document.createElement('script');
+    schemaEl.type = 'application/ld+json';
+    schemaEl.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": data.title,
+      "description": data.excerpt || '',
+      "datePublished": data.published_at,
+      "author": { "@type": "Organization", "name": "TIGERDLE" },
+      "publisher": { "@type": "Organization", "name": "TIGERDLE", "logo": { "@type": "ImageObject", "url": "https://tigerdle.com/apple-touch-icon.png" } },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": window.location.href },
+    });
+    document.head.appendChild(schemaEl);
+
     root.innerHTML = `
       <div class="post-meta" style="margin-top:24px;">${new Date(data.published_at).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</div>
       <h1 class="title" style="font-size:clamp(28px,7vw,42px); text-align:left;">${escapeHtml(data.title)}</h1>
