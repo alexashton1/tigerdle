@@ -1,5 +1,5 @@
 -- Run this once in the Supabase SQL editor. This is the predictions
--- core — the next phase after accounts. Leagues and points scoring are
+-- core, the next phase after accounts. Leagues and points scoring are
 -- NOT in this migration; they're a separate phase once this is working
 -- and tested, since a scoring bug affecting real friends matters more
 -- to get right than almost anything else here.
@@ -22,7 +22,7 @@ create table if not exists predictions (
 alter table predictions enable row level security;
 
 -- A prediction is only ever readable/writable by the person who made
--- it — nobody else, including other signed-in users, can query someone
+-- it. Nobody else, including other signed-in users, can query someone
 -- else's specific pick through this table. The aggregate views below
 -- are the only sanctioned way anyone sees "what other people predicted",
 -- and they only ever expose counts, never who predicted what.
@@ -32,7 +32,7 @@ create policy "users read own predictions" on predictions
 
 -- Locking: a fixture stops accepting new or changed predictions once
 -- it's kicked off. Enforced here, server-side, not just hidden in the
--- UI — a direct API call after kickoff is rejected by the database
+-- UI. A direct API call after kickoff is rejected by the database
 -- itself, not just discouraged by the frontend.
 create or replace function fixture_not_started(fid uuid) returns boolean as $$
   select coalesce(
@@ -51,14 +51,13 @@ create policy "users update own predictions before kickoff" on predictions
   for update using (auth.uid() = user_id and fixture_not_started(fixture_id));
 
 -- ---------- aggregate views: "most predicted XI" as percentages ----------
--- Each of these only ever returns counts grouped by fixture — never a
+-- Each of these only ever returns counts grouped by fixture, never a
 -- user_id, never which specific person picked what. That's what makes
 -- it safe to expose to any visitor, signed in or not.
 
 create or replace view prediction_slot_counts as
 select
   p.fixture_id,
-  p.formation,
   lineup_item.slot,
   lineup_item.player_id,
   lineup_item.first_name,
@@ -66,7 +65,7 @@ select
   count(*) as votes
 from predictions p,
   jsonb_to_recordset(p.lineup) as lineup_item(player_id uuid, first_name text, last_name text, slot text)
-group by p.fixture_id, p.formation, lineup_item.slot, lineup_item.player_id, lineup_item.first_name, lineup_item.last_name;
+group by p.fixture_id, lineup_item.slot, lineup_item.player_id, lineup_item.first_name, lineup_item.last_name;
 
 grant select on prediction_slot_counts to anon, authenticated;
 
@@ -109,6 +108,6 @@ grant select on prediction_totals to anon, authenticated;
 -- One honest limitation worth knowing: kickoff locking compares against
 -- the database's UTC clock, while kickoff_time is entered as plain UK
 -- local time (e.g. "15:00"). This is off by an hour during British
--- Summer Time. Not a problem in practice — predictions realistically
--- close well before kickoff anyway — but worth knowing if you ever see
+-- Summer Time. Not a problem in practice, predictions realistically
+-- close well before kickoff anyway, but worth knowing if you ever see
 -- locking behave an hour earlier/later than expected in summer.

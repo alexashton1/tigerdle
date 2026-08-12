@@ -1,0 +1,14 @@
+{
+  "name": "TIGERDLE",
+  "short_name": "TIGERDLE",
+  "description": "The Hull City Wordle: daily puzzles, team news, and predictor",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14110d",
+  "theme_color": "#f5a300",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,7 +1,7 @@
 /* Shared site chrome: header nav + footer + subscribe widget + toast helper.
    Include after supabase-client.js. Call renderChrome('home'|'play'|'blog') at top of <body>. */
 
-/* Original shield badge — not the Hull City AFC crest, a standalone mark
+/* Original shield badge, not the Hull City AFC crest, a standalone mark
    in the club's colours. Swap this <svg> out for a real crest file if/when
    you want to use official artwork instead. */
 const BADGE_SVG = `
@@ -19,10 +19,10 @@ const BADGE_SVG = `
 </svg>`;
 
 /* Makes the site installable to a phone's home screen. Runs once,
-   on every page, via chrome.js — no need to edit each page's <head>
+   on every page, via chrome.js. No need to edit each page's <head>
    individually. Uses the same origin as everything else, so a
    signed-in session carries over into the installed app exactly like
-   opening the site in a normal tab — there's no separate storage for
+   opening the site in a normal tab. There's no separate storage for
    an "installed" version, it's the same website either way. */
 (function setupPWA(){
   if(!document.querySelector('link[rel="manifest"]')){
@@ -94,7 +94,7 @@ function renderChrome(current){
       <div class="wrap">
         <div class="subscribe-box" id="subscribe-box">
           <h3>Get new puzzles &amp; posts by email</h3>
-          <p>One email when there's something new — a blog post, a fresh goal-guess puzzle, nothing else.</p>
+          <p>One email when there's something new: a blog post, a fresh goal-guess puzzle, nothing else.</p>
           <div class="subscribe-row">
             <input type="email" id="sub-email" placeholder="you@email.com" autocomplete="email">
             <button id="sub-btn">Subscribe</button>
@@ -123,8 +123,8 @@ function renderChrome(current){
   }
 }
 
-/* If someone's already signed in — from a magic-link click on ANY page,
-   not just this one — this shows it in the header immediately. Supabase
+/* If someone's already signed in, from a magic-link click on ANY page,
+   not just this one, this shows it in the header immediately. Supabase
    persists sessions in localStorage by default, shared across every
    page on the same domain, so this isn't re-checking a login each time,
    just surfacing a session that's already there. */
@@ -147,7 +147,7 @@ async function updateAccountButtonAuthState(){
   }
 
   // A single source of truth for this, rather than a separate getSession()
-  // call racing against this listener — onAuthStateChange reliably fires
+  // call racing against this listener. onAuthStateChange reliably fires
   // once on setup with whatever the current session is (event
   // 'INITIAL_SESSION' if signed in, or none if not), then again for any
   // real sign-in that happens afterward. Mixing two separate async paths
@@ -169,7 +169,7 @@ async function updateAccountButtonAuthState(){
       return;
     }
     markSignedIn(session.user);
-    // Only the live SIGNED_IN event is someone watching it happen —
+    // Only the live SIGNED_IN event is someone watching it happen,
     // arriving on a page already signed in shouldn't animate anything.
     revealAuthNavLinks(event === 'SIGNED_IN');
     checkForNewAchievements(session.user.id);
@@ -177,14 +177,14 @@ async function updateAccountButtonAuthState(){
 }
 
 // Builds its own toast element rather than relying on one already being
-// on the page — not every page has one, and achievements can genuinely
+// on the page. Not every page has one, and achievements can genuinely
 // be earned from any of them (a game, a prediction, joining a league),
 // so this needs to work everywhere without assuming anything about
 // what markup that particular page happens to already have.
 function showAchievementToast(icon, name, tier){
   const el = getOrCreateAchievementToastEl();
   const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  el.innerHTML = `<span style="font-size:26px;">${icon}</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">Achievement unlocked — ${tierLabel}</span><span style="color:var(--paper); font-size:14px; font-weight:600;">${name}</span></span>`;
+  el.innerHTML = `<span style="font-size:26px;">${icon}</span><span style="font-family:'Inter',sans-serif;"><span style="font-family:var(--mono); font-size:9.5px; color:var(--amber-soft); text-transform:uppercase; letter-spacing:.05em; display:block;">Achievement unlocked: ${tierLabel}</span><span style="color:var(--paper); font-size:14px; font-weight:600;">${name}</span></span>`;
   animateAchievementToast(el);
 }
 function showAchievementSummaryToast(count){
@@ -208,7 +208,7 @@ function animateAchievementToast(el){
   animateAchievementToast._t = setTimeout(()=>{ el.style.transform = 'translateX(-50%) translateY(120%)'; }, 4200);
 }
 
-// Runs on every page while signed in — achievements can be earned from
+// Runs on every page while signed in. Achievements can be earned from
 // any of them, so notification can't be tied to just one place (like
 // only the Achievements page itself, which someone might rarely visit).
 async function checkForNewAchievements(userId){
@@ -218,7 +218,7 @@ async function checkForNewAchievements(userId){
     if(!unseen || !unseen.length) return;
 
     const keys = unseen.map(u => u.achievement_key);
-    // Marked seen immediately, before any toast is shown — not after.
+    // Marked seen immediately, before any toast is shown, not after.
     // Showing them first and marking seen last left a window where
     // navigating to a new page quickly could re-fetch the same
     // still-unseen rows and show them a second time. This closes that
@@ -228,8 +228,8 @@ async function checkForNewAchievements(userId){
 
     const { data: defs } = await sb.from('achievement_definitions').select('*').in('key', keys);
     const sorted = (defs||[]).sort((a,b)=>a.sort_order-b.sort_order);
-    // More than a few at once — most likely a first login after a
-    // backfill catches someone up on a lot of history at once — reads
+    // More than a few at once, most likely a first login after a
+    // backfill catches someone up on a lot of history at once, reads
     // better as one summary than a long, slow drip of individual
     // toasts stacking up over the better part of a minute.
     if(sorted.length > 3){
@@ -239,7 +239,7 @@ async function checkForNewAchievements(userId){
         setTimeout(()=> showAchievementToast(d.icon, d.name, d.tier), i * 4500);
       });
     }
-  }catch(e){ /* not critical — worst case, it shows next page load instead */ }
+  }catch(e){ /* not critical, worst case, it shows next page load instead */ }
 }
 
 async function subscribeSubmit(){

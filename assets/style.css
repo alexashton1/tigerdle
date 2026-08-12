@@ -1,10 +1,10 @@
 /* =========================================================
-   TIGERDLE — shared design system
+   TIGERDLE: shared design system
    ========================================================= */
 
 /* Smooth cross-fade between page navigations, automatically, in
    browsers that support it (Chrome/Edge). Safari/Firefox just ignore
-   this and navigate normally — no broken behaviour either way. */
+   this and navigate normally, no broken behaviour either way. */
 @view-transition {
   navigation: auto;
 }

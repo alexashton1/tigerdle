@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
   const { error } = await supabase.from("subscribers").update({ subscribed: false }).eq("unsubscribe_token", token);
   if (error) {
-    return new Response(page("Something went wrong — try again later."), { status: 500, headers: { "Content-Type": "text/html" } });
+    return new Response(page("Something went wrong, try again later."), { status: 500, headers: { "Content-Type": "text/html" } });
   }
   return new Response(page("You're unsubscribed. No more emails from us."), { headers: { "Content-Type": "text/html" } });
 });

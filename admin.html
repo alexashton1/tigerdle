@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin — TIGERDLE</title>
+<title>Admin: TIGERDLE</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -44,7 +44,7 @@
     <div class="formcard">
       <h3>Backup</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        Downloads every player, post, goal puzzle, and subscriber email as one JSON file. Worth doing every so often —
+        Downloads every player, post, goal puzzle, and subscriber email as one JSON file. Worth doing every so often, since
         Supabase's automatic backups aren't enabled on the free tier.
       </p>
       <button class="primary-btn" id="export-all">Download full backup</button>
@@ -56,8 +56,8 @@
       <h3>Bulk add players</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
         One player per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">First,Last,Position,Nationality,Era,Age,BirthDate,Appearances</code><br>
-        Position must be GK, DF, MF or FW. Everything after that is optional — leave blank if unsure.
-        BirthDate as YYYY-MM-DD (e.g. 1996-04-02) — if you know it, it's better than Age since the age then updates itself forever.<br>
+        Position must be GK, DF, MF or FW. Everything after that is optional, leave blank if unsure.
+        BirthDate as YYYY-MM-DD (e.g. 1996-04-02): if you know it, it's better than Age since the age then updates itself forever.<br>
         Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Jimmy,Bullard,MF,England,Premier League Era,,,</code>
       </p>
       <div class="field"><textarea id="bulk-players" placeholder="Jimmy,Bullard,MF,England,Premier League Era,,,&#10;Nick,Barmby,MF,England,2000s Local Hero,,1974-02-11,"></textarea></div>
@@ -69,7 +69,7 @@
     <div class="formcard">
       <h3>Bulk fix existing players</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        Same format, but this <b>updates</b> players already in the pool instead of adding new ones — matched by first + last name.
+        Same format, but this <b>updates</b> players already in the pool instead of adding new ones, matched by first + last name.
         Leave any column blank to leave that field unchanged. Use this to fix missing ages/birth dates, correct eras, or refresh appearance counts in bulk.<br>
         Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Ahmed,Elmohamady,,,2012-2017,,,217</code> only changes the era and appearances, leaves everything else as-is.
       </p>
@@ -89,7 +89,7 @@
         <div class="field"><label>Position</label>
           <select id="p-pos"><option value="GK">Goalkeeper</option><option value="DF">Defender</option><option value="MF">Midfielder</option><option value="FW">Forward</option></select>
         </div>
-        <div class="field"><label>Birth date <span style="text-transform:none; opacity:.7;">(preferred — age updates itself)</span></label>
+        <div class="field"><label>Birth date <span style="text-transform:none; opacity:.7;">(preferred: age updates itself)</span></label>
           <input type="date" id="p-birthdate">
         </div>
       </div>
@@ -98,7 +98,7 @@
           <select id="p-age"><option value="">Unknown</option></select>
           <input type="number" id="p-age-other" placeholder="Type age" style="display:none; margin-top:6px;">
         </div>
-        <div class="field"><label>Appearances <span style="text-transform:none; opacity:.7;">(club career total — optional)</span></label>
+        <div class="field"><label>Appearances <span style="text-transform:none; opacity:.7;">(club career total, optional)</span></label>
           <input type="number" id="p-apps" min="0" placeholder="e.g. 217">
         </div>
       </div>
@@ -121,7 +121,7 @@
         </div>
       </div>
       <div class="field">
-        <label>Pitch position <span style="text-transform:none; opacity:.7;">(where they show up left-to-right on any pitch view — leave blank if it doesn't matter)</span></label>
+        <label>Pitch position <span style="text-transform:none; opacity:.7;">(where they show up left-to-right on any pitch view, leave blank if it doesn't matter)</span></label>
         <select id="p-pitch-order">
           <option value="">Not set</option>
           <option value="1">Wide left</option>
@@ -177,14 +177,14 @@
     <!-- Schedule viewer -->
     <div class="formcard">
       <h3>Upcoming &amp; recent puzzles</h3>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">Each answer cycles through the full pool once before repeating — TIGERDLE and Guess the Opponent repeat sooner since their pools are smaller. Add more players or goal photos to stretch the gap.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">Each answer cycles through the full pool once before repeating. TIGERDLE and Guess the Opponent repeat sooner since their pools are smaller. Add more players or goal photos to stretch the gap.</p>
       <div id="schedule-view" class="admin-list"><div class="meta">Loading…</div></div>
     </div>
 
     <!-- Goal puzzle -->
     <div class="formcard">
       <h3>Add a "Guess the Opponent" puzzle</h3>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">Use a photo you own the rights to — your own matchday shot, not a press or club photo.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">Use a photo you own the rights to: your own matchday shot, not a press or club photo.</p>
       <div class="field"><label>Goal photo</label><input type="file" id="g-file" accept="image/*"></div>
       <div class="field-row">
         <div class="field"><label>Opponent club</label><input type="text" id="g-opp" list="opponent-list-admin"></div>
@@ -203,12 +203,12 @@
       <div class="admin-list" id="g-list"></div>
     </div>
 
-    <!-- Fixtures — Phase 1 of the predictor roadmap -->
+    <!-- Fixtures: Phase 1 of the predictor roadmap -->
     <div class="formcard">
       <h3>Bulk add fixtures</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
         One fixture per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Opponent,Date,KickoffTime,HomeAway,Competition,Status</code><br>
-        Date as YYYY-MM-DD. HomeAway is Home or Away. Competition and Status are optional — Status defaults to Scheduled.
+        Date as YYYY-MM-DD. HomeAway is Home or Away. Competition and Status are optional, Status defaults to Scheduled.
         Already-added fixtures (same opponent + date) are skipped automatically, so it's safe to paste the same list twice.
       </p>
       <div class="field"><textarea id="fx-bulk" placeholder="Middlesbrough,2026-08-16,15:00,Home,Premier League,&#10;Newcastle United,2026-08-23,17:30,Away,Premier League,"></textarea></div>
@@ -219,7 +219,7 @@
     <div class="formcard">
       <h3 id="fx-form-heading">Add a fixture</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        Premier League fixtures — add and adjust them here as the season's confirmed or changes.
+        Premier League fixtures. Add and adjust them here as the season's confirmed or changes.
         This is groundwork for the predictor feature, not connected to anything else yet.
       </p>
       <div class="field-row">
@@ -251,14 +251,14 @@
     <div class="formcard">
       <h3 id="md-form-heading">Add a matchday</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        Built as a two-step job: publish the lineup as soon as the team's out — before kickoff, no ratings or score needed yet —
+        Built as a two-step job: publish the lineup as soon as the team's out, before kickoff, no ratings or score needed yet,
         then come back after the game, click <b>Edit</b> on it below, and fill in ratings, the final score, and who scored.
         Saving credits an appearance to everyone in the lineup the first time; editing afterwards only adjusts for players
         actually added or removed, so filling in ratings later never double-counts anyone.
       </p>
       <div class="field">
         <label>Linked fixture <span style="text-transform:none; opacity:.7;">(needed for predictions to be scored against this result)</span></label>
-        <select id="md-fixture"><option value="">— Not linked to a fixture —</option></select>
+        <select id="md-fixture"><option value="">Not linked to a fixture</option></select>
       </div>
       <div class="field-row">
         <div class="field"><label>Opponent</label><input type="text" id="md-opponent" list="opponent-list-admin"></div>
@@ -285,7 +285,7 @@
       </div>
       <div id="md-subs"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin:18px 0 8px;">
-        <label style="font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">Goalscorers <span style="text-transform:none; opacity:.7;">(in order — first one entered is the first goal)</span></label>
+        <label style="font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim);">Goalscorers <span style="text-transform:none; opacity:.7;">(in order: first one entered is the first goal)</span></label>
         <button class="ghost-btn" id="md-add-scorer" type="button">+ Add goal</button>
       </div>
       <div id="md-scorers"></div>
@@ -302,7 +302,7 @@
     <div class="formcard">
       <h3>Calculate prediction scores</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        Once a matchday's fully entered — lineup, score, and goalscorers all correct — pick its fixture here to score everyone's
+        Once a matchday's fully entered (lineup, score, and goalscorers all correct), pick its fixture here to score everyone's
         predictions against it. Safe to re-run if you need to fix something afterwards; it recalculates rather than double-adding.
       </p>
       <select id="score-fixture-select"></select>
@@ -314,7 +314,7 @@
     <div class="formcard">
       <h3 id="fm-form-heading">Add a formation</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        These are the formations people can pick from in the Predictor. Goalkeeper is always 1 —
+        These are the formations people can pick from in the Predictor. Goalkeeper is always 1,
         the other three need to add up to 10 between them (11 total on the pitch).
       </p>
       <div class="field"><label>Name</label><input type="text" id="fm-name" placeholder="e.g. 4-3-3"></div>
@@ -335,7 +335,7 @@
     <div class="formcard">
       <h3>Pitch layout</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        How far down the pitch each position's row sits — purely visual, doesn't touch any actual predictions, votes, or players.
+        How far down the pitch each position's row sits, purely visual, doesn't touch any actual predictions, votes, or players.
         0 is the very top, 100 is the very bottom.
       </p>
       <div id="pl-preview-wrap" style="position:relative; width:160px; aspect-ratio:100/130; margin:0 auto 18px; border-radius:8px; overflow:hidden; border:1px solid var(--line); background:#10231a;">
@@ -465,7 +465,7 @@ async function tryEnter(){
     sessionStorage.setItem('tigerdle_admin_pass', PASSPHRASE);
     showAdmin();
   }catch(e){
-    document.getElementById('gate-msg').textContent = 'Wrong passphrase, or admin function not deployed yet — see SETUP.md.';
+    document.getElementById('gate-msg').textContent = 'Wrong passphrase, or admin function not deployed yet. See SETUP.md.';
   }
 }
 if(PASSPHRASE) tryEnter(); else showGate('');
@@ -512,7 +512,7 @@ document.getElementById('sub-export').addEventListener('click', async ()=>{
     const text = allSubscribersCache.filter(s=>s.subscribed).map(s=>s.email).join('\n');
     await navigator.clipboard.writeText(text);
     toast(`Copied ${allSubscribersCache.filter(s=>s.subscribed).length} email(s) to clipboard`);
-  }catch(e){ toast('Could not copy — clipboard access blocked?'); }
+  }catch(e){ toast('Could not copy, clipboard access blocked?'); }
 });
 
 /* ---- Full backup ---- */
@@ -528,7 +528,7 @@ document.getElementById('export-all').addEventListener('click', async ()=>{
     a.href = url; a.download = `tigerdle-backup-${stamp}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-    msg.textContent = `Downloaded — ${data.players.length} players, ${data.posts.length} posts, ${data.goals.length} goals, ${data.subscribers.length} subscribers.`;
+    msg.textContent = `Downloaded: ${data.players.length} players, ${data.posts.length} posts, ${data.goals.length} goals, ${data.subscribers.length} subscribers.`;
   }catch(e){ msg.textContent = e.message; }
 });
 
@@ -553,13 +553,13 @@ document.getElementById('bulk-submit').addEventListener('click', async ()=>{
       appearances: appearances ? Number(appearances) : null
     });
   });
-  if(!players.length){ document.getElementById('bulk-msg').textContent = 'No valid lines found — check the format.'; return; }
+  if(!players.length){ document.getElementById('bulk-msg').textContent = 'No valid lines found, check the format.'; return; }
   document.getElementById('bulk-msg').textContent = `Adding ${players.length} player(s)…`;
   try{
     const data = await callAdmin('bulk_add_players', { players });
     let msg = `Added ${data.inserted} player(s).`;
     if(data.duplicatesSkipped) msg += ` ${data.duplicatesSkipped} already in the pool, skipped.`;
-    if(badLines.length) msg += ` Skipped line(s) ${badLines.join(', ')} — missing required fields.`;
+    if(badLines.length) msg += ` Skipped line(s) ${badLines.join(', ')}. Missing required fields.`;
     if(data.skipped && data.skipped.length) msg += ` ${data.skipped.length} row(s) rejected server-side, check position values.`;
     document.getElementById('bulk-msg').textContent = msg;
     document.getElementById('bulk-players').value = '';
@@ -575,7 +575,7 @@ document.getElementById('p-export').addEventListener('click', async ()=>{
     const text = data.map(p => [p.first_name, p.last_name, p.position, p.nationality, p.era, p.age ?? '', p.birth_date ?? '', p.appearances ?? ''].join(',')).join('\n');
     await navigator.clipboard.writeText(text);
     toast(`Copied ${data.length} players to clipboard`);
-  }catch(e){ toast('Could not copy — clipboard access blocked?'); }
+  }catch(e){ toast('Could not copy, clipboard access blocked?'); }
 });
 
 /* ---- Players ---- */
@@ -589,7 +589,7 @@ async function refreshPlayers(){
     renderPlayerList();
     updateToggleLabel();
     // Player dropdowns in the matchday form are built from this same
-    // cache — refresh them now that real data exists, unless someone's
+    // cache. Refresh them now that real data exists, unless someone's
     // actively mid-edit (don't want to wipe their in-progress selections).
     if(typeof editingMatchdayId !== 'undefined' && !editingMatchdayId && document.getElementById('md-slots')){
       renderSlots(document.getElementById('md-formation').value);
@@ -732,7 +732,7 @@ document.getElementById('bulk-update-submit').addEventListener('click', async ()
       age: age || undefined, birth_date: birth_date || undefined, appearances: appearances || undefined
     };
   }).filter(u=>u.first_name && u.last_name);
-  if(!updates.length){ document.getElementById('bulk-update-msg').textContent = 'No valid lines found — check the format.'; return; }
+  if(!updates.length){ document.getElementById('bulk-update-msg').textContent = 'No valid lines found, check the format.'; return; }
   document.getElementById('bulk-update-msg').textContent = `Updating ${updates.length} player(s)…`;
   try{
     const data = await callAdmin('bulk_update_players', { updates });
@@ -757,7 +757,7 @@ document.getElementById('dup-scan').addEventListener('click', async ()=>{
     }
     el.innerHTML = `
       <p style="font-size:12.5px; color:var(--paper-dim);">
-        Found ${groups.length} name(s) with duplicate entries. The oldest entry in each group is pre-selected to <b>keep</b> —
+        Found ${groups.length} name(s) with duplicate entries. The oldest entry in each group is pre-selected to <b>keep</b>,
         everything else is checked for deletion. Review before confirming; this can't be undone.
       </p>
       ${groups.map((g, gi) => `
@@ -768,7 +768,7 @@ document.getElementById('dup-scan').addEventListener('click', async ()=>{
               <input type="checkbox" class="dup-check" data-group="${gi}" data-id="${row.id}" ${ri===0 ? '' : 'checked'}>
               <span>
                 ${row.position} · ${row.era} · ${row.nationality}${row.age ? ' · age ' + row.age : ''}${row.active ? '' : ' · inactive'}
-                <span class="meta" style="display:block;">added ${new Date(row.created_at).toLocaleDateString()}${ri===0 ? ' — oldest, kept by default' : ''}</span>
+                <span class="meta" style="display:block;">added ${new Date(row.created_at).toLocaleDateString()}${ri===0 ? ', oldest, kept by default' : ''}</span>
               </span>
             </label>`).join('')}
         </div>`).join('')}
@@ -802,13 +802,13 @@ document.getElementById('missing-scan').addEventListener('click', ()=>{
   }).filter(x => x.missing.length);
 
   if(!issues.length){
-    el.innerHTML = '<div class="meta">Nothing missing — every player has age, nationality and a specific era.</div>';
+    el.innerHTML = '<div class="meta">Nothing missing, every player has age, nationality and a specific era.</div>';
     return;
   }
   el.innerHTML = `
     <p style="font-size:12.5px; color:var(--paper-dim);">
       ${issues.length} player(s) missing at least one field. "Specific era" flags generic placeholders
-      like "Former Hull Player" that could use a real date range — not necessarily wrong, just rough.
+      like "Former Hull Player" that could use a real date range, not necessarily wrong, just rough.
     </p>
     <div class="admin-list">
       ${issues.map(({p, missing})=>`
@@ -888,16 +888,16 @@ async function refreshSchedule(){
       d.setDate(d.getDate() + offset);
       const label = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
       const isToday = offset === 0;
-      const s5 = surname5.length ? stripAccents(pickForDate(surname5, "surname5", d).last).toUpperCase() : "—";
+      const s5 = surname5.length ? stripAccents(pickForDate(surname5, "surname5", d).last).toUpperCase() : "N/A";
       const gt = players.length ? pickForDate(players, "guesstiger", d) : null;
       const mt = players.length ? pickForDate(players, "mysterytiger", d) : null;
-      let opp = "—";
+      let opp = "N/A";
       if(goalPool.length){
         const dk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
         const pinned = goalPool.find(g => g.puzzle_date === dk);
         opp = pinned ? pinned.opponent : pickForDate(goalPool, "guessopponent", d).opponent;
       }
-      rows.push({label, isToday, offset, s5, gt: gt ? `${gt.first} ${gt.last}` : "—", mt: mt ? `${mt.first} ${mt.last}` : "—", opp});
+      rows.push({label, isToday, offset, s5, gt: gt ? `${gt.first} ${gt.last}` : "N/A", mt: mt ? `${mt.first} ${mt.last}` : "N/A", opp});
     }
 
     el.innerHTML = rows.map(r => `
@@ -983,13 +983,13 @@ document.getElementById('fx-bulk-submit').addEventListener('click', async ()=>{
       status: status || undefined,
     });
   });
-  if(!fixtures.length){ msg.textContent = 'No valid lines found — check the format.'; return; }
+  if(!fixtures.length){ msg.textContent = 'No valid lines found, check the format.'; return; }
   msg.textContent = `Adding ${fixtures.length} fixture(s)…`;
   try{
     const data = await callAdmin('bulk_add_fixtures', { fixtures });
     let m = `Added ${data.inserted} fixture(s).`;
     if(data.duplicatesSkipped) m += ` ${data.duplicatesSkipped} already existed, skipped.`;
-    if(badLines.length) m += ` Skipped line(s) ${badLines.join(', ')} — missing opponent or date.`;
+    if(badLines.length) m += ` Skipped line(s) ${badLines.join(', ')}. Missing opponent or date.`;
     msg.textContent = m;
     document.getElementById('fx-bulk').value = '';
     refreshFixtures();
@@ -1072,9 +1072,9 @@ async function refreshFixtures(){
       catch(e){ toast(e.message); }
     }));
 
-    const fixtureOptionsHtml = data.map(fx=>`<option value="${fx.id}">vs ${fx.opponent} — ${fx.match_date}</option>`).join('');
+    const fixtureOptionsHtml = data.map(fx=>`<option value="${fx.id}">vs ${fx.opponent}, ${fx.match_date}</option>`).join('');
     const mdSel = document.getElementById('md-fixture');
-    if(mdSel) mdSel.innerHTML = '<option value="">— Not linked to a fixture —</option>' + fixtureOptionsHtml;
+    if(mdSel) mdSel.innerHTML = '<option value="">Not linked to a fixture</option>' + fixtureOptionsHtml;
     const scoreSel = document.getElementById('score-fixture-select');
     if(scoreSel) scoreSel.innerHTML = fixtureOptionsHtml || '<option value="">No fixtures yet</option>';
   }catch(e){ list.innerHTML = '<div class="meta">Could not load.</div>'; }
@@ -1088,7 +1088,7 @@ document.getElementById('score-calculate-btn').addEventListener('click', async (
   msg.textContent = 'Calculating…';
   try{
     const data = await callAdmin('calculate_fixture_scores', { fixture_id: fixtureId });
-    msg.textContent = `Done — scored ${data.scoredCount} prediction(s).`;
+    msg.textContent = `Done. Scored ${data.scoredCount} prediction(s).`;
     loadFixtureScores(fixtureId);
   }catch(e){ msg.textContent = e.message; }
 });
@@ -1177,7 +1177,7 @@ async function refreshFormations(){
   const list = document.getElementById('fm-list');
   try{
     const { data } = await sb.from('predictor_formations').select('*').order('sort_order', {ascending:true});
-    if(!data || !data.length){ list.innerHTML = '<div class="meta">No formations yet — add one above.</div>'; return; }
+    if(!data || !data.length){ list.innerHTML = '<div class="meta">No formations yet, add one above.</div>'; return; }
     list.innerHTML = data.map(f=>`
       <div class="admin-row">
         <div>${f.name} <span class="meta">GK ${f.gk} · DF ${f.df} · MF ${f.mf} · FW ${f.fw}</span></div>
@@ -1258,7 +1258,7 @@ let subCounter = 0;
 
 function activePlayerOptionsHtml(selectedId){
   const active = allPlayersCache.filter(p=>p.active && p.era === 'Current Squad').sort((a,b)=> a.last_name.localeCompare(b.last_name));
-  return `<option value="">— Select —</option>` + active.map(p=>
+  return `<option value="">Select...</option>` + active.map(p=>
     `<option value="${p.id}" ${p.id===selectedId?'selected':''}>${p.first_name} ${p.last_name}</option>`
   ).join('');
 }
@@ -1459,7 +1459,7 @@ async function refreshMatchdays(){
       if(!confirm('Delete this matchday? This also undoes the appearances it credited.')) return;
       try{
         const data = await callAdmin('delete_matchday', { id: b.dataset.deleteMd });
-        toast(`Deleted — ${data.appearancesRemoved} appearance(s) undone.`);
+        toast(`Deleted. ${data.appearancesRemoved} appearance(s) undone.`);
         await refreshMatchdays(); await refreshPlayers();
       }catch(e){ toast(e.message); }
     }));
@@ -1467,7 +1467,7 @@ async function refreshMatchdays(){
 }
 
 // Initial render of an empty 4-3-3 so the form isn't blank before any
-// players/formation are picked — repopulates once players load.
+// players/formation are picked, repopulates once players load.
 document.getElementById('md-homeaway').value = 'Home';
 document.getElementById('md-formation').value = '4-3-3';
 renderSlots('4-3-3');

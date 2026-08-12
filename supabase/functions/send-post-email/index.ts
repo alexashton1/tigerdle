@@ -2,15 +2,15 @@
 //
 // Called by admin-action whenever a post is published. Loads the post and
 // every subscribed email address, then sends via Resend's batch endpoint.
-// Not meant to be called from the browser directly (no CORS needed) —
+// Not meant to be called from the browser directly (no CORS needed),
 // admin-action calls it server-to-server with the service role key.
 //
 // Deploy with: supabase functions deploy send-post-email --no-verify-jwt
 // Required secrets:
 //   RESEND_API_KEY
-//   RESEND_FROM        — e.g. "TIGERDLE <news@yourdomain.com>" (domain must
+//   RESEND_FROM        : e.g. "TIGERDLE <news@yourdomain.com>" (domain must
 //                         be verified in Resend)
-//   SITE_URL           — e.g. https://yourname.github.io/tigerdle
+//   SITE_URL           : e.g. https://yourname.github.io/tigerdle
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 

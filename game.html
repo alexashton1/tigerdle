@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Play — TIGERDLE</title>
+<title>Play: TIGERDLE</title>
 <link rel="canonical" href="https://tigerdle.com/game.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TIGERDLE">
-<meta property="og:title" content="Play — TIGERDLE">
+<meta property="og:title" content="Play: TIGERDLE">
 <meta property="og:description" content="Four daily Hull City puzzles: TIGERDLE, Guess the Tiger, Mystery Tiger, and Guess the Opponent.">
 <meta property="og:image" content="https://tigerdle.com/social-card.png">
 <meta property="og:url" content="https://tigerdle.com/game.html">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Play — TIGERDLE">
+<meta name="twitter:title" content="Play: TIGERDLE">
 <meta name="twitter:description" content="Four daily Hull City puzzles: TIGERDLE, Guess the Tiger, Mystery Tiger, and Guess the Opponent.">
 <meta name="twitter:image" content="https://tigerdle.com/social-card.png">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -150,7 +150,7 @@
 
   .today-label-wrap{ text-align:center; padding-top:16px; }
 
-  /* Genuinely tighter on mobile — every one of these stacks on top of
+  /* Genuinely tighter on mobile. Every one of these stacks on top of
      the others, so shaving each individually is what actually gets
      TIGERDLE closer to fitting on one screen without scrolling,
      rather than one single big change. */
@@ -183,12 +183,12 @@
 <noscript>
   <nav style="text-align:center; padding:12px; font-family:sans-serif; font-size:13px; line-height:1.8;">
     <a href="index.html">Home</a> · <a href="game.html">Play</a> · <a href="blog.html">Blog</a> · <a href="about.html">About &amp; FAQ</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a>
-    <br>TIGERDLE is a free, fan-made Hull City AFC puzzle and predictor site — not affiliated with the club. Contact: tigerdle.tigerdle@gmail.com
+    <br>TIGERDLE is a free, fan-made Hull City AFC puzzle and predictor site, not affiliated with the club. Contact: tigerdle.tigerdle@gmail.com
   </nav>
 </noscript>
 <div class="wrap">
   <div class="today-label-wrap">
-    <div class="kicker" id="today-label">—</div>
+    <div class="kicker" id="today-label">...</div>
   </div>
 
   <nav class="tabs">
@@ -211,7 +211,7 @@
   <!-- MODE 2 -->
   <section class="panel" id="panel-m2">
     <div class="mode-head"><h2>Guess the Tiger</h2><p>One player from Hull's current squad or Tigers folklore. Compare position, era, nationality, age and appearances with every guess. 8 attempts.</p></div>
-    <div class="starter-hint" id="m2-starter"><b>Not sure where to start?</b> Guess anyone — current squad or a name from the archives — and the table below shows how close you were on every stat.</div>
+    <div class="starter-hint" id="m2-starter"><b>Not sure where to start?</b> Guess anyone, current squad or a name from the archives, and the table below shows how close you were on every stat.</div>
     <div class="guessrow">
       <div class="ac-wrap">
         <input type="text" id="m2-input" placeholder="Type a player name…" autocomplete="off">
@@ -302,7 +302,7 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("panel-"+btn.dataset.mode).classList.add("active");
-    // Auto-focus the guess box on switch — desktop only, so this doesn't
+    // Auto-focus the guess box on switch. Desktop only, so this doesn't
     // pop the on-screen keyboard on mobile just from tapping a tab.
     const inputId = TAB_INPUT_MAP[btn.dataset.mode];
     if(inputId && window.matchMedia('(pointer: fine)').matches){
@@ -312,7 +312,7 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
   });
 });
 
-/* Shared "share result" popup — used by all four modes instead of a
+/* Shared "share result" popup, used by all four modes instead of a
    silent clipboard copy. Offers direct links for X/WhatsApp/Facebook,
    a native share sheet ("More") on devices that support it, and a
    plain copy fallback for anywhere else. */
@@ -357,7 +357,7 @@ function updateStreak(modeKey, won){
   syncStatsIfSignedIn();
   return stats;
 }
-/* Nothing on this page requires an account — this only does anything if
+/* Nothing on this page requires an account. This only does anything if
    someone happens to already be signed in via account.html, in which case
    their just-updated stats quietly follow them there too. Fails silently
    and harmlessly for the vast majority of anonymous players. */
@@ -369,7 +369,7 @@ async function syncStatsIfSignedIn(){
     const allStats = {};
     ['m1','m2','m3','m4'].forEach(m => { allStats[m] = getStats(m); });
     await sb.from('user_stats').upsert({ user_id: user.id, stats: allStats, updated_at: new Date().toISOString() });
-  }catch(e){ /* silent — this is a nice-to-have, never block gameplay on it */ }
+  }catch(e){ /* silent, this is a nice-to-have, never block gameplay on it */ }
 }
 function getStats(modeKey){ return loadState("tigerdle_stats_"+modeKey, {played:0, wins:0, streak:0, maxStreak:0}); }
 function renderStatsbar(){
@@ -398,7 +398,7 @@ async function loadPlayers(){
   }catch(e){ return FALLBACK_PLAYERS; }
 }
 
-/* Load goal puzzles: Supabase only — no fallback images (copyright: only
+/* Load goal puzzles: Supabase only, no fallback images (copyright: only
    Alex's own uploaded matchday photos should ever appear here) */
 async function loadGoals(){
   try{
@@ -408,7 +408,7 @@ async function loadGoals(){
   }catch(e){ return []; }
 }
 
-/* Custom autocomplete dropdown — native <datalist> silently doesn't work
+/* Custom autocomplete dropdown. Native <datalist> silently doesn't work
    on iOS Safari, so this replaces it with something that works everywhere.
    items: array of {value, label, sub?}. onSelect(item) fires on pick. */
 function attachAutocomplete(inputEl, dropdownEl, items, opts){
@@ -580,7 +580,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     function updateStarterHint(){ if(starterEl) starterEl.style.display = state.guesses.length ? "none" : "block"; }
     function findPlayer(name){ const norm=name.trim().toLowerCase();
       return PLAYERS.find(p=>`${p.first} ${p.last}`.toLowerCase()===norm || p.last.toLowerCase()===norm); }
-    function ageCell(g,t){ if(g==null||t==null) return `<div class="cmp-cell">—</div>`;
+    function ageCell(g,t){ if(g==null||t==null) return `<div class="cmp-cell">...</div>`;
       if(g===t) return `<div class="cmp-cell hit">${g}</div>`;
       return `<div class="cmp-cell">${g}<span class="arrow">${g<t?"↑":"↓"}</span></div>`; }
     function matchCell(val,isHit){ return `<div class="cmp-cell ${isHit?'hit':''}">${val}</div>`; }
@@ -597,7 +597,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
       state.done=true; state.won=won; saveState(stateKey,state);
       const stats=updateStreak("m2",won); renderStatsbar(); updateAttempts();
       resultEl.innerHTML=`<div class="resultcard"><div class="rtitle">${won?`Spotted in ${state.guesses.length}/${MAX}`:"Not today"}</div>
-        <div class="rsub">${won?"":`It was ${target.first} ${target.last} — ${target.era}.`} Streak: ${stats.streak}</div>
+        <div class="rsub">${won?"":`It was ${target.first} ${target.last}, ${target.era}.`} Streak: ${stats.streak}</div>
         <button class="sharebtn" id="m2-share">Share result</button></div>`;
       document.getElementById("m2-share").addEventListener("click", ()=>{
         const text=`Tigerdle Guess the Tiger ${dateKey()}\n${won?state.guesses.length:"X"}/${MAX} 🐯`;
@@ -606,7 +606,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     }
     function submit(){
       if(state.done) return; const p=findPlayer(input.value);
-      if(!p){ toast("Not on the team sheet — pick from the list"); return; }
+      if(!p){ toast("Not on the team sheet, pick from the list"); return; }
       if(state.guesses.some(g=>g.last===p.last&&g.first===p.first)){ toast("Already guessed that one"); return; }
       state.guesses.push({first:p.first,last:p.last}); saveState(stateKey,state); renderRow(p);
       input.value=""; input.dispatchEvent(new Event('input'));
@@ -623,14 +623,14 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     const target = pickDaily(PLAYERS, "mysterytiger"); const MAX=6;
     const stateKey="tigerdle_m3_"+dateKey(); let state=loadState(stateKey,{wrong:[],done:false,won:false});
 
-    // Every clue that CAN be built from this player's data — position, era,
+    // Every clue that CAN be built from this player's data: position, era,
     // nationality, and both surname facts are always available; appearances
     // and age only show up as clues when the database actually has that
     // data, which now covers far more players since the TigerBase import.
     const cluePool = [
       { key:'pos', text:`Plays as a <b>${POS_LABEL[target.pos]}</b>.` },
       { key:'era', text:`Associated with: <b>${target.era}</b>.` },
-      { key:'nat', text: target.nat==="Unknown" ? `Nationality: <b>unconfirmed</b> — no help there!` : `Nationality: <b>${target.nat}</b>.` },
+      { key:'nat', text: target.nat==="Unknown" ? `Nationality: <b>unconfirmed</b>, no help there!` : `Nationality: <b>${target.nat}</b>.` },
       { key:'surnameLetter', text:`Surname starts with <b>${target.last[0].toUpperCase()}</b>.` },
       { key:'surnameLength', text:`Surname is <b>${stripAcc(target.last).replace(/[^A-Za-z]/g,"").length} letters</b> long.` },
       { key:'firstLetter', text:`First name starts with <b>${target.first[0].toUpperCase()}</b>.` },
@@ -659,7 +659,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     }
 
     // Which 5 of the eligible clues show up, and in what order, changes
-    // every day — same shuffling trick used for the daily puzzle rotation,
+    // every day, same shuffling trick used for the daily puzzle rotation,
     // just seeded with a clue-specific salt so it varies independently.
     const shuffledClues = seededShuffle(cluePool, "mysteryclue-order::" + dateKey());
     const clues = shuffledClues.slice(0, 5).map(c => c.text);
@@ -679,7 +679,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
       state.done=true; state.won=won; saveState(stateKey,state);
       const stats=updateStreak("m3",won); renderStatsbar(); unlockUpTo(clues.length);
       resultEl.innerHTML=`<div class="resultcard"><div class="rtitle">${won?`Identified in ${state.wrong.length+1}/${MAX}`:"Not today"}</div>
-        <div class="rsub">${target.first} ${target.last} — ${target.era}. Streak: ${stats.streak}</div>
+        <div class="rsub">${target.first} ${target.last}, ${target.era}. Streak: ${stats.streak}</div>
         <button class="sharebtn" id="m3-share">Share result</button></div>`;
       document.getElementById("m3-share").addEventListener("click", ()=>{
         const text=`Tigerdle Mystery Tiger ${dateKey()}\n${won?state.wrong.length+1:"X"}/${MAX} 🐯`;
@@ -703,7 +703,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     const goalWrap = document.getElementById("goal-wrap");
     const goals = await loadGoals();
     if(!goals.length){
-      goalWrap.innerHTML = `<div class="goal-empty">No goal puzzles yet. Head to the admin panel to add the first matchday photo — it'll show up here automatically.</div>`;
+      goalWrap.innerHTML = `<div class="goal-empty">No goal puzzles yet. Head to the admin panel to add the first matchday photo, it'll show up here automatically.</div>`;
       document.getElementById("m4-input").disabled = true;
       document.getElementById("m4-submit").disabled = true;
       return;

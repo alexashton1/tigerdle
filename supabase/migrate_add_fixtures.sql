@@ -1,5 +1,5 @@
 -- Run this once in the Supabase SQL editor. Adds a table for the real
--- fixture list — Premier League fixtures for 2026-27, entered/adjusted
+-- fixture list: Premier League fixtures for 2026-27, entered/adjusted
 -- by you. Safe to run even if already applied.
 
 create table if not exists fixtures (

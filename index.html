@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TIGERDLE — The Hull City Wordle | Daily Puzzles for Tigers Fans</title>
-<meta name="description" content="TIGERDLE is the Hull City Wordle — a free daily word puzzle plus three more Hull City guessing games. New surname, new player, new goal every day.">
+<title>TIGERDLE: The Hull City Wordle | Daily Puzzles for Tigers Fans</title>
+<meta name="description" content="TIGERDLE is the Hull City Wordle, a free daily word puzzle plus three more Hull City guessing games. New surname, new player, new goal every day.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TIGERDLE">
-<meta property="og:title" content="TIGERDLE — The Hull City Wordle">
-<meta property="og:description" content="TIGERDLE is the Hull City Wordle — a free daily word puzzle plus three more Hull City guessing games.">
+<meta property="og:title" content="TIGERDLE: The Hull City Wordle">
+<meta property="og:description" content="TIGERDLE is the Hull City Wordle, a free daily word puzzle plus three more Hull City guessing games.">
 <meta property="og:image" content="https://tigerdle.com/social-card.png">
 <meta property="og:url" content="https://tigerdle.com/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="TIGERDLE — The Hull City Wordle">
-<meta name="twitter:description" content="TIGERDLE is the Hull City Wordle — a free daily word puzzle plus three more Hull City guessing games.">
+<meta name="twitter:title" content="TIGERDLE: The Hull City Wordle">
+<meta name="twitter:description" content="TIGERDLE is the Hull City Wordle, a free daily word puzzle plus three more Hull City guessing games.">
 <meta name="twitter:image" content="https://tigerdle.com/social-card.png">
 <link rel="canonical" href="https://tigerdle.com/">
 <script type="application/ld+json">
@@ -23,7 +23,7 @@
   "name": "TIGERDLE",
   "url": "https://tigerdle.com/",
   "logo": "https://tigerdle.com/apple-touch-icon.png",
-  "description": "TIGERDLE is a free, fan-made daily puzzle site for Hull City AFC supporters — four Hull City guessing games plus a match predictor and leagues. Not affiliated with Hull City AFC.",
+  "description": "TIGERDLE is a free, fan-made daily puzzle site for Hull City AFC supporters. Four Hull City guessing games plus a match predictor and leagues. Not affiliated with Hull City AFC.",
   "sameAs": [
   ]
 }
@@ -79,14 +79,14 @@
 <noscript>
   <nav style="text-align:center; padding:12px; font-family:sans-serif; font-size:13px; line-height:1.8;">
     <a href="index.html">Home</a> · <a href="game.html">Play</a> · <a href="blog.html">Blog</a> · <a href="about.html">About &amp; FAQ</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a>
-    <br>TIGERDLE is a free, fan-made Hull City AFC puzzle and predictor site — not affiliated with the club. Contact: tigerdle.tigerdle@gmail.com
+    <br>TIGERDLE is a free, fan-made Hull City AFC puzzle and predictor site, not affiliated with the club. Contact: tigerdle.tigerdle@gmail.com
   </nav>
 </noscript>
 <main class="wrap">
   <header style="padding:20px 0 4px; text-align:center;">
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title">TIGERDLE</h1>
-    <p class="tagline">The Hull City Wordle — plus three more daily Hull City guessing games. Match memories and the odd rant, for Tigers who bleed amber &amp; black.</p>
+    <p class="tagline">The Hull City Wordle, plus three more daily Hull City guessing games. Match memories and the odd rant, for Tigers who bleed amber &amp; black.</p>
   </header>
 
   <div class="section-head"><h2>Today's puzzles</h2></div>
@@ -126,15 +126,15 @@
   <div class="section-head"><h2>Predictor</h2></div>
   <a href="account.html" class="predictor-cta">
     <span class="predictor-cta-title">🔮 Predict Hull's team &amp; score before kick-off →</span>
-    <span class="predictor-cta-sub">Free account needed — no password, just your email. Takes 10 seconds.</span>
+    <span class="predictor-cta-sub">Free account needed: no password, just your email. Takes 10 seconds.</span>
   </a>
 
   <div class="section-head"><h2>What is TIGERDLE?</h2></div>
   <p style="font-size:13.5px; color:var(--paper-dim); line-height:1.7; margin-top:8px;">
-    TIGERDLE is a free, fan-made puzzle site for Hull City AFC supporters. Every day brings four separate games — a Wordle-style surname guesser, a squad-and-legends matching game, a clue-by-clue mystery player, and a goal reveal where you guess the opponent. None of it needs an account or costs anything.
+    TIGERDLE is a free, fan-made puzzle site for Hull City AFC supporters. Every day brings four separate games: a Wordle-style surname guesser, a squad-and-legends matching game, a clue-by-clue mystery player, and a goal reveal where you guess the opponent. None of it needs an account or costs anything.
   </p>
   <p style="font-size:13.5px; color:var(--paper-dim); line-height:1.7; margin-top:10px;">
-    Signed-in supporters can go further with the Predictor — picking Hull's starting XI, calling the scoreline, and predicting who scores, scored automatically after every match — plus private or public leagues to compete with friends. TIGERDLE isn't affiliated with Hull City AFC; it's built independently by a fan, for fans.
+    Signed-in supporters can go further with the Predictor, picking Hull's starting XI, calling the scoreline, and predicting who scores. Points are scored automatically after every match, and there are private or public leagues to compete with friends. TIGERDLE isn't affiliated with Hull City AFC; it's built independently by a fan, for fans.
   </p>
 
   <div class="section-head"><h2>Latest from the blog</h2><a href="blog.html">View all →</a></div>
@@ -174,7 +174,7 @@
   try{
     const { data, error } = await sb.from('posts').select('*').eq('published', true).order('published_at', {ascending:false}).limit(3);
     if(error || !data || !data.length){
-      listEl.innerHTML = `<div class="empty-state">No posts yet — check back soon, or subscribe below to get the first one.</div>`;
+      listEl.innerHTML = `<div class="empty-state">No posts yet, check back soon, or subscribe below to get the first one.</div>`;
       return;
     }
     listEl.innerHTML = data.map(p=>`

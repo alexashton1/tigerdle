@@ -1,6 +1,6 @@
 /* =========================================================
    Supabase project connection.
-   Replace these two values once your project exists —
+   Replace these two values once your project exists,
    see SETUP.md. Until then, every page falls back to the
    bundled data below so the site still works out of the box.
    ========================================================= */
@@ -36,7 +36,7 @@ if(!sb){
 }
 
 /* =========================================================
-   Fallback player database — used whenever Supabase isn't
+   Fallback player database, used whenever Supabase isn't
    configured yet, or a fetch fails/returns nothing. Keeps
    the game playable immediately, before any backend exists.
    Once the database has rows, those take over automatically.
@@ -96,7 +96,7 @@ const FALLBACK_PLAYERS = [
 ];
 
 // Common EFL/English league club names, purely for the "Guess the Opponent"
-// autocomplete list — factual club names, nothing copyrighted here.
+// autocomplete list, factual club names, nothing copyrighted here.
 const OPPONENT_CLUBS = [
   "Sheffield Wednesday","Sheffield United","Leeds United","Middlesbrough","Sunderland",
   "Norwich City","Ipswich Town","West Bromwich Albion","Coventry City","Stoke City",
@@ -111,7 +111,7 @@ const OPPONENT_CLUBS = [
 ];
 
 /* =========================================================
-   Deterministic daily seeding — same pool, same day, same
+   Deterministic daily seeding: same pool, same day, same
    puzzle for everyone. No backend required for this part.
    ========================================================= */
 function dateKey(){
@@ -146,7 +146,7 @@ function pickForDate(pool, salt, date){
 function pickDaily(pool, salt){ return pickForDate(pool, salt, new Date()); }
 function stripAccents(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 
-/* Age from a birth date, calculated fresh every time — never goes stale.
+/* Age from a birth date, calculated fresh every time, never goes stale.
    Falls back to a static age value (old data, or players with no known
    birth date) when no birth date is on file. */
 function computeAge(birthDate, fallbackAge){

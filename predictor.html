@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Predictor — TIGERDLE</title>
+<title>Predictor: TIGERDLE</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -231,7 +231,7 @@
   <div id="signed-out-view">
     <div class="account-card">
       <h2>Sign in to predict</h2>
-      <p>No password needed — enter your email and we'll send a one-click sign-in link.</p>
+      <p>No password needed: enter your email and we'll send a one-click sign-in link.</p>
       <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
       <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
@@ -315,13 +315,13 @@
 <script>
 renderChrome('account');
 
-/* Scoring rules — agreed, not yet wired up to actual computation.
+/* Scoring rules, agreed but not yet wired up to actual computation.
    That needs two things that don't exist yet: matchdays linked to a
    specific fixture, and the real goalscorers (in order) recorded for
    that matchday. Once both exist, this is the exact table to score
    predictions against. */
 
-/* Scoring rules — position points now match on BROAD position (GK/DF/MF/FW)
+/* Scoring rules: position points now match on BROAD position (GK/DF/MF/FW)
    rather than an exact slot, since the picker below only ever captures
    broad position. See migrate_add_scoring_system.sql for the matching
    change on the scoring side. */
@@ -331,7 +331,7 @@ const SCORING_RULES = {
   firstScorer:     { FW: 10, MF: 15, DF: 20, GK: 20 }, // scored the FIRST goal specifically
 };
 
-// Loaded from the predictor_formations table at boot — admin-editable
+// Loaded from the predictor_formations table at boot, admin-editable
 // now, not hardcoded. Starts with a sane fallback so nothing breaks if
 // the fetch is slow or the table's briefly empty.
 let FORMATIONS = {
@@ -345,7 +345,7 @@ async function loadFormations(){
   }
 }
 const POS_LABELS = {GK:'Goalkeepers', DF:'Defenders', MF:'Midfielders', FW:'Forwards'};
-// Loaded from pitch_layout_settings at boot — admin-adjustable now.
+// Loaded from pitch_layout_settings at boot, admin-adjustable now.
 // Starts with the original defaults so nothing breaks if the fetch is
 // slow or the table's briefly empty.
 let PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
@@ -402,7 +402,7 @@ document.getElementById('acc-forgot-password').addEventListener('click', async (
   if(!email){ msg.textContent = 'Enter your email above first, then tap this again.'; return; }
   msg.textContent = 'Sending a reset link…';
   try{
-    // Always completes on account.html — that's the one place with the
+    // Always completes on account.html. That's the one place with the
     // "set a new password" UI, regardless of which page this was
     // requested from.
     const resetUrl = new URL('account.html', window.location.href).href;
@@ -435,7 +435,7 @@ sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.
 
 /* Covers exactly this scenario: someone taps a magic-link email while
    using the installed app, the OS opens the link in a regular browser
-   tab instead (normal — email apps can't route into installed PWAs),
+   tab instead (normal, email apps can't route into installed PWAs),
    they sign in there, then switch back to the app. Only rechecks while
    still showing signed-out, so it doesn't wastefully re-fetch
    everything just because someone briefly switched apps while already
@@ -454,7 +454,7 @@ const WILDCARD_NAMES = {
   reverse_score: { icon:'🔄', name:'Reverse Score' },
 };
 
-// Compares score/scorer/first-scorer points only — position points are
+// Compares score/scorer/first-scorer points only. Position points are
 // deliberately never eligible to be THE headline pick here, even though
 // they still show up in the full breakdown below.
 function buildResultHighlight(score){
@@ -469,15 +469,15 @@ function buildResultHighlight(score){
   if(best.type === 'score'){
     const label = (b.score_result === 'exact' || b.score_result === 'exact_reversed') ? 'Exact score!' : 'Correct result';
     const reversedNote = b.score_result === 'exact_reversed' ? ', the other way round' : '';
-    return `<b>${label}</b> — you called ${b.predicted_hull_score}-${b.predicted_opponent_score}${reversedNote} — <b>+${best.points}pts</b>`;
+    return `<b>${label}</b>: you called ${b.predicted_hull_score}-${b.predicted_opponent_score}${reversedNote}, <b>+${best.points}pts</b>`;
   }
-  if(best.type === 'scorer' && b.predicted_scorer) return `<b>${escapeHtml(b.predicted_scorer.first_name)} ${escapeHtml(b.predicted_scorer.last_name)}</b> scored, just like you called it — <b>+${best.points}pts</b>`;
-  if(best.type === 'first' && b.first_scorer) return `<b>${escapeHtml(b.first_scorer.first_name)} ${escapeHtml(b.first_scorer.last_name)}</b> scored first, exactly as predicted — <b>+${best.points}pts</b>`;
+  if(best.type === 'scorer' && b.predicted_scorer) return `<b>${escapeHtml(b.predicted_scorer.first_name)} ${escapeHtml(b.predicted_scorer.last_name)}</b> scored, just like you called it, <b>+${best.points}pts</b>`;
+  if(best.type === 'first' && b.first_scorer) return `<b>${escapeHtml(b.first_scorer.first_name)} ${escapeHtml(b.first_scorer.last_name)}</b> scored first, exactly as predicted, <b>+${best.points}pts</b>`;
   return null;
 }
 
 // How many of the awarded points are actually attributable to the
-// wildcard — not just re-displaying the already-boosted number, since
+// wildcard. Not just re-displaying the already-boosted number, since
 // that would overstate what it actually contributed.
 function wildcardUplift(score){
   const wildcard = score.wildcard_applied;
@@ -538,7 +538,7 @@ function buildResultShareText(score, fixture){
 
   let lines = [`I scored ${score.total_points}pts predicting Hull vs ${opponent} on TIGERDLE 🏆`];
   if(highlight) lines.push(`⭐ ${highlight.replace(/<\/?b>/g, '')}`);
-  if(wc && uplift) lines.push(`${wc.icon} ${wc.name} was active too — worth an extra +${uplift}pts`);
+  if(wc && uplift) lines.push(`${wc.icon} ${wc.name} was active too, worth an extra +${uplift}pts`);
   lines.push(`Beat that: ${link}`);
   return lines.join('\n');
 }
@@ -549,30 +549,30 @@ function renderScoreBreakdown(score, prediction, fixture, resultIndex){
   const highlight = buildResultHighlight(score);
   const highlightHtml = highlight
     ? `<div class="result-highlight" style="display:flex; align-items:center; gap:10px; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-family:var(--body); font-size:13px; color:var(--amber-soft);"><span style="font-size:20px; flex-shrink:0;">🏆</span><span>Your best pick: ${highlight}</span></div>`
-    : `<div class="empty-state" style="background:var(--ink-2); border:1px dashed var(--line); border-radius:8px; padding:10px 14px; margin-bottom:14px;">No scoreline or scorer hits this one — still picked up points from your team selection below.</div>`;
+    : `<div class="empty-state" style="background:var(--ink-2); border:1px dashed var(--line); border-radius:8px; padding:10px 14px; margin-bottom:14px;">No scoreline or scorer hits this one, still picked up points from your team selection below.</div>`;
 
   const uplift = wildcardUplift(score);
   const wc = score.wildcard_applied ? WILDCARD_NAMES[score.wildcard_applied] : null;
   const wildcardHtml = (wc && uplift)
-    ? `<div style="display:flex; align-items:center; gap:10px; background:rgba(110,31,42,0.18); border:1px solid var(--maroon-soft); border-radius:8px; padding:9px 14px; margin-bottom:14px; font-family:var(--body); font-size:12.5px; color:var(--paper);"><span style="font-size:18px; flex-shrink:0;">${wc.icon}</span><span><b style="color:var(--maroon-soft);">${wc.name}</b> was active — worth an extra <b style="color:var(--maroon-soft);">+${uplift}pts</b> on top of what you'd have scored without it</span></div>`
+    ? `<div style="display:flex; align-items:center; gap:10px; background:rgba(110,31,42,0.18); border:1px solid var(--maroon-soft); border-radius:8px; padding:9px 14px; margin-bottom:14px; font-family:var(--body); font-size:12.5px; color:var(--paper);"><span style="font-size:18px; flex-shrink:0;">${wc.icon}</span><span><b style="color:var(--maroon-soft);">${wc.name}</b> was active, worth an extra <b style="color:var(--maroon-soft);">+${uplift}pts</b> on top of what you'd have scored without it</span></div>`
     : '';
 
   let scoreLineHtml;
   if(b.score_result === 'exact'){
-    scoreLineHtml = `<div class="agg-row"><span>Exact score — you called ${b.predicted_hull_score}-${b.predicted_opponent_score}</span><span class="agg-pct">+10</span></div>`;
+    scoreLineHtml = `<div class="agg-row"><span>Exact score: you called ${b.predicted_hull_score}-${b.predicted_opponent_score}</span><span class="agg-pct">+10</span></div>`;
   } else if(b.score_result === 'exact_reversed'){
-    scoreLineHtml = `<div class="agg-row"><span>Exact score, the other way round — you called ${b.predicted_hull_score}-${b.predicted_opponent_score}, it finished ${b.actual_hull_score}-${b.actual_opponent_score}</span><span class="agg-pct">+10</span></div>`;
+    scoreLineHtml = `<div class="agg-row"><span>Exact score, the other way round: you called ${b.predicted_hull_score}-${b.predicted_opponent_score}, it finished ${b.actual_hull_score}-${b.actual_opponent_score}</span><span class="agg-pct">+10</span></div>`;
   } else if(b.score_result === 'result'){
     scoreLineHtml = `<div class="agg-row"><span>Correct result (scoreline was ${b.actual_hull_score}-${b.actual_opponent_score}, you had ${b.predicted_hull_score}-${b.predicted_opponent_score})</span><span class="agg-pct">+5</span></div>`;
   } else {
-    scoreLineHtml = `<div class="empty-state" style="padding:8px 0;">Scoreline prediction didn't match — actual was ${b.actual_hull_score ?? '?'}-${b.actual_opponent_score ?? '?'}.</div>`;
+    scoreLineHtml = `<div class="empty-state" style="padding:8px 0;">Scoreline prediction didn't match. Actual was ${b.actual_hull_score ?? '?'}-${b.actual_opponent_score ?? '?'}.</div>`;
   }
 
   function scorerLine(detail, label){
     if(!detail) return '';
     return detail.hit
-      ? `<div class="agg-row"><span>${label}: ${escapeHtml(detail.first_name)} ${escapeHtml(detail.last_name)} — scored!</span><span class="agg-pct">+${detail.points}</span></div>`
-      : `<div class="empty-state" style="padding:8px 0;">${label}: ${escapeHtml(detail.first_name)} ${escapeHtml(detail.last_name)} — didn't score.</div>`;
+      ? `<div class="agg-row"><span>${label}: ${escapeHtml(detail.first_name)} ${escapeHtml(detail.last_name)}, scored!</span><span class="agg-pct">+${detail.points}</span></div>`
+      : `<div class="empty-state" style="padding:8px 0;">${label}: ${escapeHtml(detail.first_name)} ${escapeHtml(detail.last_name)}, didn't score.</div>`;
   }
 
   const captureId = `result-pitch-${resultIndex}`;
@@ -598,16 +598,16 @@ async function loadPastResults(){
   const section = document.getElementById('past-results-section');
   const list = document.getElementById('past-results-list');
 
-  // Own scores only — RLS already confines this to rows that belong to
+  // Own scores only. RLS already confines this to rows that belong to
   // the signed-in user (or, separately, league-mates' scores once
-  // scored — but this view is specifically "my results", so no need to
+  // scored, but this view is specifically "my results", so no need to
   // widen the query here).
   const { data: scores } = await sb.from('prediction_scores').select('*').eq('user_id', currentUser.id).order('calculated_at', {ascending:false});
   if(!scores || !scores.length){ section.style.display = 'none'; return; }
 
   const fixtureIds = scores.map(s => s.fixture_id);
   const { data: fixtures } = await sb.from('fixtures').select('*').in('id', fixtureIds);
-  // The full prediction (lineup, wildcard) alongside its score — needed
+  // The full prediction (lineup, wildcard) alongside its score, needed
   // to draw the pitch and show any wildcard uplift, neither of which
   // live on the prediction_scores row itself.
   const { data: predictions } = await sb.from('predictions').select('*').eq('user_id', currentUser.id).in('fixture_id', fixtureIds);
@@ -653,7 +653,7 @@ async function loadPastResults(){
 
 /* ---------- fixture list ---------- */
 const WILDCARDS = [
-  { id:'double', icon:'🎯', name:'Double Points', desc:'Doubles every point this prediction earns you — position, score, and both scorers, all of it.' },
+  { id:'double', icon:'🎯', name:'Double Points', desc:'Doubles every point this prediction earns you: position, score, and both scorers, all of it.' },
   { id:'clean_sheet', icon:'🧤', name:'Clean Sheet Hero', desc:'5 points for every goalkeeper and defender in your team if Hull keep a clean sheet.' },
   { id:'hat_trick_hero', icon:'⚡', name:'Hat-trick Hero', desc:'Triples the points from your anytime and first goalscorer picks.' },
   { id:'reverse_score', icon:'🔄', name:'Reverse Score', desc:'Predict 1-0 and it finishes 0-1? Still counts as your exact score, either way round.' },
@@ -673,14 +673,14 @@ async function loadFixtureList(){
   list.innerHTML = '<div class="empty-state">Loading fixtures…</div>';
   const { data: fixtures } = await sb.from('fixtures').select('*').eq('status','Scheduled').order('match_date', {ascending:true});
   if(!fixtures || !fixtures.length){
-    list.innerHTML = '<div class="empty-state">No upcoming fixtures added yet — check back soon.</div>';
+    list.innerHTML = '<div class="empty-state">No upcoming fixtures added yet, check back soon.</div>';
     return;
   }
   const { data: myPredictions } = await sb.from('predictions').select('*').eq('user_id', currentUser.id);
   const predictionByFixture = new Map((myPredictions||[]).map(p=>[p.fixture_id, p]));
 
   // A wildcard is "used" for the season the moment it's attached to any
-  // of this user's predictions — including ones not yet locked, so two
+  // of this user's predictions, including ones not yet locked, so two
   // fixtures can't both quietly claim the same wildcard at once.
   const currentSeason = footballSeason(new Date().toISOString());
   usedWildcardsThisSeason = new Set();
@@ -689,7 +689,7 @@ async function loadFixtureList(){
     if(p.wildcard && fx && footballSeason(fx.match_date) === currentSeason) usedWildcardsThisSeason.add(p.wildcard);
   });
 
-  // Only the soonest fixture is open — everything after it stays locked
+  // Only the soonest fixture is open, everything after it stays locked
   // until it's had its kickoff. One at a time, deliberately.
   const nextFixtureId = fixtures[0].id;
 
@@ -760,7 +760,7 @@ async function loadFixtureList(){
 function openWildcardModal(fixtureId, currentWildcard, fixture){
   wildcardModalFixtureId = fixtureId;
   wildcardModalPending = currentWildcard;
-  document.getElementById('wc-modal-title').textContent = 'Wildcard — vs ' + (fixture?.opponent || '');
+  document.getElementById('wc-modal-title').textContent = 'Wildcard: vs ' + (fixture?.opponent || '');
   renderWildcardModalGrid();
   document.getElementById('wc-modal-overlay').classList.add('open');
 }
@@ -817,7 +817,7 @@ document.getElementById('back-to-fixtures').addEventListener('click', (e)=>{
 /* ---------- predict view ---------- */
 function playerOptionsHtml(selectedId){
   const groups = [['GK','Goalkeepers'], ['DF','Defenders'], ['MF','Midfielders'], ['FW','Forwards']];
-  let html = '<option value="">— Select —</option>';
+  let html = '<option value="">Select...</option>';
   groups.forEach(([code, label])=>{
     const players = allPlayersCache.filter(p=>p.position===code);
     if(!players.length) return;
@@ -841,7 +841,7 @@ async function openPredictView(fixture){
 
   const { data: existing } = await sb.from('predictions').select('*').eq('user_id', currentUser.id).eq('fixture_id', fixture.id).single();
 
-  // A previous week's team to offer reusing — most recent prediction on
+  // A previous week's team to offer reusing, most recent prediction on
   // a DIFFERENT fixture, so there's something to copy from.
   let previousTeam = null;
   if(!existing){
@@ -854,8 +854,8 @@ async function openPredictView(fixture){
     <div class="formcard">
       <h3>Hull City vs ${escapeHtml(fixture.opponent)}</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin:2px 0 14px;">${fixture.match_date}${fixture.kickoff_time ? ' '+fixture.kickoff_time : ''} · ${fixture.home_away||''} · ${escapeHtml(fixture.competition||'')}</p>
-      ${locked ? '<div class="locked-note">⏱ Team sheets are out — predictions closed 75 minutes before kick-off.</div>' : ''}
-      ${existing?.is_auto_carried ? '<div class="locked-note">🔄 This was carried over from your last prediction automatically — change anything you like before it locks.</div>' : ''}
+      ${locked ? '<div class="locked-note">⏱ Team sheets are out, predictions closed 75 minutes before kick-off.</div>' : ''}
+      ${existing?.is_auto_carried ? '<div class="locked-note">🔄 This was carried over from your last prediction automatically. Change anything you like before it locks.</div>' : ''}
       ${previousTeam && !locked ? `<button class="ghost-btn" id="pr-reuse-team" style="width:100%; margin-bottom:14px;">📋 Use my team from last time (${previousTeam.formation})</button>` : ''}
       <div class="score-picker-row">
         <div class="score-picker">
@@ -899,7 +899,7 @@ async function openPredictView(fixture){
         </svg>
         <div class="pitch-players" id="pr-pitch-players"></div>
       </div>
-      <p class="pitch-swap-hint" id="pr-swap-hint" style="display:none;">🔄 <b>Tap any two players</b> to swap their spots on the pitch — just for how it looks when shared, doesn't change scoring.</p>
+      <p class="pitch-swap-hint" id="pr-swap-hint" style="display:none;">🔄 <b>Tap any two players</b> to swap their spots on the pitch. Just for how it looks when shared, doesn't change scoring.</p>
 
       <div id="pr-player-sections"></div>
 
@@ -910,7 +910,7 @@ async function openPredictView(fixture){
       </div>
       <div class="field">
         <label style="margin-bottom:2px;">⚡ First goalscorer</label>
-        <p style="font-family:var(--body); font-size:12px; color:var(--paper-dim); margin:0 0 8px;">Specifically whoever scores <b style="color:var(--amber-soft);">first</b> — worth more points</p>
+        <p style="font-family:var(--body); font-size:12px; color:var(--paper-dim); margin:0 0 8px;">Specifically whoever scores <b style="color:var(--amber-soft);">first</b>, worth more points</p>
         <div id="pr-first-scorer-chips"></div>
       </div>
       ${!locked ? `<button class="primary-btn" id="pr-save" style="width:100%;" disabled>Save prediction</button><p id="pr-save-hint" style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:8px;"></p>` : ''}
@@ -936,7 +936,7 @@ async function openPredictView(fixture){
       if(!positionOrder[item.slot]) return;
       // If this player's left the current squad since the prediction was
       // saved, don't silently show a broken empty slot or drop them from
-      // a save with no explanation — pull them out now and say so, so
+      // a save with no explanation. Pull them out now and say so, so
       // there's an obvious open slot to fill with someone current.
       const stillCurrent = allPlayersCache.some(p => p.id === item.player_id);
       if(stillCurrent){ positionOrder[item.slot].push(item.player_id); }
@@ -961,7 +961,7 @@ async function openPredictView(fixture){
 
   renderPicker(locked);
   if(removedDeparted.length){
-    toast(`${removedDeparted.join(', ')} ${removedDeparted.length===1?'has':'have'} left the squad since you picked them — replace before saving.`);
+    toast(`${removedDeparted.join(', ')} ${removedDeparted.length===1?'has':'have'} left the squad since you picked them, replace before saving.`);
   }
 
   if(!locked){
@@ -985,15 +985,15 @@ async function openPredictView(fixture){
       armedSwap = null;
       renderPicker(locked);
       toast(skippedDeparted.length
-        ? `Team copied — but ${skippedDeparted.join(', ')} left the squad since then, so those spots are open.`
-        : 'Team copied — scoreline and scorers left for you to set fresh.');
+        ? `Team copied, but ${skippedDeparted.join(', ')} left the squad since then, so those spots are open.`
+        : 'Team copied. Scoreline and scorers left for you to set fresh.');
     });
   }
 
   loadAggregate(fixture.id);
 }
 
-/* Clean click-to-adjust score picker — no typing, no keyboard popup on
+/* Clean click-to-adjust score picker, no typing, no keyboard popup on
    mobile. The current value lives on the display element's data-value
    attribute, which savePrediction() reads directly. */
 function setupScoreStepper(prefix, initial, locked){
@@ -1088,7 +1088,7 @@ function renderScorerChips(locked){
   Object.keys(positionOrder).forEach(pos => positionOrder[pos].forEach(id => selectedIds.push(id)));
   const selectedPlayers = selectedIds.map(id => allPlayersCache.find(p=>p.id===id)).filter(Boolean);
 
-  // If the previously-chosen scorer got removed from the team, clear the pick —
+  // If the previously-chosen scorer got removed from the team, clear the pick,
   // can't predict a goal from someone no longer in your lineup.
   if(selectedPredictedScorer && !selectedIds.includes(selectedPredictedScorer)) selectedPredictedScorer = null;
   if(selectedFirstScorer && !selectedIds.includes(selectedFirstScorer)) selectedFirstScorer = null;
@@ -1157,7 +1157,7 @@ function renderPicker(locked){
 
   const container = document.getElementById('pr-player-sections');
   if(locked){
-    // Read-only view of a locked prediction — no tappable cards.
+    // Read-only view of a locked prediction, no tappable cards.
     container.innerHTML = Object.keys(POS_LABELS).map(pos=>{
       const names = positionOrder[pos].map(id => allPlayersCache.find(p=>p.id===id)).filter(Boolean).map(p=>`${p.first_name} ${p.last_name}`);
       return names.length ? `<div class="pos-section-title">${POS_LABELS[pos]}</div><p style="font-size:13px; color:var(--paper-dim);">${names.join(', ')}</p>` : '';
@@ -1205,7 +1205,7 @@ function renderPicker(locked){
   const hint = document.getElementById('pr-save-hint');
   if(saveBtn){
     saveBtn.disabled = !complete;
-    if(hint) hint.textContent = complete ? 'Team complete — ready to save.' : `${totalHave} of ${totalNeed} selected — pick a few more to continue.`;
+    if(hint) hint.textContent = complete ? 'Team complete, ready to save.' : `${totalHave} of ${totalNeed} selected, pick a few more to continue.`;
   }
 }
 
@@ -1268,7 +1268,7 @@ async function loadAggregate(fixtureId){
 
   const total = totals?.total_predictions || 0;
   if(!total){
-    container.innerHTML = '<div class="empty-state">No predictions yet — be the first.</div>';
+    container.innerHTML = '<div class="empty-state">No predictions yet, be the first.</div>';
     return;
   }
 
@@ -1279,7 +1279,7 @@ async function loadAggregate(fixtureId){
   const playersHtml = Object.keys(required).map(pos=>{
     const need = required[pos];
     const xs = spreadX(need);
-    // Which players make the cut is still purely by votes — but WHERE
+    // Which players make the cut is still purely by votes, but WHERE
     // they sit along the line now follows the admin-set pitch order
     // (wide vs central), not vote ranking, so a popular winger actually
     // shows up wide instead of wherever the vote count happened to land.
@@ -1351,7 +1351,7 @@ let currentShareBlob = null;
 
 async function shareTeamImage(fixture, targetId){
   const target = document.getElementById(targetId || 'pr-pitch-wrap');
-  if(!target || typeof html2canvas === 'undefined'){ toast("Couldn't build the image — try again in a moment."); return; }
+  if(!target || typeof html2canvas === 'undefined'){ toast("Couldn't build the image, try again in a moment."); return; }
   toast('Building image…');
   try{
     const canvas = await html2canvas(target, { backgroundColor: '#10231a', scale: 2 });
@@ -1387,8 +1387,8 @@ document.getElementById('image-share-copy').addEventListener('click', async ()=>
   if(!currentShareBlob) return;
   try{
     await navigator.clipboard.write([ new ClipboardItem({ 'image/png': currentShareBlob }) ]);
-    toast('Image copied — paste it anywhere.');
-  }catch(e){ toast("Copy isn't supported in this browser — try Save instead."); }
+    toast('Image copied, paste it anywhere.');
+  }catch(e){ toast("Copy isn't supported in this browser, try Save instead."); }
 });
 document.getElementById('image-share-modal-close').addEventListener('click', ()=> document.getElementById('image-share-modal-overlay').classList.remove('open'));
 document.getElementById('image-share-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='image-share-modal-overlay') e.currentTarget.classList.remove('open'); });
@@ -1410,7 +1410,7 @@ function shareMyPrediction(fixture){
 }
 
 // Same idea as shareMyPrediction, but built entirely from a saved
-// prediction row rather than the live picker's in-progress state — safe
+// prediction row rather than the live picker's in-progress state, safe
 // to call from the fixture list, where none of that picker DOM exists.
 function shareSavedPrediction(fixture, prediction){
   const names = (prediction.lineup||[]).map(p => `${p.first_name} ${p.last_name}`);

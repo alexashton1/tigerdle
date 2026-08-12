@@ -2,7 +2,7 @@
 //
 // Triggered on a schedule (pg_cron + pg_net, see migrate_add_prediction_reminders.sql)
 // rather than by a person or admin action. Checks for fixtures approaching
-// their lock time, and emails anyone signed up who hasn't predicted it yet —
+// their lock time, and emails anyone signed up who hasn't predicted it yet,
 // a nudge before the auto-carry-over takes over, not a replacement for it.
 //
 // Deploy with: supabase functions deploy send-prediction-reminders --no-verify-jwt
@@ -26,7 +26,7 @@ Deno.serve(async (_req) => {
     return new Response(JSON.stringify({ ok: false, error: "RESEND_API_KEY not set" }), { status: 500 });
   }
 
-  // Fixtures locking in the next 3 to 4 hours — a window wide enough that
+  // Fixtures locking in the next 3 to 4 hours, a window wide enough that
   // the every-30-minutes schedule reliably catches each fixture exactly
   // once, without emailing people so early it's easy to forget by kickoff.
   const { data: fixtures, error: fxErr } = await supabase.from("fixtures").select("*").eq("status", "Scheduled");
@@ -65,9 +65,9 @@ Deno.serve(async (_req) => {
         <div style="height:8px; background:repeating-linear-gradient(-35deg,#f5a300 0 12px,#14110d 12px 24px);"></div>
         <div style="padding:24px;">
           <p style="font-family:monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#c67f00;">TIGERDLE</p>
-          <h1 style="font-size:22px; margin:6px 0 14px;">Hull City vs ${escapeHtml(fixture.opponent)} — you haven't predicted yet</h1>
+          <h1 style="font-size:22px; margin:6px 0 14px;">Hull City vs ${escapeHtml(fixture.opponent)}: you haven't predicted yet</h1>
           <p style="font-size:14px; line-height:1.6; color:#333;">
-            Predictions close 75 minutes before kick-off. If you don't set one, your last team carries forward automatically —
+            Predictions close 75 minutes before kick-off. If you don't set one, your last team carries forward automatically,
             but it's more fun to actually make the call yourself.
           </p>
           <p><a href="${predictUrl}" style="display:inline-block; margin-top:10px; background:#f5a300; color:#14110d; padding:10px 18px; border-radius:999px; text-decoration:none; font-weight:bold; font-size:13px;">Predict now</a></p>
@@ -84,7 +84,7 @@ Deno.serve(async (_req) => {
     const remindedThisRun: string[] = [];
     for (const chunk of chunks) {
       const batch = chunk.map((p: any) => ({
-        from, to: [p.email], subject: `Hull vs ${fixture.opponent} — predictions close soon`, html: emailHtml(),
+        from, to: [p.email], subject: `Hull vs ${fixture.opponent}: predictions close soon`, html: emailHtml(),
       }));
       const res = await fetch("https://api.resend.com/emails/batch", {
         method: "POST",

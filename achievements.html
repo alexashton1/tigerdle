@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Achievements — TIGERDLE</title>
+<title>Achievements: TIGERDLE</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -75,7 +75,7 @@
   <div id="signed-out-view">
     <div class="account-card">
       <h2>Sign in to see yours</h2>
-      <p>Free account, no password needed — enter your email and we'll send a one-click sign-in link.</p>
+      <p>Free account, no password needed. Enter your email and we'll send a one-click sign-in link.</p>
       <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
       <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
@@ -88,7 +88,7 @@
 
     <div style="margin-top:30px;">
       <h3 style="font-family:var(--display); font-weight:400; color:var(--amber); font-size:19px; margin-bottom:4px;">What shows next to your name</h3>
-      <p style="font-size:12px; color:var(--paper-dim); margin:0 0 14px;">Private by default — nothing shows unless you specifically choose it.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin:0 0 14px;">Private by default, nothing shows unless you specifically choose it.</p>
       <div class="badge-grid" id="equip-choice" style="max-width:280px;"></div>
     </div>
   </div>
@@ -145,7 +145,7 @@ function renderStatusCard(){
     <div class="status-tier-name">${current.name}</div>
     <div class="status-points">${points} achievement points earned</div>
     <div class="status-bar-track"><div class="status-bar-fill" style="width:${progressPct}%;"></div></div>
-    <div class="status-next">${next ? `${next.threshold - points} points to ${next.name} ${next.icon}` : 'Highest status reached — Legend'}</div>
+    <div class="status-next">${next ? `${next.threshold - points} points to ${next.name} ${next.icon}` : 'Highest status reached: Legend'}</div>
   `;
 }
 
@@ -154,7 +154,7 @@ function renderAchievements(){
   if(!allDefinitions.length){ container.innerHTML = `<div class="empty-state">No achievements set up yet.</div>`; return; }
 
   // Group by category, then by name within category (so tiers of the
-  // same badge — bronze/silver/gold — collapse into one tile showing
+  // same badge (bronze/silver/gold) collapse into one tile showing
   // whichever's highest, not three separate tiles).
   const byCategory = {};
   allDefinitions.forEach(d => {
@@ -182,7 +182,7 @@ function renderAchievements(){
               <div class="badge-tier-row">
                 ${tiers.map(t => `<span class="tier-dot ${t.tier} ${earnedKeys.has(t.key)?'reached':''}"></span>`).join('')}
               </div>
-              <div class="badge-desc">${isLocked ? escapeHtml(tiers[0].description) : (display.tier.charAt(0).toUpperCase()+display.tier.slice(1)) + ' — ' + escapeHtml(display.description)}</div>
+              <div class="badge-desc">${isLocked ? escapeHtml(tiers[0].description) : (display.tier.charAt(0).toUpperCase()+display.tier.slice(1)) + ': ' + escapeHtml(display.description)}</div>
             </div>`;
           }).join('')}
         </div>
@@ -219,11 +219,11 @@ async function equip(key, icon, name){
   equippedBadge = key;
   try{
     await sb.from('profiles').update({ equipped_badge: key }).eq('user_id', currentUser.id);
-  }catch(e){ toast("Couldn't save that — try again."); }
+  }catch(e){ toast("Couldn't save that, try again."); }
   renderAchievements();
   renderEquipChoice();
-  if(key === null) toast('Nothing equipped — you stay private.');
-  else toast(`${icon} ${name} equipped — this now shows next to your name.`);
+  if(key === null) toast('Nothing equipped, you stay private.');
+  else toast(`${icon} ${name} equipped, this now shows next to your name.`);
 }
 
 async function boot(user){
@@ -235,12 +235,17 @@ async function boot(user){
   allDefinitions = defs || [];
 
   // Recalculates against real, current data every time this page is
-  // opened — nothing here is stale, and nothing already earned can
+  // opened. Nothing here is stale, and nothing already earned can
   // ever be un-earned by this running again.
   await sb.rpc('calculate_achievements', { uid: currentUser.id });
 
   const { data: earned } = await sb.from('user_achievements').select('achievement_key').eq('user_id', currentUser.id);
   earnedKeys = new Set((earned||[]).map(e => e.achievement_key));
+
+  // Seeing them listed right here counts as having seen them, avoids
+  // a redundant toast popping up on the next page for something
+  // they've just looked straight at.
+  await sb.from('user_achievements').update({ seen: true }).eq('user_id', currentUser.id).eq('seen', false);
 
   const { data: profile } = await sb.from('profiles').select('equipped_badge').eq('user_id', currentUser.id).single();
   equippedBadge = profile?.equipped_badge || null;

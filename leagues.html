@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Leagues — TIGERDLE</title>
+<title>Leagues: TIGERDLE</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -62,7 +62,7 @@
   <div id="signed-out-view">
     <div class="account-card">
       <h2>Sign in for leagues</h2>
-      <p>No password needed — enter your email and we'll send a one-click sign-in link.</p>
+      <p>No password needed: enter your email and we'll send a one-click sign-in link.</p>
       <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
       <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
@@ -189,7 +189,7 @@ sb.auth.getSession().then(({data})=>{ if(data?.session?.user) boot(data.session.
 
 /* Covers exactly this scenario: someone taps a magic-link email while
    using the installed app, the OS opens the link in a regular browser
-   tab instead (normal — email apps can't route into installed PWAs),
+   tab instead (normal, email apps can't route into installed PWAs),
    they sign in there, then switch back to the app. Only rechecks while
    still showing signed-out, so it doesn't wastefully re-fetch
    everything just because someone briefly switched apps while already
@@ -295,13 +295,13 @@ async function openLeagueDetail(leagueId){
   const { data: members } = await sb.from('league_members').select('user_id').eq('league_id', leagueId);
   const { data: leaderboard } = await sb.from('league_leaderboard').select('*').eq('league_id', leagueId).order('total_points', {ascending:false});
 
-  let leaderboardHtml = `<div class="leaderboard-placeholder">🏆 No scores calculated yet — this fills in once results start coming in.</div>`;
+  let leaderboardHtml = `<div class="leaderboard-placeholder">🏆 No scores calculated yet, this fills in once results start coming in.</div>`;
   if(leaderboard && leaderboard.length && leaderboard.some(r=>r.fixtures_scored > 0)){
     const userIds = leaderboard.map(r=>r.user_id);
     const { data: profiles } = await sb.from('profiles').select('*').in('user_id', userIds);
     const nameFor = (uid) => uid === currentUser.id ? 'You' : (profiles||[]).find(p=>p.user_id===uid)?.display_name || 'Player';
 
-    // Resolving an equipped badge icon needs two different lookups —
+    // Resolving an equipped badge icon needs two different lookups,
     // a specific achievement is just an icon lookup, but "status" needs
     // that user's total achievement points worked out first. Both are
     // done here in one pass rather than per-row, so a big leaderboard

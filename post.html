@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Post — TIGERDLE</title>
+<title>Post: TIGERDLE</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TIGERDLE">
 <meta property="og:title" content="TIGERDLE Blog">
@@ -54,7 +54,7 @@ renderChrome('blog');
   try{
     const { data, error } = await sb.from('posts').select('*').eq('slug', slug).eq('published', true).single();
     if(error || !data){ root.innerHTML = `<div class="empty-state">Post not found.</div>`; return; }
-    document.title = data.title + ' — TIGERDLE';
+    document.title = data.title + ': TIGERDLE';
     root.innerHTML = `
       <div class="post-meta" style="margin-top:24px;">${new Date(data.published_at).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</div>
       <h1 class="title" style="font-size:clamp(28px,7vw,42px); text-align:left;">${escapeHtml(data.title)}</h1>

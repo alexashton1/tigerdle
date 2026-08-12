@@ -1,14 +1,14 @@
 // supabase/functions/admin-action/index.ts
 //
 // Single gatekeeper for every admin write in TIGERDLE. The browser never
-// gets write access to the database directly — every insert/update/delete
+// gets write access to the database directly. Every insert/update/delete
 // for players, posts and goals goes through this function, which checks
 // the passphrase against a server-side secret before touching anything.
 //
 // Deploy with: supabase functions deploy admin-action --no-verify-jwt
 // Required secrets (supabase secrets set ...):
-//   ADMIN_PASSPHRASE   — the phrase you type into the admin panel
-//   SITE_URL           — e.g. https://yourname.github.io/tigerdle (used in emails)
+//   ADMIN_PASSPHRASE   : the phrase you type into the admin panel
+//   SITE_URL           : e.g. https://yourname.github.io/tigerdle (used in emails)
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -459,7 +459,7 @@ Deno.serve(async (req) => {
         }
         const total = 1 + Number(p.df) + Number(p.mf) + Number(p.fw);
         if (total !== 11) {
-          return json({ ok: false, error: `Positions must add up to 11 including the goalkeeper — this adds up to ${total}.` }, 400);
+          return json({ ok: false, error: `Positions must add up to 11 including the goalkeeper. This adds up to ${total}.` }, 400);
         }
         const { data, error } = await supabase.from("predictor_formations").upsert({
           name: p.name, gk: 1, df: p.df, mf: p.mf, fw: p.fw, sort_order: p.sort_order ?? 0,

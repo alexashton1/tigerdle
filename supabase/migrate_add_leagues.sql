@@ -1,6 +1,6 @@
--- Run this once in the Supabase SQL editor. Leagues — join via code for
+-- Run this once in the Supabase SQL editor. Leagues: join via code for
 -- private friend groups, or join directly for public ones. A points
--- leaderboard needs the scoring engine (still not built — see the note
+-- leaderboard needs the scoring engine (still not built, see the note
 -- at the bottom of migrate_add_predictions.sql), so league pages will
 -- show membership correctly but an honest "no scores yet" placeholder
 -- until that exists.
@@ -25,7 +25,7 @@ alter table leagues enable row level security;
 alter table league_members enable row level security;
 
 -- A league is visible if it's public, or you're already a member, or
--- you created it. A private league you don't belong to is invisible —
+-- you created it. A private league you don't belong to is invisible,
 -- you can't browse your way into it, only join by knowing its code
 -- (via the function below, which looks it up without needing this
 -- policy to allow it).
@@ -42,13 +42,26 @@ create policy "users create leagues" on leagues
   for insert with check (auth.uid() = created_by);
 
 -- Members of a league can see who else is in it.
+-- Membership check as its own function, not a raw subquery on the same
+-- table. A policy on league_members that queries league_members
+-- directly triggers RLS on itself recursively, which Postgres can't
+-- resolve. SECURITY DEFINER here means this function's own internal
+-- query bypasses RLS, breaking that cycle.
+create or replace function is_league_member(check_league_id uuid, check_user_id uuid)
+returns boolean as $$
+  select exists(
+    select 1 from league_members
+    where league_id = check_league_id and user_id = check_user_id
+  );
+$$ language sql stable security definer;
+
 drop policy if exists "members see other members" on league_members;
 create policy "members see other members" on league_members
   for select using (
-    league_id in (select league_id from league_members where user_id = auth.uid())
+    is_league_member(league_members.league_id, auth.uid())
   );
 
--- Direct self-join only works for public leagues — joining a private
+-- Direct self-join only works for public leagues. Joining a private
 -- one requires the code, enforced by the function below instead.
 drop policy if exists "users join public leagues directly" on league_members;
 create policy "users join public leagues directly" on league_members
@@ -58,22 +71,22 @@ create policy "users join public leagues directly" on league_members
   );
 
 -- Creating a league: picks a name, generates a unique code, creates the
--- league, and joins the creator as its first member — all in one call.
+-- league, and joins the creator as its first member, all in one call.
 create or replace function create_league(league_name text, make_public boolean default false)
-returns table(league_id uuid, league_code text) as $$
+returns table(result_league_id uuid, result_league_code text) as $$
 declare
-  new_code text;
-  new_league_id uuid;
+  v_code text;
+  v_league_id uuid;
 begin
   loop
-    new_code := upper(substr(md5(random()::text), 1, 6));
-    exit when not exists (select 1 from leagues where code = new_code);
+    v_code := upper(substr(md5(random()::text), 1, 6));
+    exit when not exists (select 1 from leagues where code = v_code);
   end loop;
   insert into leagues (name, code, is_public, created_by)
-    values (league_name, new_code, make_public, auth.uid())
-    returning id into new_league_id;
-  insert into league_members (league_id, user_id) values (new_league_id, auth.uid());
-  return query select new_league_id, new_code;
+    values (league_name, v_code, make_public, auth.uid())
+    returning id into v_league_id;
+  insert into league_members (league_id, user_id) values (v_league_id, auth.uid());
+  return query select v_league_id, v_code;
 end;
 $$ language plpgsql security definer;
 
@@ -82,7 +95,7 @@ $$ language plpgsql security definer;
 -- since you have to already know the code) and adds you as a member.
 -- Wrong code just raises an error, no information leaked either way.
 create or replace function join_league_by_code(join_code text)
-returns table(league_id uuid, league_name text) as $$
+returns table(result_league_id uuid, result_league_name text) as $$
 declare
   target leagues%rowtype;
 begin
@@ -96,7 +109,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Seeds one public league so there's always at least one to see —
+-- Seeds one public league so there's always at least one to see,
 -- "Overall", open to anyone, no code needed.
 insert into leagues (name, code, is_public, created_by)
 select 'Overall', 'OVERALL', true, null

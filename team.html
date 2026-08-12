@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Team News — TIGERDLE</title>
+<title>Team News: TIGERDLE</title>
 <link rel="canonical" href="https://tigerdle.com/team.html">
 <meta name="description" content="See Hull City's lineup and player ratings from the latest matchday.">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -133,7 +133,7 @@
 <noscript>
   <nav style="text-align:center; padding:12px; font-family:sans-serif; font-size:13px; line-height:1.8;">
     <a href="index.html">Home</a> · <a href="game.html">Play</a> · <a href="blog.html">Blog</a> · <a href="about.html">About &amp; FAQ</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a>
-    <br>TIGERDLE is a free, fan-made Hull City AFC puzzle and predictor site — not affiliated with the club. Contact: tigerdle.tigerdle@gmail.com
+    <br>TIGERDLE is a free, fan-made Hull City AFC puzzle and predictor site, not affiliated with the club. Contact: tigerdle.tigerdle@gmail.com
   </nav>
 </noscript>
 <div class="wrap">
@@ -159,7 +159,7 @@
     <p class="player-role" id="rate-modal-role"></p>
 
     <div id="rate-signed-out" style="display:none; text-align:center; padding:10px 0 4px;">
-      <p style="font-size:12.5px; color:var(--paper-dim); margin-bottom:10px;">Sign in to add your own rating — free account, no password.</p>
+      <p style="font-size:12.5px; color:var(--paper-dim); margin-bottom:10px;">Sign in to add your own rating: free account, no password.</p>
       <input type="email" id="rate-email" placeholder="you@email.com" style="width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:14px; padding:10px 12px; border-radius:7px; margin-bottom:10px;">
       <button class="primary-btn" id="rate-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="rate-signin-msg" style="text-align:center; margin-top:8px;"></div>
@@ -264,12 +264,12 @@ let ratingAverages = {}; // player_id -> { average, count }
 let openPlayerId = null;
 let openPlayerName = '';
 let selectedRating = null;
-let myRatingsThisMatch = {}; // player_id -> { rating, comment } — this user's own submissions
+let myRatingsThisMatch = {}; // player_id -> { rating, comment }, this user's own submissions
 let thoughtsExpanded = false;
 
 sb.auth.onAuthStateChange((event, session)=>{ currentUser = session?.user || null; });
 sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; });
-// Same fix as the rest of the site — catches the case where someone
+// Same fix as the rest of the site. Catches the case where someone
 // signs in via a magic link in a separate tab/app, then switches back.
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && !currentUser){
@@ -298,7 +298,7 @@ function renderMatchday(m){
 
   const score = (m.hull_score != null && m.opponent_score != null)
     ? `<div class="score">${m.hull_score} - ${m.opponent_score}</div>`
-    : (hasAnyRating ? '' : `<div class="meta" style="margin-top:4px; color:var(--amber-soft);">Team news — ratings and result added after the match</div>`);
+    : (hasAnyRating ? '' : `<div class="meta" style="margin-top:4px; color:var(--amber-soft);">Team news: ratings and result added after the match</div>`);
 
   const playersHtml = starters.map((p, i)=>{
     const c = coords[i] || [50,50];
@@ -364,7 +364,7 @@ async function openRateModal(playerId, playerName){
   const community = ratingAverages[playerId];
   document.getElementById('rate-modal-role').textContent = community
     ? `Community average ${community.average} from ${community.count} rating${community.count===1?'':'s'}`
-    : 'No community ratings yet — be the first';
+    : 'No community ratings yet, be the first';
 
   document.getElementById('rate-comment').value = myRatingsThisMatch[playerId]?.comment || '';
   document.getElementById('rate-char-count').textContent = (myRatingsThisMatch[playerId]?.comment || '').length + ' / 200';
@@ -399,7 +399,7 @@ async function renderThoughts(){
     <div class="thought-row">
       <div class="thought-meta"><span class="thought-rating">${t.rating}</span><span class="thought-name">${escapeHtml(namesById[t.user_id] || 'A Tiger')}</span></div>
       <div class="thought-text">${escapeHtml(t.comment)}</div>
-    </div>`).join('') : `<div class="empty-state">No comments yet — yours could be the first.</div>`;
+    </div>`).join('') : `<div class="empty-state">No comments yet, yours could be the first.</div>`;
   if(!thoughtsExpanded && thoughts.length > 2){
     html += `<span class="thoughts-see-more" id="thoughts-expand">See all ${thoughts.length} comments →</span>`;
   }
@@ -471,7 +471,7 @@ document.getElementById('rate-submit').addEventListener('click', async ()=>{
     myRatingsThisMatch[openPlayerId] = { rating: selectedRating, comment: comment || null };
     await loadRatingsForMatchday(currentMatchday.id);
     renderMatchday(currentMatchday);
-    toast('Rating saved — thanks!');
+    toast('Rating saved, thanks!');
     document.getElementById('rate-modal-overlay').classList.remove('open');
   }catch(e){ msg.textContent = e.message; }
 });
@@ -485,11 +485,11 @@ function buildShareText(){
       const p = (currentMatchday.lineup||[]).find(x=>x.player_id===pid);
       const r = myRatingsThisMatch[pid];
       if(!p) return null;
-      return `⚽ ${p.first_name} ${p.last_name}: ${r.rating}/10${r.comment ? ' — "' + r.comment + '"' : ''}`;
+      return `⚽ ${p.first_name} ${p.last_name}: ${r.rating}/10${r.comment ? ' : "' + r.comment + '"' : ''}`;
     }).filter(Boolean);
     return `My ratings for Hull City vs ${currentMatchday.opponent}:\n\n${lines.join('\n')}\n\nAdd yours: ${link}`;
   }
-  return `Rate how Hull City played vs ${currentMatchday.opponent} — add your player ratings here:\n${link}`;
+  return `Rate how Hull City played vs ${currentMatchday.opponent}. Add your player ratings here:\n${link}`;
 }
 function openShareTextModal(){
   const text = buildShareText();
@@ -503,7 +503,7 @@ function openShareTextModal(){
 document.getElementById('share-text-close').addEventListener('click', ()=> document.getElementById('share-text-modal-overlay').classList.remove('open'));
 document.getElementById('share-text-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='share-text-modal-overlay') document.getElementById('share-text-modal-overlay').classList.remove('open'); });
 document.getElementById('share-copy').addEventListener('click', ()=>{
-  navigator.clipboard.writeText(buildShareText()).then(()=> toast('Copied to clipboard.')).catch(()=> toast('Copy not supported — select the text manually.'));
+  navigator.clipboard.writeText(buildShareText()).then(()=> toast('Copied to clipboard.')).catch(()=> toast('Copy not supported, select the text manually.'));
 });
 
 /* ---------- share as image ---------- */
@@ -529,7 +529,7 @@ document.getElementById('image-share-save').addEventListener('click', ()=>{
 document.getElementById('image-share-copy').addEventListener('click', async ()=>{
   if(!currentImageBlob) return;
   try{ await navigator.clipboard.write([new ClipboardItem({'image/png': currentImageBlob})]); toast('Image copied.'); }
-  catch(e){ toast('Copy not supported in this browser — try Save.'); }
+  catch(e){ toast('Copy not supported in this browser, try Save.'); }
 });
 
 (async function(){
@@ -537,14 +537,14 @@ document.getElementById('image-share-copy').addEventListener('click', async ()=>
   try{
     const { data, error } = await sb.from('matchdays').select('*').order('match_date', {ascending:false}).limit(20);
     if(error || !data || !data.length){
-      content.innerHTML = `<div class="empty-state">No matchdays recorded yet — check back after the next game.</div>`;
+      content.innerHTML = `<div class="empty-state">No matchdays recorded yet, check back after the next game.</div>`;
       return;
     }
     const pickerWrap = document.getElementById('md-picker-wrap');
     const picker = document.getElementById('md-picker');
     if(data.length > 1){
       pickerWrap.style.display = 'flex';
-      picker.innerHTML = data.map((m,i)=>`<option value="${i}">vs ${escapeHtml(m.opponent)} — ${m.match_date}</option>`).join('');
+      picker.innerHTML = data.map((m,i)=>`<option value="${i}">vs ${escapeHtml(m.opponent)}, ${m.match_date}</option>`).join('');
       picker.addEventListener('change', async ()=>{ const m = data[Number(picker.value)]; await loadRatingsForMatchday(m.id); renderMatchday(m); });
     }
     // A shared link (?matchday=<id>) opens that specific match directly,

@@ -1,5 +1,5 @@
 -- Run this once in the Supabase SQL editor. Adds a table to record each
--- matchday's lineup, formation, ratings, and opponent — safe to run even
+-- matchday's lineup, formation, ratings, and opponent. Safe to run even
 -- if you're not sure whether it's already been applied.
 
 create table if not exists matchdays (
@@ -16,7 +16,7 @@ create table if not exists matchdays (
   -- correctly even if a player is later deactivated or renamed.
   lineup jsonb not null default '[]'::jsonb,
   -- Guards against double-counting appearances if a matchday gets edited
-  -- after being saved — tracks exactly which players have already had
+  -- after being saved. Tracks exactly which players have already had
   -- an appearance credited for this specific matchday.
   appearances_counted_for jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
@@ -28,6 +28,6 @@ alter table matchdays enable row level security;
 drop policy if exists "public read matchdays" on matchdays;
 create policy "public read matchdays" on matchdays
   for select using (true);
--- No write policies for anon — all writes go through admin-action.
+-- No write policies for anon. All writes go through admin-action.
 
 create index if not exists matchdays_date_idx on matchdays(match_date desc);

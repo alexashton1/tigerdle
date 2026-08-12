@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Your Account — TIGERDLE</title>
+<title>Your Account: TIGERDLE</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -76,13 +76,13 @@
   <header style="padding:20px 0 4px; text-align:center;">
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title" style="font-size:clamp(28px,7vw,40px);">Your Account</h1>
-    <p class="tagline">Nothing else on the site needs this — play all four games freely, no login required. This is for anyone who wants their stats to follow them, and it's how you get into the Predictor.</p>
+    <p class="tagline">Nothing else on the site needs this. Play all four games freely, no login required. This is for anyone who wants their stats to follow them, and it's how you get into the Predictor.</p>
   </header>
 
   <div id="signed-out-view">
     <div class="account-card">
       <h2>Sign in</h2>
-      <p>No password to remember — enter your email and we'll send a one-click sign-in link.</p>
+      <p>No password to remember: enter your email and we'll send a one-click sign-in link.</p>
       <input type="email" id="acc-email" placeholder="you@email.com" autocomplete="email">
       <button class="primary-btn" id="acc-send-link" style="width:100%;">Send sign-in link</button>
       <div class="subscribe-msg" id="acc-msg" style="text-align:center; margin-top:10px;"></div>
@@ -116,18 +116,18 @@
       <span style="font-size:24px; flex-shrink:0;">🏅</span>
       <span style="flex:1; min-width:0;">
         <span style="display:block; font-family:var(--display); font-weight:400; font-size:16px; color:var(--paper);">Your achievements</span>
-        <span style="display:block; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:2px;">Every game counts — see what you've earned</span>
+        <span style="display:block; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:2px;">Every game counts, see what you've earned</span>
       </span>
       <span style="font-size:20px; color:var(--amber); flex-shrink:0;">→</span>
     </a>
 
     <a href="predictor.html" class="cta-btn">
       <span class="cta-title">🔮 Predict Hull's team and score →</span>
-      <span class="cta-sub">Formation, scoreline, goalscorers — locks 75 minutes before kick-off</span>
+      <span class="cta-sub">Formation, scoreline, goalscorers. Locks 75 minutes before kick-off</span>
     </a>
     <a href="leagues.html" class="cta-btn">
       <span class="cta-title">🏆 Create or join a league →</span>
-      <span class="cta-sub">Private with a friend code, or public — real points, real leaderboards</span>
+      <span class="cta-sub">Private with a friend code, or public. Real points, real leaderboards</span>
     </a>
   </div>
 </div>
@@ -141,7 +141,7 @@
       <span style="font-size:15px;">🏷️</span>
       <span style="font-family:var(--display); font-size:17px; color:var(--amber);">Display name</span>
     </div>
-    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 10px;">What league-mates see — never your email.</p>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 10px;">What league-mates see, never your email.</p>
     <input type="text" id="acc-display-name" placeholder="e.g. TigerFan42" maxlength="24">
     <div style="display:flex; gap:8px; margin-top:8px;">
       <button class="primary-btn" id="acc-save-name" style="flex:1;">Save name</button>
@@ -155,7 +155,7 @@
       <span style="font-size:15px;">🔐</span>
       <span style="font-family:var(--display); font-size:17px; color:var(--amber);">Password</span>
     </div>
-    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 10px;">The email link still works everywhere with no setup — this is purely an extra option on top of it.</p>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 10px;">The email link still works everywhere with no setup. This is purely an extra option on top of it.</p>
     <div id="acc-recovery-banner" style="display:none; background:rgba(245,163,0,0.1); border:1px solid var(--amber-deep); border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12.5px; color:var(--amber-soft);">
       🔑 Enter a new password below to finish resetting it.
     </div>
@@ -223,7 +223,7 @@ function renderStatsDashboard(stats){
   `;
 }
 
-/* Merge two stats objects, keeping whichever side has played more —
+/* Merge two stats objects, keeping whichever side has played more,
    used so signing in on a second device never overwrites a browser
    with more games played by an empty/newer one. */
 function mergeStats(a, b){
@@ -291,7 +291,7 @@ document.getElementById('acc-save-name').addEventListener('click', async ()=>{
     if(error) throw error;
     msg.textContent = 'Saved.';
   }catch(e){
-    // The moderation trigger raises a plain exception — its message is
+    // The moderation trigger raises a plain exception. Its message is
     // already written for a person to read, so just show it directly.
     msg.textContent = e.message;
   }
@@ -309,7 +309,7 @@ document.getElementById('acc-send-link').addEventListener('click', async ()=>{
   }catch(e){ msg.textContent = e.message; }
 });
 
-// Purely opt-in — hidden until someone specifically asks for it, never
+// Purely opt-in. Hidden until someone specifically asks for it, never
 // shown as the default way in.
 document.getElementById('acc-show-password-signin').addEventListener('click', ()=>{
   const el = document.getElementById('acc-password-signin');
@@ -353,7 +353,7 @@ document.getElementById('acc-set-password').addEventListener('click', async ()=>
   try{
     const { error } = await sb.auth.updateUser({ password: pw });
     if(error) throw error;
-    msg.textContent = 'Password set — you can now sign in with it from the sign-in screen any time.';
+    msg.textContent = 'Password set. You can now sign in with it from the sign-in screen any time.';
     document.getElementById('acc-new-password').value = '';
     document.getElementById('acc-confirm-password').value = '';
   }catch(e){ msg.textContent = e.message; }
@@ -378,7 +378,7 @@ sb.auth.getSession().then(({data})=>{
 
 /* Covers exactly this scenario: someone taps a magic-link email while
    using the installed app, the OS opens the link in a regular browser
-   tab instead (normal — email apps can't route into installed PWAs),
+   tab instead (normal, email apps can't route into installed PWAs),
    they sign in there, then switch back to the app. The app's session
    check already ran once on load, before any of that happened, so
    without this it would keep showing "signed out" until manually
