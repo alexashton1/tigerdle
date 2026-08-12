@@ -93,15 +93,48 @@
   .team-news-arrow{ font-size:20px; color:var(--amber); flex-shrink:0; transition:transform .15s ease; }
   .team-news-btn:hover .team-news-arrow{ transform:translateX(3px); }
 
-  .predictor-cta{
-    display:block; padding:18px 20px; margin-top:14px;
-    background:linear-gradient(135deg, var(--amber) 0%, var(--amber-deep) 100%);
-    color:var(--ink); border:none; border-radius:14px; text-align:center; text-decoration:none;
-    box-shadow:0 8px 24px rgba(245,163,0,0.28); transition:all .2s ease;
+  .play-cta-btn{
+    display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, var(--amber) 0%, var(--amber-deep) 100%);
+    color:var(--ink); font-family:var(--display); font-weight:400; font-size:17px; padding:13px 28px; border-radius:999px;
+    text-decoration:none; box-shadow:0 8px 22px rgba(245,163,0,0.3); transition:all .2s ease; margin-top:14px;
   }
-  .predictor-cta:hover{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(245,163,0,0.38); }
-  .predictor-cta-title{ display:block; font-family:var(--display); font-weight:400; font-size:18px; line-height:1.2; }
-  .predictor-cta-sub{ display:block; font-family:var(--body); font-size:12px; color:var(--ink); opacity:.75; margin-top:4px; }
+  .play-cta-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(245,163,0,0.4); }
+  .play-cta-sub{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:8px; }
+
+  /* Trimmed to sit at the same visual weight as the game-card grid and
+     the Team News teaser around it, not louder than either. */
+  .predictor-showcase{
+    background:var(--ink-2); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-top:14px; text-align:center;
+  }
+  .predictor-showcase h2{ font-family:var(--display); font-weight:400; font-size:19px; color:var(--amber); margin:6px 0 6px; }
+  .predictor-showcase p.lead{ font-size:12.5px; color:var(--paper-dim); max-width:400px; margin:0 auto 14px; line-height:1.55; }
+  .predict-now-btn{
+    display:inline-flex; align-items:center; gap:7px; background:var(--amber); color:var(--ink); border:none;
+    font-family:var(--display); font-weight:400; font-size:15px; padding:10px 22px; border-radius:999px; cursor:pointer; transition:all .2s ease;
+  }
+  .predict-now-btn:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(245,163,0,0.3); }
+
+  .signup-modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(13,15,20,0.82); z-index:100;
+    align-items:flex-end; justify-content:center; backdrop-filter:blur(2px);
+  }
+  .signup-modal-overlay.open{ display:flex; }
+  @media(min-width:640px){ .signup-modal-overlay{ align-items:center; } }
+  .signup-modal{
+    background:var(--ink-2); border:1px solid var(--line); border-radius:16px 16px 0 0; padding:26px;
+    width:100%; max-width:400px; text-align:center;
+  }
+  @media(min-width:640px){ .signup-modal{ border-radius:16px; } }
+  .signup-modal .icon{ font-size:36px; margin-bottom:6px; }
+  .signup-modal h3{ font-family:var(--display); font-weight:400; color:var(--amber); font-size:22px; margin:0 0 6px; }
+  .signup-modal p{ font-size:13px; color:var(--paper-dim); margin:0 0 18px; line-height:1.6; }
+  .signup-modal input{
+    width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-size:15px;
+    padding:13px 16px; border-radius:10px; outline:none; text-align:center; transition:border-color .15s ease;
+  }
+  .signup-modal input:focus{ border-color:var(--amber); }
+  .signup-modal-close{ position:absolute; top:10px; right:14px; font-family:var(--mono); font-size:16px; color:var(--paper-dim); cursor:pointer; }
+  .signup-modal-inner{ position:relative; }
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-7L95ER8N3S"></script>
@@ -125,6 +158,8 @@
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title">TIGERDLE</h1>
     <p class="tagline">The Hull City Wordle, plus three more daily Hull City guessing games. Match memories and the odd rant, for Tigers who bleed amber &amp; black.</p>
+    <a href="game.html" class="play-cta-btn">&#9654; Play Today's Puzzle</a>
+    <div class="play-cta-sub">New puzzle every day, completely free</div>
   </header>
 
   <div class="section-head"><h2>Today's puzzles</h2></div>
@@ -162,10 +197,13 @@
   </a>
 
   <div class="section-head"><h2>Predictor</h2></div>
-  <a href="account.html" class="predictor-cta">
-    <span class="predictor-cta-title">🔮 Predict Hull's team &amp; score before kick-off →</span>
-    <span class="predictor-cta-sub">Free account needed: no password, just your email. Takes 10 seconds.</span>
-  </a>
+  <div class="predictor-showcase">
+    <div style="font-size:26px;">🔮</div>
+    <h2>Predict Hull's Season</h2>
+    <p class="lead">Pick the starting XI, call the scoreline, and predict who scores, every single match. Points calculated automatically, with leagues to run alongside friends.</p>
+    <button class="predict-now-btn" id="predict-now-btn">🔮 Start Predicting</button>
+    <div style="font-family:var(--mono); font-size:10.5px; color:var(--paper-dim); margin-top:10px;">Just your email. No password. Takes 10 seconds.</div>
+  </div>
 
   <div class="section-head"><h2>What is TIGERDLE?</h2></div>
   <p style="font-size:13.5px; color:var(--paper-dim); line-height:1.7; margin-top:8px;">
@@ -204,12 +242,73 @@
     <a href="about.html" style="display:block; text-align:center; font-family:var(--mono); font-size:11px; color:var(--amber-soft); text-decoration:underline; text-underline-offset:3px; margin-top:14px;">More questions? See the full FAQ &amp; About page &rarr;</a>
   </div>
 </main>
+
+<div class="signup-modal-overlay" id="signup-modal-overlay">
+  <div class="signup-modal">
+    <div class="signup-modal-inner">
+      <span class="signup-modal-close" id="signup-modal-close">&times;</span>
+      <div id="signup-form-state">
+        <div class="icon">🔮</div>
+        <h3>Start Predicting</h3>
+        <p>Enter your email and we'll send a one-click sign-in link. No password, ever.</p>
+        <input type="email" id="signup-email" placeholder="you@email.com" style="margin-bottom:12px;">
+        <button class="primary-btn" id="signup-send-btn" style="width:100%;">Send sign-in link</button>
+        <div class="subscribe-msg" id="signup-msg" style="text-align:center; margin-top:10px;"></div>
+      </div>
+      <div id="signup-sent-state" style="display:none;">
+        <div class="icon">✅</div>
+        <h3>Check your email</h3>
+        <p>We've sent a one-click link. Tap it to sign in, no password needed, then come straight back to start predicting.</p>
+        <button class="ghost-btn" id="signup-close-2" style="width:100%;">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="site-footer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script src="assets/chrome.js"></script>
 <script>renderChrome('home');</script>
+<script>
+function openSignupModal(){
+  document.getElementById('signup-modal-overlay').classList.add('open');
+  document.getElementById('signup-form-state').style.display = 'block';
+  document.getElementById('signup-sent-state').style.display = 'none';
+  document.getElementById('signup-email').value = '';
+  document.getElementById('signup-msg').textContent = '';
+}
+function closeSignupModal(){
+  document.getElementById('signup-modal-overlay').classList.remove('open');
+}
+document.getElementById('predict-now-btn').addEventListener('click', openSignupModal);
+document.getElementById('signup-modal-close').addEventListener('click', closeSignupModal);
+document.getElementById('signup-close-2').addEventListener('click', closeSignupModal);
+document.getElementById('signup-modal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'signup-modal-overlay') closeSignupModal();
+});
+
+document.getElementById('signup-send-btn').addEventListener('click', async ()=>{
+  const email = document.getElementById('signup-email').value.trim();
+  const msg = document.getElementById('signup-msg');
+  const btn = document.getElementById('signup-send-btn');
+  if(!email){ msg.textContent = 'Enter your email first.'; return; }
+  btn.disabled = true;
+  msg.textContent = 'Sending…';
+  try{
+    // Same real sign-in mechanism used everywhere else on the site,
+    // just triggered here without leaving the homepage first.
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/predictor.html' } });
+    if(error) throw error;
+    document.getElementById('signup-form-state').style.display = 'none';
+    document.getElementById('signup-sent-state').style.display = 'block';
+  }catch(e){
+    msg.textContent = e.message;
+  }finally{
+    btn.disabled = false;
+  }
+});
+</script>
 <script>
 // Highlight any of today's puzzles already completed, using the same
 // localStorage state game.html writes when a puzzle finishes.
