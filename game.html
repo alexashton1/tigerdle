@@ -346,8 +346,32 @@ document.getElementById('share-modal-overlay').addEventListener('click', (e)=>{
   if(e.target.id === 'share-modal-overlay') e.currentTarget.classList.remove('open');
 });
 
+// Which account (if any) is currently signed in, set once at boot
+// before any game logic runs. Stats keys are scoped by this so two
+// accounts on the same device stop sharing each other's numbers,
+// same root cause as the completion-state fix above.
+let CURRENT_USER_ID = null;
+function statsKeyFor(modeKey){
+  return "tigerdle_stats_"+modeKey+(CURRENT_USER_ID ? "_"+CURRENT_USER_ID : "");
+}
+// One-time migration: an existing signed-in user's stats currently
+// live under the old, unscoped key. The first time this runs for
+// them post-fix, claim that data into their new scoped key rather
+// than let it look like their progress just reset to zero.
+function migrateStatsToScopedKey(modeKey){
+  if(!CURRENT_USER_ID) return;
+  const scopedKey = statsKeyFor(modeKey);
+  const oldKey = "tigerdle_stats_"+modeKey;
+  const alreadyMigrated = localStorage.getItem(scopedKey) !== null;
+  const oldData = localStorage.getItem(oldKey);
+  if(!alreadyMigrated && oldData !== null){
+    localStorage.setItem(scopedKey, oldData);
+  }
+}
+
 function updateStreak(modeKey, won){
-  const statsKey = "tigerdle_stats_"+modeKey;
+  migrateStatsToScopedKey(modeKey);
+  const statsKey = statsKeyFor(modeKey);
   const stats = loadState(statsKey, {played:0, wins:0, streak:0, maxStreak:0, lastResultDate:null});
   if(stats.lastResultDate === dateKey()) return stats;
   stats.played += 1;
@@ -367,12 +391,62 @@ async function syncStatsIfSignedIn(){
     const { data } = await sb.auth.getSession();
     const user = data?.session?.user;
     if(!user) return;
-    const allStats = {};
-    ['m1','m2','m3','m4'].forEach(m => { allStats[m] = getStats(m); });
-    await sb.from('user_stats').upsert({ user_id: user.id, stats: allStats, updated_at: new Date().toISOString() });
+    const localStats = {};
+    ['m1','m2','m3','m4'].forEach(m => { localStats[m] = getStats(m); });
+
+    // Merge with whatever's already on the server, taking the higher
+    // value per field. Without this, signing in on a second device
+    // with empty local storage would overwrite and erase real
+    // progress that only existed on the first device.
+    const { data: existing } = await sb.from('user_stats').select('stats').eq('user_id', user.id).maybeSingle();
+    const serverStats = existing?.stats || {};
+    const merged = {};
+    ['m1','m2','m3','m4'].forEach(m => {
+      const l = localStats[m] || {played:0, wins:0, streak:0, maxStreak:0};
+      const s = serverStats[m] || {played:0, wins:0, streak:0, maxStreak:0};
+      merged[m] = {
+        played: Math.max(l.played||0, s.played||0),
+        wins: Math.max(l.wins||0, s.wins||0),
+        streak: Math.max(l.streak||0, s.streak||0),
+        maxStreak: Math.max(l.maxStreak||0, s.maxStreak||0),
+      };
+    });
+    await sb.from('user_stats').upsert({ user_id: user.id, stats: merged, updated_at: new Date().toISOString() });
+    // Also pull the merged (possibly higher) values back into this
+    // device's own local storage, so its stats bar reflects the true
+    // total immediately, not just whatever this device tracked alone.
+    ['m1','m2','m3','m4'].forEach(m => { saveState(statsKeyFor(m), merged[m]); });
+    if(typeof renderStatsbar === 'function') renderStatsbar();
   }catch(e){ /* silent, this is a nice-to-have, never block gameplay on it */ }
 }
-function getStats(modeKey){ return loadState("tigerdle_stats_"+modeKey, {played:0, wins:0, streak:0, maxStreak:0}); }
+function getStats(modeKey){ migrateStatsToScopedKey(modeKey); return loadState(statsKeyFor(modeKey), {played:0, wins:0, streak:0, maxStreak:0}); }
+
+// Server-authoritative "has this account played today" state, fixing
+// completion leaking between different accounts sharing a device, and
+// keeping the same account correctly in sync across different devices.
+// Falls back to local storage entirely for anyone not signed in.
+async function loadTodaysCompletions(){
+  try{
+    const { data: sessionData } = await sb.auth.getSession();
+    const user = sessionData?.session?.user;
+    if(!user) return {};
+    const { data, error } = await sb.from('daily_completions').select('mode, state').eq('date_key', dateKey());
+    if(error || !data) return {};
+    const out = {};
+    data.forEach(row => { out[row.mode] = row.state; });
+    return out;
+  }catch(e){ return {}; }
+}
+async function saveCompletionToServer(mode, state){
+  try{
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user;
+    if(!user) return;
+    await sb.from('daily_completions').upsert({
+      user_id: user.id, mode, date_key: dateKey(), state, updated_at: new Date().toISOString()
+    });
+  }catch(e){ /* silent, never block gameplay on this */ }
+}
 function renderStatsbar(){
   const s1=getStats("m1"), s2=getStats("m2"), s3=getStats("m3"), s4=getStats("m4");
   const bestStreak = Math.max(s1.streak||0, s2.streak||0, s3.streak||0, s4.streak||0);
@@ -389,14 +463,39 @@ const POS_LABEL = {GK:"Goalkeeper", DF:"Defender", MF:"Midfielder", FW:"Forward"
 /* Load players: Supabase first, fall back to bundled data */
 async function loadPlayers(){
   try{
-    const { data, error } = await sb.from('players').select('*').eq('active', true);
+    const { data, error } = await sb.from('players').select('*').eq('active', true).order('id');
     if(error || !data || !data.length) return FALLBACK_PLAYERS;
     return data.map(r=>({
-      first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era,
+      id: r.id, first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era,
       age: computeAge(r.birth_date, r.age),
       appearances: r.appearances ?? null
     }));
   }catch(e){ return FALLBACK_PLAYERS; }
+}
+
+// The frozen, server-side rotation order for m1/m2/m3. Fixes the
+// games shifting whenever a player was added, since this only ever
+// grows by appending, never by reshuffling what's already there.
+async function loadRotationPools(){
+  try{
+    const { data, error } = await sb.from('rotation_pools').select('*');
+    if(error || !data) return {};
+    const pools = {};
+    data.forEach(row => { pools[row.mode] = row.player_ids; });
+    return pools;
+  }catch(e){ return {}; }
+}
+// Falls back to the old live-shuffle behaviour if a pool hasn't been
+// bootstrapped yet, or Supabase is unreachable. Same resilience the
+// site's always had, just no longer the everyday path.
+function pickFromFrozenPool(frozenIds, playersById, fallbackPool, fallbackSalt){
+  if(frozenIds && frozenIds.length){
+    const raw = daysSince(SCHEDULE_EPOCH, new Date()) % frozenIds.length;
+    const idx = (raw + frozenIds.length) % frozenIds.length;
+    const found = playersById[frozenIds[idx]];
+    if(found) return found;
+  }
+  return pickDaily(fallbackPool, fallbackSalt);
 }
 
 /* Load goal puzzles: Supabase only, no fallback images (copyright: only
@@ -460,7 +559,16 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
 }
 
 (async function boot(){
+  try{
+    const { data: sessionData } = await sb.auth.getSession();
+    CURRENT_USER_ID = sessionData?.session?.user?.id || null;
+  }catch(e){ CURRENT_USER_ID = null; }
+
   const PLAYERS = await loadPlayers();
+  const ROTATION_POOLS = await loadRotationPools();
+  const SERVER_TODAY = await loadTodaysCompletions();
+  const playersById = {};
+  PLAYERS.forEach(p => { if(p.id) playersById[p.id] = p; });
 
   const stripAcc = stripAccents;
   const SURNAME5 = PLAYERS.filter(p => stripAcc(p.last).replace(/[^A-Za-z]/g,"").length === 5);
@@ -478,11 +586,11 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
 
   /* ================= MODE 1: Surname5 ================= */
   (function(){
-    const targetPlayer = pickDaily(SURNAME5, "surname5");
+    const targetPlayer = pickFromFrozenPool(ROTATION_POOLS.m1, playersById, SURNAME5, "surname5");
     const target = stripAcc(targetPlayer.last).toUpperCase();
     const validSurnames = new Set(SURNAME5.map(p => stripAcc(p.last).toUpperCase().replace(/[^A-Z]/g,"")));
     const stateKey = "tigerdle_m1_"+dateKey();
-    let state = loadState(stateKey, {guesses:[], done:false, won:false});
+    let state = SERVER_TODAY.m1 || loadState(stateKey, {guesses:[], done:false, won:false});
     const gridEl = document.getElementById("grid5"), statusEl=document.getElementById("m1-status"), resultEl=document.getElementById("m1-result");
     const rows = [];
     for(let r=0;r<6;r++){ const row=document.createElement("div"); row.className="row5"; const tiles=[];
@@ -522,7 +630,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     function renderTyping(){ for(let c=0;c<5;c++){ rows[state.guesses.length][c].textContent=current[c]||"";
         rows[state.guesses.length][c].classList.toggle("filled", !!current[c]); } updateEnterState(); }
     function finish(won){
-      state.done=true; state.won=won; saveState(stateKey,state);
+      state.done=true; state.won=won; saveState(stateKey,state); saveCompletionToServer('m1', state);
       const stats=updateStreak("m1",won); renderStatsbar();
       statusEl.textContent = won ? "Tigers!" : `The surname was ${target}`;
       const grid = state.guesses.map(g=>{ const res=evaluateGuess(g,target);
@@ -574,8 +682,8 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
 
   /* ================= MODE 2: Guess the Tiger ================= */
   (function(){
-    const target = pickDaily(PLAYERS, "guesstiger"); const MAX=8;
-    const stateKey="tigerdle_m2_"+dateKey(); let state=loadState(stateKey,{guesses:[],done:false,won:false});
+    const target = pickFromFrozenPool(ROTATION_POOLS.m2, playersById, PLAYERS, "guesstiger"); const MAX=8;
+    const stateKey="tigerdle_m2_"+dateKey(); let state=SERVER_TODAY.m2 || loadState(stateKey,{guesses:[],done:false,won:false});
     const input=document.getElementById("m2-input"), btn=document.getElementById("m2-submit"), table=document.getElementById("m2-table"),
           attemptsEl=document.getElementById("m2-attempts"), resultEl=document.getElementById("m2-result"), starterEl=document.getElementById("m2-starter");
     function updateStarterHint(){ if(starterEl) starterEl.style.display = state.guesses.length ? "none" : "block"; }
@@ -595,7 +703,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
       table.prepend(row); }
     function updateAttempts(){ attemptsEl.textContent = state.done? "" : `${MAX-state.guesses.length} guesses left`; }
     function finish(won){
-      state.done=true; state.won=won; saveState(stateKey,state);
+      state.done=true; state.won=won; saveState(stateKey,state); saveCompletionToServer('m2', state);
       const stats=updateStreak("m2",won); renderStatsbar(); updateAttempts();
       resultEl.innerHTML=`<div class="resultcard"><div class="rtitle">${won?`Spotted in ${state.guesses.length}/${MAX}`:"Not today"}</div>
         <div class="rsub">${won?"":`It was ${target.first} ${target.last}, ${target.era}.`} Streak: ${stats.streak}</div>
@@ -621,8 +729,8 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
 
   /* ================= MODE 3: Mystery Tiger ================= */
   (function(){
-    const target = pickDaily(PLAYERS, "mysterytiger"); const MAX=6;
-    const stateKey="tigerdle_m3_"+dateKey(); let state=loadState(stateKey,{wrong:[],done:false,won:false});
+    const target = pickFromFrozenPool(ROTATION_POOLS.m3, playersById, PLAYERS, "mysterytiger"); const MAX=6;
+    const stateKey="tigerdle_m3_"+dateKey(); let state=SERVER_TODAY.m3 || loadState(stateKey,{wrong:[],done:false,won:false});
 
     // Every clue that CAN be built from this player's data: position, era,
     // nationality, and both surname facts are always available; appearances
@@ -677,7 +785,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     function renderHistory(){ histEl.innerHTML=""; state.wrong.forEach(name=>{ const chip=document.createElement("div");
         chip.className="m3-chip wrong"; chip.textContent=name; histEl.appendChild(chip); }); }
     function finish(won){
-      state.done=true; state.won=won; saveState(stateKey,state);
+      state.done=true; state.won=won; saveState(stateKey,state); saveCompletionToServer('m3', state);
       const stats=updateStreak("m3",won); renderStatsbar(); unlockUpTo(clues.length);
       resultEl.innerHTML=`<div class="resultcard"><div class="rtitle">${won?`Identified in ${state.wrong.length+1}/${MAX}`:"Not today"}</div>
         <div class="rsub">${target.first} ${target.last}, ${target.era}. Streak: ${stats.streak}</div>
@@ -713,7 +821,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     const target = todayRow || pickDaily(goals, "guessopponent");
     const MAX = 6;
     const stateKey = "tigerdle_m4_" + dateKey();
-    let state = loadState(stateKey, {wrongCount:0, done:false, won:false, order:null});
+    let state = SERVER_TODAY.m4 || loadState(stateKey, {wrongCount:0, done:false, won:false, order:null});
     if(!state.order){
       const idx = [...Array(9).keys()];
       const seed = hashStr(dateKey()+"::opporder");
@@ -739,7 +847,7 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
         chip.className="m3-chip wrong"; chip.textContent=name; histEl.appendChild(chip); }); }
     function updateAttempts(){ attemptsEl.textContent = state.done? "" : `${MAX - state.wrongCount} guesses left`; }
     function finish(won){
-      state.done=true; state.won=won; saveState(stateKey,state);
+      state.done=true; state.won=won; saveState(stateKey,state); saveCompletionToServer('m4', state);
       const stats=updateStreak("m4",won); renderStatsbar();
       tiles.forEach(t=>t.classList.add("revealed"));
       resultEl.innerHTML=`<div class="resultcard"><div class="rtitle">${won?`Spotted in ${state.wrongCount+1}/${MAX}`:"Not today"}</div>
