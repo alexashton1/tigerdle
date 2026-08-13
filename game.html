@@ -587,10 +587,15 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
   /* ================= MODE 1: Surname5 ================= */
   (function(){
     const targetPlayer = pickFromFrozenPool(ROTATION_POOLS.m1, playersById, SURNAME5, "surname5");
-    const target = stripAcc(targetPlayer.last).toUpperCase();
     const validSurnames = new Set(SURNAME5.map(p => stripAcc(p.last).toUpperCase().replace(/[^A-Z]/g,"")));
     const stateKey = "tigerdle_m1_"+dateKey();
     let state = SERVER_TODAY.m1 || loadState(stateKey, {guesses:[], done:false, won:false});
+    // Locks in the actual word this game's guesses get checked
+    // against, once determined, so a later rotation-pool change can
+    // never retroactively repaint an in-progress or finished puzzle
+    // with the wrong colours.
+    const target = state.target || stripAcc(targetPlayer.last).toUpperCase();
+    if(!state.target) state.target = target;
     const gridEl = document.getElementById("grid5"), statusEl=document.getElementById("m1-status"), resultEl=document.getElementById("m1-result");
     const rows = [];
     for(let r=0;r<6;r++){ const row=document.createElement("div"); row.className="row5"; const tiles=[];
@@ -682,8 +687,10 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
 
   /* ================= MODE 2: Guess the Tiger ================= */
   (function(){
-    const target = pickFromFrozenPool(ROTATION_POOLS.m2, playersById, PLAYERS, "guesstiger"); const MAX=8;
     const stateKey="tigerdle_m2_"+dateKey(); let state=SERVER_TODAY.m2 || loadState(stateKey,{guesses:[],done:false,won:false});
+    const target = (state.targetId && playersById[state.targetId]) || pickFromFrozenPool(ROTATION_POOLS.m2, playersById, PLAYERS, "guesstiger");
+    if(!state.targetId && target.id) state.targetId = target.id;
+    const MAX=8;
     const input=document.getElementById("m2-input"), btn=document.getElementById("m2-submit"), table=document.getElementById("m2-table"),
           attemptsEl=document.getElementById("m2-attempts"), resultEl=document.getElementById("m2-result"), starterEl=document.getElementById("m2-starter");
     function updateStarterHint(){ if(starterEl) starterEl.style.display = state.guesses.length ? "none" : "block"; }
@@ -729,8 +736,10 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
 
   /* ================= MODE 3: Mystery Tiger ================= */
   (function(){
-    const target = pickFromFrozenPool(ROTATION_POOLS.m3, playersById, PLAYERS, "mysterytiger"); const MAX=6;
     const stateKey="tigerdle_m3_"+dateKey(); let state=SERVER_TODAY.m3 || loadState(stateKey,{wrong:[],done:false,won:false});
+    const target = (state.targetId && playersById[state.targetId]) || pickFromFrozenPool(ROTATION_POOLS.m3, playersById, PLAYERS, "mysterytiger");
+    if(!state.targetId && target.id) state.targetId = target.id;
+    const MAX=6;
 
     // Every clue that CAN be built from this player's data: position, era,
     // nationality, and both surname facts are always available; appearances
@@ -817,11 +826,12 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
       document.getElementById("m4-submit").disabled = true;
       return;
     }
-    const todayRow = goals.find(g => g.puzzle_date === dateKey());
-    const target = todayRow || pickDaily(goals, "guessopponent");
-    const MAX = 6;
     const stateKey = "tigerdle_m4_" + dateKey();
     let state = SERVER_TODAY.m4 || loadState(stateKey, {wrongCount:0, done:false, won:false, order:null});
+    const todayRow = goals.find(g => g.puzzle_date === dateKey());
+    const target = (state.targetId && goals.find(g => g.id === state.targetId)) || todayRow || pickDaily(goals, "guessopponent");
+    if(!state.targetId && target.id) state.targetId = target.id;
+    const MAX = 6;
     if(!state.order){
       const idx = [...Array(9).keys()];
       const seed = hashStr(dateKey()+"::opporder");
