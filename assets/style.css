@@ -9,11 +9,16 @@
   navigation: auto;
 }
 
-/* Universal fallback: a quick fade-in on every page load, so the
-   click-to-page feels smoother everywhere, including browsers without
-   View Transitions support. */
-@keyframes pageFadeIn { from{ opacity:0; } to{ opacity:1; } }
-.wrap{ animation: pageFadeIn .28s ease; }
+/* This fade-in is a genuine fallback, not an addition. It only runs
+   in browsers that lack native view-transition support. Without this
+   @supports guard it was playing on every page load regardless,
+   stacking on top of the native cross-fade and the hero's own
+   staggered reveal, which is exactly what made navigation feel odd
+   rather than smooth in supporting browsers. */
+@supports not (view-transition-name: none) {
+  @keyframes pageFadeIn { from{ opacity:0; } to{ opacity:1; } }
+  .wrap{ animation: pageFadeIn .28s ease; }
+}
 
 :root{
   --ink:#14110d;
@@ -285,21 +290,31 @@ footer.sitefoot{ text-align:center; font-family:var(--mono); font-size:10.5px; c
 }
 .stripe-hero::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(18,14,11,0.15) 0%, rgba(18,14,11,0.75) 75%, var(--v2-ink) 100%); }
 .stripe-hero > *{ position:relative; z-index:2; }
-.tigerdle-v2 .kicker{ font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.28em; text-transform:uppercase; color:var(--v2-amber); opacity:0; animation:v2RiseIn .55s .08s ease forwards; }
+.tigerdle-v2 .kicker{ font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.28em; text-transform:uppercase; color:var(--v2-amber); }
 .tigerdle-v2 h1.title{
   font-family:'Anton', sans-serif; font-weight:400; font-size:clamp(46px,13vw,72px); line-height:.88; margin:10px 0 0;
   letter-spacing:-.01em; color:var(--v2-cream); text-shadow:0 2px 0 var(--v2-amber-deep), 0 4px 16px rgba(0,0,0,.5);
-  opacity:0; animation:v2RiseIn .6s .18s cubic-bezier(.16,1,.3,1) forwards;
 }
 .tigerdle-v2 .tagline{
   font-size:14px; color:var(--v2-dim); max-width:360px; margin:12px auto 0; line-height:1.55; font-weight:500;
-  opacity:0; animation:v2RiseIn .55s .3s ease forwards;
 }
 .tigerdle-v2 .leagues-link{
   display:inline-block; margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--v2-amber);
-  text-decoration:none; opacity:0; animation:v2RiseIn .55s .4s ease forwards;
+  text-decoration:none;
 }
 .tigerdle-v2 .leagues-link:hover{ text-decoration:underline; }
+
+/* Staggered entrance is a fallback for browsers without native page
+   transitions, same reasoning as the .wrap fade-in above. In
+   supporting browsers this was replaying on every navigation right on
+   top of the native cross-fade, which read as a stutter rather than
+   a reveal. */
+@supports not (view-transition-name: none) {
+  .tigerdle-v2 .kicker{ opacity:0; animation:v2RiseIn .55s .08s ease forwards; }
+  .tigerdle-v2 h1.title{ opacity:0; animation:v2RiseIn .6s .18s cubic-bezier(.16,1,.3,1) forwards; }
+  .tigerdle-v2 .tagline{ opacity:0; animation:v2RiseIn .55s .3s ease forwards; }
+  .tigerdle-v2 .leagues-link{ opacity:0; animation:v2RiseIn .55s .4s ease forwards; }
+}
 @keyframes v2RiseIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:translateY(0); } }
 
 .tigerdle-v2 .section-head{ display:flex; align-items:center; gap:11px; margin:28px 0 16px; justify-content:flex-start; }
