@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Post: TIGERDLE</title>
+<title>Post: Tigerdle</title>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="TIGERDLE">
-<meta property="og:title" content="TIGERDLE Blog">
+<meta property="og:site_name" content="Tigerdle">
+<meta property="og:title" content="Tigerdle Blog">
 <meta property="og:description" content="Matchday notes, transfer takes, and everything else amber & black.">
 <meta property="og:image" content="https://tigerdle.com/social-card.png">
 <meta property="og:url" content="https://tigerdle.com/post.html">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="TIGERDLE Blog">
+<meta name="twitter:title" content="Tigerdle Blog">
 <meta name="twitter:description" content="Matchday notes, transfer takes, and everything else amber & black.">
 <meta name="twitter:image" content="https://tigerdle.com/social-card.png">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -55,7 +55,7 @@ renderChrome('blog');
   try{
     const { data, error } = await sb.from('posts').select('*').eq('slug', slug).eq('published', true).single();
     if(error || !data){ root.innerHTML = `<div class="empty-state">Post not found.</div>`; return; }
-    document.title = data.title + ': TIGERDLE';
+    document.title = data.title + ': Tigerdle';
 
     // Article schema, built from the same post data already fetched
     // above, so search engines and AI assistants can properly attribute
@@ -68,8 +68,8 @@ renderChrome('blog');
       "headline": data.title,
       "description": data.excerpt || '',
       "datePublished": data.published_at,
-      "author": { "@type": "Organization", "name": "TIGERDLE" },
-      "publisher": { "@type": "Organization", "name": "TIGERDLE", "logo": { "@type": "ImageObject", "url": "https://tigerdle.com/apple-touch-icon.png" } },
+      "author": { "@type": "Organization", "name": "Tigerdle" },
+      "publisher": { "@type": "Organization", "name": "Tigerdle", "logo": { "@type": "ImageObject", "url": "https://tigerdle.com/apple-touch-icon.png" } },
       "mainEntityOfPage": { "@type": "WebPage", "@id": window.location.href },
     });
     document.head.appendChild(schemaEl);

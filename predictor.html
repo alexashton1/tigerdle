@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Predictor: TIGERDLE</title>
+<title>Predictor: Tigerdle</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -595,7 +595,7 @@ function buildResultShareText(score, fixture){
   const uplift = wildcardUplift(score);
   const wc = score.wildcard_applied ? WILDCARD_NAMES[score.wildcard_applied] : null;
 
-  let lines = [`I scored ${score.total_points}pts predicting Hull vs ${opponent} on TIGERDLE 🏆`];
+  let lines = [`I scored ${score.total_points}pts predicting Hull vs ${opponent} on Tigerdle 🏆`];
   if(highlight) lines.push(`⭐ ${highlight.replace(/<\/?b>/g, '')}`);
   if(wc && uplift) lines.push(`${wc.icon} ${wc.name} was active too, worth an extra +${uplift}pts`);
   lines.push(`Beat that: ${link}`);
