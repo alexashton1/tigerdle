@@ -103,7 +103,7 @@ function renderChrome(current){
         </div>
         ${socialLinks.length ? `<div class="social-row">${socialLinks.join('')}</div>` : ''}
         <footer class="sitefoot">
-          TIGERDLE · built for the amber &amp; black · not affiliated with Hull City AFC
+          Tigerdle · built for the amber &amp; black · not affiliated with Hull City AFC
           <br>
           <a href="about.html" class="footer-link">About &amp; FAQ</a> ·
           <a href="privacy.html" class="footer-link">Privacy</a> ·
