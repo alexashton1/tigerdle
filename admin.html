@@ -875,11 +875,30 @@ async function refreshSchedule(){
   const el = document.getElementById('schedule-view');
   try{
     let players = FALLBACK_PLAYERS;
-    const { data } = await sb.from('players').select('*').eq('active', true);
-    if(data && data.length) players = data.map(r=>({first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era, age:r.age}));
+    const { data } = await sb.from('players').select('*').eq('active', true).order('id');
+    if(data && data.length) players = data.map(r=>({id:r.id, first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era, age:r.age}));
     const surname5 = players.filter(p => stripAccents(p.last).replace(/[^A-Za-z]/g,"").length === 5);
+    const playersById = {};
+    players.forEach(p => { if(p.id) playersById[p.id] = p; });
 
-    const { data: goals } = await sb.from('goals').select('*');
+    // Same frozen order the real game actually uses, not the old live
+    // shuffle. Those two drifting apart is exactly why this schedule
+    // preview could show a different answer than what players see.
+    const { data: poolRows } = await sb.from('rotation_pools').select('mode, player_ids');
+    const rotationPools = {};
+    (poolRows || []).forEach(row => { rotationPools[row.mode] = row.player_ids; });
+    function pickFromPool(mode, fallbackPool, salt, date){
+      const ids = rotationPools[mode];
+      if(ids && ids.length){
+        const raw = daysSince(SCHEDULE_EPOCH, date) % ids.length;
+        const idx = (raw + ids.length) % ids.length;
+        const found = playersById[ids[idx]];
+        if(found) return found;
+      }
+      return pickForDate(fallbackPool, salt, date);
+    }
+
+    const { data: goals } = await sb.from('goals').select('*').order('id');
     const goalPool = goals || [];
 
     const rows = [];
@@ -888,9 +907,9 @@ async function refreshSchedule(){
       d.setDate(d.getDate() + offset);
       const label = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
       const isToday = offset === 0;
-      const s5 = surname5.length ? stripAccents(pickForDate(surname5, "surname5", d).last).toUpperCase() : "N/A";
-      const gt = players.length ? pickForDate(players, "guesstiger", d) : null;
-      const mt = players.length ? pickForDate(players, "mysterytiger", d) : null;
+      const s5 = surname5.length ? stripAccents(pickFromPool("m1", surname5, "surname5", d).last).toUpperCase() : "N/A";
+      const gt = players.length ? pickFromPool("m2", players, "guesstiger", d) : null;
+      const mt = players.length ? pickFromPool("m3", players, "mysterytiger", d) : null;
       let opp = "N/A";
       if(goalPool.length){
         const dk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");

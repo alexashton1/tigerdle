@@ -502,7 +502,7 @@ function pickFromFrozenPool(frozenIds, playersById, fallbackPool, fallbackSalt){
    Alex's own uploaded matchday photos should ever appear here) */
 async function loadGoals(){
   try{
-    const { data, error } = await sb.from('goals').select('*');
+    const { data, error } = await sb.from('goals').select('*').order('id');
     if(error || !data) return [];
     return data;
   }catch(e){ return []; }
