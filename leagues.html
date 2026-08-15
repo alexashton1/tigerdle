@@ -49,6 +49,35 @@
   }
   .back-link{ display:inline-block; font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-decoration:none; margin-bottom:14px; }
   .back-link:hover{ color:var(--amber-soft); }
+
+  .lb-toggle{ display:flex; gap:6px; margin-bottom:12px; }
+  .lb-toggle button{
+    flex:1; font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    padding:9px; border-radius:8px; border:1px solid var(--line); background:var(--ink); color:var(--paper-dim); cursor:pointer; transition:all .15s ease;
+  }
+  .lb-toggle button.active{ background:var(--amber); color:var(--ink); border-color:var(--amber); font-weight:700; }
+  .lb-table{ width:100%; border-collapse:collapse; }
+  .lb-table thead th{
+    text-align:left; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--paper-dim); padding:0 4px 8px; border-bottom:1px solid var(--line);
+  }
+  .lb-table thead th:first-child, .lb-table thead th:last-child{ text-align:center; }
+  .lb-table tbody tr{ cursor:pointer; transition:background .15s ease; }
+  .lb-table tbody tr:hover{ background:var(--ink-2); }
+  .lb-table tbody tr.lb-top{ background:rgba(245,163,0,0.08); }
+  .lb-table td{ padding:11px 4px; border-bottom:1px solid var(--line); font-size:13.5px; }
+  .lb-rank{ text-align:center; font-family:var(--mono); color:var(--paper-dim); width:28px; }
+  .lb-points{ text-align:right; font-family:var(--display); font-size:18px; color:var(--amber); white-space:nowrap; }
+  .lb-sub{ display:block; font-family:var(--mono); font-size:10px; color:var(--paper-dim); margin-top:1px; }
+
+  .history-modal-overlay{ display:none; position:fixed; inset:0; background:rgba(10,9,7,0.75); z-index:80; align-items:center; justify-content:center; padding:20px; }
+  .history-modal-overlay.open{ display:flex; }
+  .history-modal{ background:var(--ink-2); border:1px solid var(--line); border-radius:14px; padding:22px; max-width:380px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+  .history-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+  .history-row:last-child{ border-bottom:none; }
+  .history-fixture{ font-size:13px; }
+  .history-fixture .hf-date{ display:block; font-family:var(--mono); font-size:10px; color:var(--paper-dim); margin-top:2px; }
+  .history-pts{ font-family:var(--display); font-size:17px; color:var(--amber); }
 </style>
 </head>
 <body>
@@ -115,6 +144,14 @@
       <a href="#" class="back-link" id="back-to-leagues">← All leagues</a>
       <div id="league-detail-content"></div>
     </div>
+  </div>
+</div>
+<div class="history-modal-overlay" id="history-modal-overlay">
+  <div class="history-modal">
+    <h3 id="history-modal-name" style="margin:0 0 4px;"></h3>
+    <p style="font-size:12px; color:var(--paper-dim); margin:0 0 16px;">Points by fixture, most recent first.</p>
+    <div id="history-modal-body"></div>
+    <button class="ghost-btn" id="history-modal-close" style="width:100%; margin-top:16px;">Close</button>
   </div>
 </div>
 <div id="site-footer"></div>
@@ -347,16 +384,55 @@ async function openLeagueDetail(leagueId){
 
     const badgeFor = (uid) => badgeIcon[uid] ? `<span class="mock-badge-icon" style="width:18px; height:18px; border-radius:50%; background:var(--ink); border:1.5px solid var(--amber); color:var(--amber-soft); font-size:9px; display:inline-flex; align-items:center; justify-content:center; margin-right:5px;">${badgeIcon[uid]}</span>` : '';
 
+    function buildTableRows(sortBy){
+      const sorted = leaderboard.slice().sort((a,b)=>{
+        if(sortBy === 'ppg'){
+          const ppgA = a.fixtures_scored ? a.total_points/a.fixtures_scored : 0;
+          const ppgB = b.fixtures_scored ? b.total_points/b.fixtures_scored : 0;
+          return ppgB - ppgA;
+        }
+        return b.total_points - a.total_points;
+      });
+      return sorted.map((row, i)=>{
+        const ppg = row.fixtures_scored ? (row.total_points/row.fixtures_scored).toFixed(1) : '0.0';
+        const mainStat = sortBy === 'ppg' ? ppg : row.total_points;
+        const subStat = sortBy === 'ppg' ? `${row.total_points} total` : `${ppg} per game`;
+        return `<tr class="${i===0?'lb-top':''}" data-user-id="${row.user_id}" data-user-name="${escapeHtml(nameFor(row.user_id))}">
+          <td class="lb-rank">${i===0?'🏆':i+1}</td>
+          <td>${badgeFor(row.user_id)}${escapeHtml(nameFor(row.user_id))}${row.user_id===currentUser.id?' <span class="league-meta">(you)</span>':''}
+            <span class="lb-sub">${row.fixtures_scored} fixture${row.fixtures_scored===1?'':'s'} scored</span></td>
+          <td class="lb-points">${mainStat}<span class="lb-sub" style="text-align:right;">${subStat}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
     leaderboardHtml = `
-      <div class="admin-list">
-        ${leaderboard.map((row, i)=>`
-          <div class="admin-row" style="${i===0 ? 'border:1px solid var(--amber); border-radius:8px; padding:10px 12px;' : ''}">
-            <div>${i===0?'🏆 ':''}${badgeFor(row.user_id)}${escapeHtml(nameFor(row.user_id))}${row.user_id===currentUser.id?' <span class="league-meta">(you)</span>':''}
-              <span class="league-meta" style="display:block;">${row.fixtures_scored} fixture${row.fixtures_scored===1?'':'s'} scored</span>
-            </div>
-            <div style="font-family:var(--display); font-size:20px; color:var(--amber);">${row.total_points}</div>
-          </div>`).join('')}
-      </div>`;
+      <div class="lb-toggle">
+        <button class="active" data-sort="total">Total points</button>
+        <button data-sort="ppg">Points per game</button>
+      </div>
+      <table class="lb-table">
+        <thead><tr><th>#</th><th>Player</th><th style="text-align:right;">Pts</th></tr></thead>
+        <tbody id="lb-tbody">${buildTableRows('total')}</tbody>
+      </table>`;
+
+    // Deferred to after this HTML is actually in the DOM, further down.
+    window.__lbWireUp = () => {
+      const tbody = document.getElementById('lb-tbody');
+      const toggleBtns = document.querySelectorAll('.lb-toggle button');
+      toggleBtns.forEach(btn => btn.addEventListener('click', () => {
+        toggleBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tbody.innerHTML = buildTableRows(btn.dataset.sort);
+        wireRowClicks();
+      }));
+      function wireRowClicks(){
+        document.querySelectorAll('#lb-tbody tr').forEach(tr => tr.addEventListener('click', () => {
+          openUserHistoryModal(tr.dataset.userId, tr.dataset.userName);
+        }));
+      }
+      wireRowClicks();
+    };
   }
 
   document.getElementById('league-detail-content').innerHTML = `
@@ -369,10 +445,56 @@ async function openLeagueDetail(leagueId){
       ${leaderboardHtml}
     </div>
   `;
+  if(window.__lbWireUp){ window.__lbWireUp(); window.__lbWireUp = null; }
 }
 document.getElementById('back-to-leagues').addEventListener('click', (e)=>{
   e.preventDefault();
   document.getElementById('league-detail-view').style.display = 'none';
+});
+
+async function openUserHistoryModal(userId, displayName){
+  const overlay = document.getElementById('history-modal-overlay');
+  const nameEl = document.getElementById('history-modal-name');
+  const bodyEl = document.getElementById('history-modal-body');
+  nameEl.textContent = displayName;
+  bodyEl.innerHTML = `<p style="text-align:center; color:var(--paper-dim); font-size:13px;">Loading…</p>`;
+  overlay.classList.add('open');
+
+  try{
+    const { data: scores } = await sb.from('prediction_scores').select('*').eq('user_id', userId);
+    if(!scores || !scores.length){
+      bodyEl.innerHTML = `<div class="empty-state">No scored fixtures yet.</div>`;
+      return;
+    }
+    const fixtureIds = scores.map(s => s.fixture_id);
+    const { data: fixtures } = await sb.from('fixtures').select('*').in('id', fixtureIds);
+    const fixtureById = {};
+    (fixtures||[]).forEach(f => { fixtureById[f.id] = f; });
+
+    const rows = scores.slice().sort((a,b)=>{
+      const dateA = fixtureById[a.fixture_id]?.match_date || '';
+      const dateB = fixtureById[b.fixture_id]?.match_date || '';
+      return dateB.localeCompare(dateA);
+    });
+
+    bodyEl.innerHTML = rows.map(s => {
+      const fx = fixtureById[s.fixture_id];
+      const opponent = fx ? `vs ${escapeHtml(fx.opponent)}` : 'Unknown fixture';
+      const date = fx ? new Date(fx.match_date).toLocaleDateString(undefined, {day:'numeric', month:'short'}) : '';
+      return `<div class="history-row">
+        <div class="history-fixture">${opponent}<span class="hf-date">${date}</span></div>
+        <div class="history-pts">${s.total_points}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    bodyEl.innerHTML = `<div class="empty-state">Couldn't load this player's history.</div>`;
+  }
+}
+document.getElementById('history-modal-close').addEventListener('click', ()=>{
+  document.getElementById('history-modal-overlay').classList.remove('open');
+});
+document.getElementById('history-modal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'history-modal-overlay') e.currentTarget.classList.remove('open');
 });
 </script>
 </body>

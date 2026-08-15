@@ -973,11 +973,17 @@ async function openPredictView(fixture){
         <div id="pr-first-scorer-chips"></div>
       </div>
       ${!locked ? `<button class="primary-btn" id="pr-save" style="width:100%;" disabled>Save prediction</button><p id="pr-save-hint" style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-top:8px;"></p>` : ''}
-      <div style="display:flex; gap:8px; margin-top:8px;">
+      <div id="pr-old-share-row" style="display:flex; gap:8px; margin-top:8px;">
         <button class="ghost-btn" id="pr-share" style="flex:1;">Share my prediction</button>
         <button class="ghost-btn" id="pr-share-image" style="flex:1;">📸 Share as image</button>
       </div>
       <div class="subscribe-msg" id="pr-msg"></div>
+      <div id="pr-save-celebration" style="display:none; margin-top:14px; padding:20px 18px; background:linear-gradient(160deg, rgba(245,163,0,0.14), rgba(245,163,0,0.03)); border:1px solid var(--amber-deep); border-radius:14px; text-align:center;">
+        <div style="font-size:30px; margin-bottom:6px;">🎉</div>
+        <div style="font-family:var(--display); font-weight:400; font-size:19px; color:var(--amber);">Prediction saved!</div>
+        <p style="font-size:13px; color:var(--paper-dim); margin:6px 0 16px; line-height:1.5;">You can still change your mind, edit your team, score or scorer anytime before predictions lock, 75 minutes before kickoff. Fancy showing your mates what you're backing for now?</p>
+        <button class="primary-btn" id="pr-celebration-share" style="width:100%;">📤 Share your team</button>
+      </div>
     </div>
 
     <div class="formcard" id="pr-aggregate">
@@ -1028,6 +1034,8 @@ async function openPredictView(fixture){
   }
   document.getElementById('pr-share').addEventListener('click', ()=> shareMyPrediction(fixture));
   document.getElementById('pr-share-image').addEventListener('click', ()=> shareTeamImage(fixture));
+  const celebrationShareBtn = document.getElementById('pr-celebration-share');
+  if(celebrationShareBtn) celebrationShareBtn.addEventListener('click', ()=> shareMyPrediction(fixture));
 
   const reuseBtn = document.getElementById('pr-reuse-team');
   if(reuseBtn){
@@ -1298,7 +1306,14 @@ async function savePrediction(fixture){
       is_auto_carried: false, updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,fixture_id' });
     if(error) throw error;
-    msg.textContent = 'Saved.';
+    msg.textContent = '';
+    const celebration = document.getElementById('pr-save-celebration');
+    const oldShareRow = document.getElementById('pr-old-share-row');
+    if(oldShareRow) oldShareRow.style.display = 'none';
+    if(celebration){
+      celebration.style.display = 'block';
+      celebration.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     loadAggregate(fixture.id);
   }catch(e){ msg.textContent = e.message; }
 }
