@@ -564,7 +564,7 @@ function renderPositionPitch(breakdown, prediction){
   let html = '';
   Object.keys(byLine).forEach(pos=>{
     const players = byLine[pos];
-    const xs = spreadX(players.length);
+    const xs = spreadX(players.length, pos);
     players.forEach((p, i)=>{
       const hit = hitNames.has(p.first_name + ' ' + p.last_name);
       html += `<div class="pitch-player" style="left:${xs[i]}%; top:${PITCH_LINE_Y[pos]}%;">
@@ -1102,11 +1102,22 @@ function onFormationChange(){
 
 function isPlayerSelected(id){ return Object.values(positionOrder).some(arr => arr.includes(id)); }
 
-function spreadX(count){
+// Spacing between adjacent players, and the maximum total width a row
+// can span, both position-specific. A row is centered and only
+// spreads as wide as its actual player count calls for, rather than
+// always stretching to a fixed margin regardless of count, so two
+// central midfielders in something like a 5-2-3 sit close together
+// instead of stretched out as wide as a back five.
+const PITCH_SPACING = { GK:0, DF:22, MF:20, FW:17 };
+const PITCH_MAX_SPAN = { GK:0, DF:74, MF:56, FW:40 };
+function spreadX(count, pos){
   if(count <= 1) return [50];
-  const margin = 14;
-  const step = (100 - margin*2) / (count - 1);
-  return Array.from({length:count}, (_, i) => margin + step*i);
+  const spacing = PITCH_SPACING[pos] ?? 20;
+  const maxSpan = PITCH_MAX_SPAN[pos] ?? 56;
+  const totalSpan = Math.min((count - 1) * spacing, maxSpan);
+  const step = totalSpan / (count - 1);
+  const start = 50 - totalSpan / 2;
+  return Array.from({length:count}, (_, i) => start + step*i);
 }
 
 function renderPredictPitch(){
@@ -1115,7 +1126,7 @@ function renderPredictPitch(){
   let html = '';
   Object.keys(required).forEach(pos=>{
     const need = required[pos];
-    const xs = spreadX(need);
+    const xs = spreadX(need, pos);
     const order = positionOrder[pos];
     for(let i = 0; i < need; i++){
       const playerId = order[i];
@@ -1353,7 +1364,7 @@ async function loadAggregate(fixtureId){
 
   const playersHtml = Object.keys(required).map(pos=>{
     const need = required[pos];
-    const xs = spreadX(need);
+    const xs = spreadX(need, pos);
     // Which players make the cut is still purely by votes, but WHERE
     // they sit along the line now follows the admin-set pitch order
     // (wide vs central), not vote ranking, so a popular winger actually
