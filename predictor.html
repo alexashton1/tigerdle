@@ -119,6 +119,11 @@
     color:var(--amber); font-size:10px; display:none; align-items:center; justify-content:center; font-weight:700;
   }
   .player-card.selected .player-card-check{ display:flex; }
+  .player-card-natural-pos{
+    position:absolute; top:6px; left:6px; font-family:var(--mono); font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    padding:2px 5px; border-radius:5px; background:var(--ink); border:1px solid var(--line); color:var(--paper-dim);
+  }
+  .player-card.selected .player-card-natural-pos{ background:rgba(0,0,0,0.2); border-color:transparent; color:var(--ink); opacity:.75; }
   .player-card-name{ font-family:var(--body); font-size:12.5px; color:var(--paper); font-weight:600; }
   .player-card-points{ font-family:var(--mono); font-size:10px; color:var(--amber-soft); margin-top:3px; }
   .player-card.selected .player-card-points{ color:var(--ink); opacity:.8; }
@@ -1011,7 +1016,7 @@ async function openPredictView(fixture){
         </svg>
         <div class="pitch-players" id="pr-pitch-players"></div>
       </div>
-      <p class="pitch-swap-hint" id="pr-swap-hint" style="display:none;">🔄 <b>Tap any two players</b> to swap their spots on the pitch. Just for how it looks when shared, doesn't change scoring.</p>
+      <p class="pitch-swap-hint" id="pr-swap-hint" style="display:none;">🔄 <b>Tap any two players</b> to swap where they're playing, even across different lines, so a pick can genuinely play out of position. Goalscorer points always follow their real position wherever you put them, only the exact-position bonus depends on where they're actually standing.</p>
 
       <div id="pr-player-sections"></div>
 
@@ -1209,7 +1214,19 @@ function renderPredictPitch(){
         const arr = positionOrder[pos];
         [arr[armedSwap.index], arr[index]] = [arr[index], arr[armedSwap.index]];
         armedSwap = null; renderPredictPitch();
-      } else { armedSwap = { pos, index }; renderPredictPitch(); }
+      } else {
+        // Cross-group swap: the two players genuinely trade slots,
+        // even across different position groups, so someone picked
+        // as a defender can actually end up playing as a midfielder
+        // on the pitch, and vice versa. This is how a player actually
+        // moves to a different part of the pitch.
+        const arrA = positionOrder[armedSwap.pos];
+        const arrB = positionOrder[pos];
+        const temp = arrA[armedSwap.index];
+        arrA[armedSwap.index] = arrB[index];
+        arrB[index] = temp;
+        armedSwap = null; renderPredictPitch();
+      }
     });
   });
 }
@@ -1294,16 +1311,24 @@ function renderPicker(locked){
       return names.length ? `<div class="pos-section-title">${POS_LABELS[pos]}</div><p style="font-size:13px; color:var(--paper-dim);">${names.join(', ')}</p>` : '';
     }).join('');
   } else {
+    // Every section only ever shows players in their real position, so
+    // it stays quick to scan. Picking someone doesn't require a slot
+    // to be free in their own section though, since real predictions
+    // often want someone playing out of position (a defender pushed
+    // into midfield, say). They land wherever there's room to start,
+    // and the pitch below is where you drag them into the exact spot
+    // you actually want, not this list.
+    const totalHave = Object.values(positionOrder).reduce((sum, arr) => sum + arr.length, 0);
+    const totalNeed = Object.values(required).reduce((a,b)=>a+b, 0);
     container.innerHTML = Object.keys(POS_LABELS).map(pos=>{
-      const players = allPlayersCache.filter(p=>p.position===pos).sort((a,b)=> (b.season_points||0) - (a.season_points||0));
-      const posFull = counts[pos] >= required[pos];
+      const players = allPlayersCache.filter(p => p.position === pos).sort((a,b)=> (b.season_points||0) - (a.season_points||0));
       return `
-      <div class="pos-section-title">${POS_LABELS[pos]} (${counts[pos]}/${required[pos]})</div>
+      <div class="pos-section-title">${POS_LABELS[pos]}</div>
       <div class="player-grid">
         ${players.map(p=>{
           const selected = isPlayerSelected(p.id);
-          const disabled = !selected && posFull;
-          return `<div class="player-card ${selected?'selected':''} ${disabled?'disabled':''}" data-player-id="${p.id}" data-player-pos="${pos}">
+          const disabled = !selected && totalHave >= totalNeed;
+          return `<div class="player-card ${selected?'selected':''} ${disabled?'disabled':''}" data-player-id="${p.id}" data-player-natural-pos="${pos}">
             <div class="player-card-check">✓</div>
             <div class="player-card-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</div>
             <div class="player-card-points">${p.season_points||0} pts</div>
@@ -1314,12 +1339,25 @@ function renderPicker(locked){
 
     container.querySelectorAll('.player-card').forEach(card=>{
       card.addEventListener('click', ()=>{
-        const id = card.dataset.playerId, pos = card.dataset.playerPos;
-        const arr = positionOrder[pos];
-        const idx = arr.indexOf(id);
-        if(idx !== -1){ arr.splice(idx, 1); }
-        else{
+        const id = card.dataset.playerId, naturalPos = card.dataset.playerNaturalPos;
+        const currentPos = Object.keys(positionOrder).find(k => positionOrder[k].includes(id));
+        if(currentPos){
+          // Already in the team: tapping it in the list removes it
+          // entirely, same as before.
+          const arr = positionOrder[currentPos];
+          arr.splice(arr.indexOf(id), 1);
+        } else {
           if(card.classList.contains('disabled')) return;
+          // Prefer their real position's slot if one's free, so a
+          // normal pick just works with no extra steps. If that
+          // group's already full, drop them into whichever group
+          // still has room, the pitch is where the actual spot gets
+          // decided, not this list.
+          let targetPos = positionOrder[naturalPos] && positionOrder[naturalPos].length < required[naturalPos]
+            ? naturalPos
+            : Object.keys(required).find(k => positionOrder[k].length < required[k]);
+          if(!targetPos) return;
+          const arr = positionOrder[targetPos];
           const newOrder = allPlayersCache.find(p=>p.id===id)?.pitch_order ?? 99;
           const insertAt = arr.findIndex(existingId => (allPlayersCache.find(p=>p.id===existingId)?.pitch_order ?? 99) > newOrder);
           if(insertAt === -1) arr.push(id); else arr.splice(insertAt, 0, id);
