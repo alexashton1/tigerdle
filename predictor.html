@@ -781,6 +781,16 @@ async function loadFixtureList(){
   const { data: myPredictions } = await sb.from('predictions').select('*').eq('user_id', currentUser.id);
   const predictionByFixture = new Map((myPredictions||[]).map(p=>[p.fixture_id, p]));
 
+  // Lets a link like predictor.html?fixture=<id> jump straight into that
+  // fixture's picker (and its community predictions section) without
+  // needing to find and tap it in the list first, useful for admin
+  // sharing tools that just need a direct link to a specific fixture.
+  const requestedFixtureId = new URLSearchParams(location.search).get('fixture');
+  if(requestedFixtureId){
+    const requested = fixtures.find(f => f.id === requestedFixtureId);
+    if(requested) openPredictView(requested);
+  }
+
   // A wildcard is "used" for the season the moment it's attached to any
   // of this user's predictions, including ones not yet locked, so two
   // fixtures can't both quietly claim the same wildcard at once.

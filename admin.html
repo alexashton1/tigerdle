@@ -1077,6 +1077,7 @@ async function refreshFixtures(){
       <div class="admin-row">
         <div>vs ${fx.opponent} <span class="meta">${fx.match_date}${fx.kickoff_time ? ' '+fx.kickoff_time : ''} · ${fx.home_away || ''} · ${fx.competition || ''} · ${fx.status}</span></div>
         <div style="display:flex; gap:6px;">
+          <a class="ghost-btn" href="predictor.html?fixture=${fx.id}" target="_blank" rel="noopener" style="text-decoration:none; display:inline-block;">📸 Community team</a>
           <button class="ghost-btn" data-edit-fx="${fx.id}">Edit</button>
           <button class="ghost-btn" data-delete-fx="${fx.id}">Delete</button>
         </div>
