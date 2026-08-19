@@ -13,6 +13,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
+<style>
+  .admin-tabs{
+    display:flex; flex-wrap:wrap; gap:6px; margin:18px 0 22px;
+    background:var(--ink-2); padding:10px; border-radius:10px; border:1px solid var(--line);
+  }
+  .admin-tab{
+    font-family:var(--mono); font-size:12px; text-transform:uppercase; letter-spacing:.03em;
+    padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--ink); color:var(--paper-dim);
+    cursor:pointer; transition:all .15s ease; white-space:nowrap;
+  }
+  .admin-tab:hover{ border-color:var(--amber-deep); color:var(--paper); }
+  .admin-tab.active{ background:var(--amber); color:var(--ink); border-color:var(--amber); font-weight:700; }
+</style>
 </head>
 <body>
 <div id="site-header"></div>
@@ -31,6 +44,16 @@
     <span class="admin-badge">🐯 ADMIN</span>
     <h1 class="title" style="font-size:32px; text-align:left;">Manage TIGERDLE</h1>
 
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="site">Site</button>
+      <button class="admin-tab" data-tab="players">Players</button>
+      <button class="admin-tab" data-tab="content">Content</button>
+      <button class="admin-tab" data-tab="puzzles">Daily puzzles</button>
+      <button class="admin-tab" data-tab="fixtures">Fixtures &amp; matchdays</button>
+      <button class="admin-tab" data-tab="predictor">Predictor</button>
+    </div>
+
+<div class="admin-category" data-category="site" style="display:block;">
     <div class="formcard">
       <h3>Subscribers</h3>
       <div id="sub-count" class="meta" style="font-family:var(--mono); color:var(--paper-dim);">Loading…</div>
@@ -52,6 +75,8 @@
     </div>
 
     <!-- Bulk add signings -->
+</div>
+<div class="admin-category" data-category="players" style="display:none;">
     <div class="formcard">
       <h3>Bulk add players</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
@@ -159,6 +184,8 @@
     </div>
 
     <!-- New blog post -->
+</div>
+<div class="admin-category" data-category="content" style="display:none;">
     <div class="formcard">
       <h3>Write a post</h3>
       <div class="field"><label>Title</label><input type="text" id="b-title"></div>
@@ -175,6 +202,8 @@
     </div>
 
     <!-- Schedule viewer -->
+</div>
+<div class="admin-category" data-category="puzzles" style="display:none;">
     <div class="formcard">
       <h3>Upcoming &amp; recent puzzles</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">Each answer cycles through the full pool once before repeating. TIGERDLE and Guess the Opponent repeat sooner since their pools are smaller. Add more players or goal photos to stretch the gap.</p>
@@ -204,6 +233,8 @@
     </div>
 
     <!-- Fixtures: Phase 1 of the predictor roadmap -->
+</div>
+<div class="admin-category" data-category="fixtures" style="display:none;">
     <div class="formcard">
       <h3>Bulk add fixtures</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
@@ -299,6 +330,8 @@
       <div class="admin-list" id="md-list"></div>
     </div>
 
+</div>
+<div class="admin-category" data-category="predictor" style="display:none;">
     <div class="formcard">
       <h3>Calculate prediction scores</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
@@ -351,6 +384,7 @@
       <button class="primary-btn" id="pl-save">Save pitch layout</button>
       <div class="subscribe-msg" id="pl-msg"></div>
     </div>
+</div>
   </div>
 
 </div>
@@ -1505,6 +1539,21 @@ async function refreshMatchdays(){
 document.getElementById('md-homeaway').value = 'Home';
 document.getElementById('md-formation').value = '4-3-3';
 renderSlots('4-3-3');
+
+// Tab switching for the admin sections. Every existing element keeps
+// its own ID exactly as before, this just shows/hides whole category
+// blocks, so nothing about how those sections actually work changes.
+document.querySelectorAll('.admin-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.admin-category').forEach(cat=>{
+      cat.style.display = cat.dataset.category === target ? 'block' : 'none';
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
 </script>
 </body>
 </html>
