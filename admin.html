@@ -468,7 +468,21 @@ async function tryEnter(){
     document.getElementById('gate-msg').textContent = 'Wrong passphrase, or admin function not deployed yet. See SETUP.md.';
   }
 }
-if(PASSPHRASE) tryEnter(); else showGate('');
+// A saved passphrase from earlier this session restores straight into
+// the admin area without asking again. This is deliberately separate
+// from tryEnter() above, which reads from the login field itself, so
+// it wouldn't have anything to read on an automatic restore where
+// nobody's just typed anything in.
+async function tryRestoreSession(){
+  try{
+    await callAdmin('ping', {});
+    showAdmin();
+  }catch(e){
+    sessionStorage.removeItem('tigerdle_admin_pass');
+    showGate('');
+  }
+}
+if(PASSPHRASE) tryRestoreSession(); else showGate('');
 
 async function refreshAll(){
   refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures(); refreshFormations(); refreshPitchLayout();
