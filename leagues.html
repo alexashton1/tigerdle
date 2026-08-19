@@ -384,8 +384,27 @@ async function openLeagueDetail(leagueId){
 
     const badgeFor = (uid) => badgeIcon[uid] ? `<span class="mock-badge-icon" style="width:18px; height:18px; border-radius:50%; background:var(--ink); border:1.5px solid var(--amber); color:var(--amber-soft); font-size:9px; display:inline-flex; align-items:center; justify-content:center; margin-right:5px;">${badgeIcon[uid]}</span>` : '';
 
-    function buildTableRows(sortBy){
-      const sorted = leaderboard.slice().sort((a,b)=>{
+    // Gameweek data isn't fetched until the tab's actually opened,
+    // keeping the page's initial load to just the one leaderboard
+    // query most people came here for.
+    let gameweekCache = null;
+    async function loadGameweekRows(){
+      if(gameweekCache) return gameweekCache;
+      const memberIds = (members||[]).map(m=>m.user_id);
+      const { data: recent } = await sb.from('prediction_scores').select('fixture_id, calculated_at').in('user_id', memberIds).order('calculated_at', {ascending:false}).limit(1);
+      if(!recent || !recent.length){ gameweekCache = { fixture: null, rows: [] }; return gameweekCache; }
+      const fixtureId = recent[0].fixture_id;
+      const [{ data: scores }, { data: fixtureRows }] = await Promise.all([
+        sb.from('prediction_scores').select('user_id, total_points').eq('fixture_id', fixtureId).in('user_id', memberIds),
+        sb.from('fixtures').select('*').eq('id', fixtureId),
+      ]);
+      gameweekCache = { fixture: (fixtureRows||[])[0] || null, rows: scores || [] };
+      return gameweekCache;
+    }
+
+    function buildTableRows(sortBy, gwRows){
+      const source = sortBy === 'gameweek' ? (gwRows||[]) : leaderboard;
+      const sorted = source.slice().sort((a,b)=>{
         if(sortBy === 'ppg'){
           const ppgA = a.fixtures_scored ? a.total_points/a.fixtures_scored : 0;
           const ppgB = b.fixtures_scored ? b.total_points/b.fixtures_scored : 0;
@@ -393,15 +412,18 @@ async function openLeagueDetail(leagueId){
         }
         return b.total_points - a.total_points;
       });
+      if(sortBy === 'gameweek' && !sorted.length){
+        return `<tr><td colspan="3" style="text-align:center; padding:20px 0; color:var(--paper-dim); font-family:var(--mono); font-size:12px;">No scores in yet for this gameweek.</td></tr>`;
+      }
       return sorted.map((row, i)=>{
         const ppg = row.fixtures_scored ? (row.total_points/row.fixtures_scored).toFixed(1) : '0.0';
         const mainStat = sortBy === 'ppg' ? ppg : row.total_points;
-        const subStat = sortBy === 'ppg' ? `${row.total_points} total` : `${ppg} per game`;
+        const subStat = sortBy === 'ppg' ? `${row.total_points} total` : sortBy === 'gameweek' ? '' : `${ppg} per game`;
         return `<tr class="${i===0?'lb-top':''}" data-user-id="${row.user_id}" data-user-name="${escapeHtml(nameFor(row.user_id))}">
           <td class="lb-rank">${i===0?'🏆':i+1}</td>
           <td>${badgeFor(row.user_id)}${escapeHtml(nameFor(row.user_id))}${row.user_id===currentUser.id?' <span class="league-meta">(you)</span>':''}
-            <span class="lb-sub">${row.fixtures_scored} fixture${row.fixtures_scored===1?'':'s'} scored</span></td>
-          <td class="lb-points">${mainStat}<span class="lb-sub" style="text-align:right;">${subStat}</span></td>
+            ${sortBy==='gameweek' ? '' : `<span class="lb-sub">${row.fixtures_scored} fixture${row.fixtures_scored===1?'':'s'} scored</span>`}</td>
+          <td class="lb-points">${mainStat}${subStat ? `<span class="lb-sub" style="text-align:right;">${subStat}</span>` : ''}</td>
         </tr>`;
       }).join('');
     }
@@ -410,7 +432,9 @@ async function openLeagueDetail(leagueId){
       <div class="lb-toggle">
         <button class="active" data-sort="total">Total points</button>
         <button data-sort="ppg">Points per game</button>
+        <button data-sort="gameweek">This gameweek</button>
       </div>
+      <p id="lb-gw-context" style="display:none; font-size:11.5px; color:var(--paper-dim); margin:-4px 0 10px;"></p>
       <table class="lb-table">
         <thead><tr><th>#</th><th>Player</th><th style="text-align:right;">Pts</th></tr></thead>
         <tbody id="lb-tbody">${buildTableRows('total')}</tbody>
@@ -419,15 +443,29 @@ async function openLeagueDetail(leagueId){
     // Deferred to after this HTML is actually in the DOM, further down.
     window.__lbWireUp = () => {
       const tbody = document.getElementById('lb-tbody');
+      const gwContext = document.getElementById('lb-gw-context');
       const toggleBtns = document.querySelectorAll('.lb-toggle button');
-      toggleBtns.forEach(btn => btn.addEventListener('click', () => {
+      toggleBtns.forEach(btn => btn.addEventListener('click', async () => {
         toggleBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        tbody.innerHTML = buildTableRows(btn.dataset.sort);
+        const sortBy = btn.dataset.sort;
+        if(sortBy === 'gameweek'){
+          tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px 0; color:var(--paper-dim); font-family:var(--mono); font-size:12px;">Loading…</td></tr>`;
+          gwContext.style.display = 'none';
+          const { fixture, rows } = await loadGameweekRows();
+          if(fixture){
+            gwContext.textContent = `vs ${fixture.opponent}, ${new Date(fixture.match_date).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`;
+            gwContext.style.display = 'block';
+          }
+          tbody.innerHTML = buildTableRows('gameweek', rows);
+        } else {
+          gwContext.style.display = 'none';
+          tbody.innerHTML = buildTableRows(sortBy);
+        }
         wireRowClicks();
       }));
       function wireRowClicks(){
-        document.querySelectorAll('#lb-tbody tr').forEach(tr => tr.addEventListener('click', () => {
+        document.querySelectorAll('#lb-tbody tr[data-user-id]').forEach(tr => tr.addEventListener('click', () => {
           openUserHistoryModal(tr.dataset.userId, tr.dataset.userName);
         }));
       }
