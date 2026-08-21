@@ -602,7 +602,10 @@ function buildResultShareText(score, fixture, topTenInfo){
   const wc = score.wildcard_applied ? WILDCARD_NAMES[score.wildcard_applied] : null;
 
   let lines = [`I scored ${score.total_points}pts predicting Hull vs ${opponent} on Tigerdle 🏆`];
-  if(topTenInfo) lines.push(`🔥 Top 10% in ${topTenInfo.leagueName}!`);
+  if(topTenInfo){
+    const isOverall = topTenInfo.leagueName.trim().toLowerCase() === 'overall';
+    lines.push(isOverall ? `🔥 Top 10% overall` : `🔥 Top 10% in ${topTenInfo.leagueName}`);
+  }
   if(highlight) lines.push(`⭐ ${highlight.replace(/<\/?b>/g, '')}`);
   if(wc && uplift) lines.push(`${wc.icon} ${wc.name} was active too, worth an extra +${uplift}pts`);
   lines.push(`Beat that: ${link}`);
@@ -612,10 +615,12 @@ function buildResultShareText(score, fixture, topTenInfo){
 function renderScoreBreakdown(score, prediction, fixture, resultIndex, topTenInfo){
   const b = score.breakdown || {};
 
+  const isOverall = topTenInfo && topTenInfo.leagueName.trim().toLowerCase() === 'overall';
   const celebrationHtml = topTenInfo ? `<div style="margin-bottom:16px; padding:20px 18px; background:linear-gradient(160deg, rgba(245,163,0,0.14), rgba(245,163,0,0.03)); border:1px solid var(--amber-deep); border-radius:14px; text-align:center;">
     <div style="font-size:30px; margin-bottom:6px;">🔥</div>
-    <div style="font-family:var(--display); font-weight:400; font-size:19px; color:var(--amber);">Top 10% in ${escapeHtml(topTenInfo.leagueName)}!</div>
-    <p style="font-size:13px; color:var(--paper-dim); margin:6px 0 16px; line-height:1.5;">Only a handful of the ${topTenInfo.total} people there called this one better than you did. Worth a brag.</p>
+    <div style="font-family:var(--display); font-weight:400; font-size:19px; color:var(--amber);">Top 10%${isOverall ? ' overall' : ''}</div>
+    ${!isOverall ? `<div style="font-family:var(--mono); font-size:11px; letter-spacing:.03em; color:var(--paper-dim); margin-top:4px; text-transform:uppercase;">${escapeHtml(topTenInfo.leagueName)}</div>` : ''}
+    <p style="font-size:13px; color:var(--paper-dim); margin:10px 0 16px; line-height:1.5;">Only a handful of the ${topTenInfo.total} people there called this one better than you did. Worth a brag.</p>
     <button class="primary-btn" style="width:100%;" data-celebration-share="${resultIndex}">📤 Share this result</button>
   </div>` : '';
 
@@ -654,16 +659,19 @@ function renderScoreBreakdown(score, prediction, fixture, resultIndex, topTenInf
     ${celebrationHtml}
     ${highlightHtml}
     ${wildcardHtml}
-    <h4 style="font-size:13px; color:var(--amber-soft); margin:0 0 6px;">Scoreline</h4>
-    ${scoreLineHtml}
-    <h4 style="font-size:13px; color:var(--amber-soft); margin:14px 0 6px;">Goalscorers</h4>
-    ${scorerLine(b.predicted_scorer, 'Predicted scorer') || '<div class="empty-state" style="padding:8px 0;">No scorer predicted.</div>'}
-    ${scorerLine(b.first_scorer, 'First scorer') || ''}
-    <h4 style="font-size:13px; color:var(--amber-soft); margin:16px 0 10px;" id="${captureId}-label">Your team</h4>
-    <div id="${captureId}">${renderPositionPitch(b, prediction)}</div>
-    <div style="display:flex; gap:8px; margin-top:16px;">
-      <button class="ghost-btn" style="flex:1;" data-result-share-text="${resultIndex}">📤 Share as text</button>
-      <button class="ghost-btn" style="flex:1;" data-result-share-image="${resultIndex}">📸 Share as image</button>
+    <button class="ghost-btn" style="width:100%;" data-toggle-full-breakdown="${resultIndex}">See full breakdown ▾</button>
+    <div id="full-breakdown-${resultIndex}" style="display:none; margin-top:14px;">
+      <h4 style="font-size:13px; color:var(--amber-soft); margin:0 0 6px;">Scoreline</h4>
+      ${scoreLineHtml}
+      <h4 style="font-size:13px; color:var(--amber-soft); margin:14px 0 6px;">Goalscorers</h4>
+      ${scorerLine(b.predicted_scorer, 'Predicted scorer') || '<div class="empty-state" style="padding:8px 0;">No scorer predicted.</div>'}
+      ${scorerLine(b.first_scorer, 'First scorer') || ''}
+      <h4 style="font-size:13px; color:var(--amber-soft); margin:16px 0 10px;" id="${captureId}-label">Your team</h4>
+      <div id="${captureId}">${renderPositionPitch(b, prediction)}</div>
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="ghost-btn" style="flex:1;" data-result-share-text="${resultIndex}">📤 Share as text</button>
+        <button class="ghost-btn" style="flex:1;" data-result-share-image="${resultIndex}">📸 Share as image</button>
+      </div>
     </div>
   `;
 }
@@ -690,16 +698,23 @@ async function loadPastResults(){
   list.innerHTML = scores.map((s, i)=>{
     const fx = (fixtures||[]).find(f => f.id === s.fixture_id);
     const opponent = fx ? fx.opponent : 'Unknown fixture';
+    const tier = s.total_points >= 20
+      ? {label:'Great week', icon:'🔥', bg:'rgba(245,163,0,0.14)', border:'var(--amber-deep)', color:'var(--amber-soft)'}
+      : s.total_points >= 10
+      ? {label:'Solid week', icon:'👍', bg:'var(--ink)', border:'var(--line)', color:'var(--paper-dim)'}
+      : null;
+    const tierHtml = tier ? `<span style="display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10.5px; padding:3px 10px; border-radius:999px; background:${tier.bg}; border:1px solid ${tier.border}; color:${tier.color}; margin-top:6px;">${tier.icon} ${tier.label}</span>` : '';
     return `
     <div class="fixture-card" data-toggle-detail="${i}" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px;">
       <div>
-        <div class="fixture-main">Hull City vs ${escapeHtml(opponent)} <span class="fixture-meta">(tap for detail)</span></div>
+        <div class="fixture-main">Hull City vs ${escapeHtml(opponent)}</div>
         <div class="fixture-meta">${fx ? fx.match_date : ''}</div>
-        <div class="agg-row" style="border:none; padding-top:8px;">
-          <span class="fixture-meta">Position: ${s.position_points} · Score: ${s.score_points} · Scorer: ${s.scorer_points} · First scorer: ${s.first_scorer_points}</span>
-        </div>
+        ${tierHtml}
       </div>
-      <div style="font-family:var(--display); font-size:22px; color:var(--amber); white-space:nowrap;">${s.total_points} pts</div>
+      <div style="text-align:right; flex-shrink:0;">
+        <div style="font-family:var(--display); font-size:26px; color:var(--amber); line-height:1;">${s.total_points}</div>
+        <div style="font-family:var(--mono); font-size:10px; color:var(--paper-dim); margin-top:2px;">points</div>
+      </div>
     </div>
     <div id="past-detail-${i}" style="display:none; margin:-4px 0 14px; padding:14px 16px; background:var(--ink); border:1px solid var(--line); border-radius:0 0 10px 10px; border-top:none;"></div>`;
   }).join('');
@@ -724,6 +739,13 @@ async function loadPastResults(){
         if(imageBtn) imageBtn.addEventListener('click', ()=> shareTeamImage(fx || {opponent:'Hull'}, `result-pitch-${i}`));
         const celebrationShareBtn = detailEl.querySelector(`[data-celebration-share="${i}"]`);
         if(celebrationShareBtn) celebrationShareBtn.addEventListener('click', ()=> openShareModal(buildResultShareText(scores[i], fx, topTenInfo)));
+        const fullToggle = detailEl.querySelector(`[data-toggle-full-breakdown="${i}"]`);
+        if(fullToggle) fullToggle.addEventListener('click', ()=>{
+          const full = document.getElementById(`full-breakdown-${i}`);
+          const isOpen = full.style.display === 'block';
+          full.style.display = isOpen ? 'none' : 'block';
+          fullToggle.textContent = isOpen ? 'See full breakdown ▾' : 'Hide full breakdown ▴';
+        });
       }
     });
   });
@@ -993,6 +1015,7 @@ async function openPredictView(fixture){
           </div>
         </div>
       </div>
+      ${!locked ? `<button class="ghost-btn" id="pr-quick-pick" style="width:100%; margin-bottom:14px; display:flex; align-items:center; justify-content:center; gap:6px;">⚡ Quick pick, fill it for me</button>` : ''}
       <div class="field">
         <label>Formation</label>
         <select id="pr-formation" ${locked?'disabled':''}>
@@ -1094,6 +1117,31 @@ async function openPredictView(fixture){
   document.getElementById('pr-share-image').addEventListener('click', ()=> shareTeamImage(fixture));
   const celebrationShareBtn = document.getElementById('pr-celebration-share');
   if(celebrationShareBtn) celebrationShareBtn.addEventListener('click', ()=> shareMyPrediction(fixture));
+
+  const quickPickBtn = document.getElementById('pr-quick-pick');
+  if(quickPickBtn){
+    quickPickBtn.addEventListener('click', ()=>{
+      const formationSel = document.getElementById('pr-formation');
+      const chosenFormation = formationSel.value || Object.keys(FORMATIONS)[0];
+      const need = FORMATIONS[chosenFormation];
+      positionOrder = { GK: [], DF: [], MF: [], FW: [] };
+      Object.keys(need).forEach(pos=>{
+        const pool = allPlayersCache.filter(p=>p.position===pos).sort((a,b)=>(b.season_points||0)-(a.season_points||0));
+        positionOrder[pos] = pool.slice(0, need[pos]).map(p=>p.id);
+      });
+      renderPredictPitch();
+      renderPicker(locked);
+      document.getElementById('pr-hull-plus').click();
+      document.getElementById('pr-hull-plus').click();
+      document.getElementById('pr-opp-plus').click();
+      const topForward = allPlayersCache.filter(p=>p.position==='FW').sort((a,b)=>(b.season_points||0)-(a.season_points||0))[0];
+      if(topForward){
+        const chip = document.querySelector(`[data-scorer-chip="${topForward.id}"]`);
+        if(chip) chip.click();
+      }
+      toast('Filled in a quick pick, tweak anything before saving.');
+    });
+  }
 
   const reuseBtn = document.getElementById('pr-reuse-team');
   if(reuseBtn){
