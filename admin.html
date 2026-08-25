@@ -1173,16 +1173,31 @@ async function loadFixtureScores(fixtureId){
     const data = await callAdmin('list_fixture_scores', { fixture_id: fixtureId });
     const scores = data.scores || [];
     if(!scores.length){ container.innerHTML = '<div class="meta">No scores calculated for this fixture yet.</div>'; return; }
-    container.innerHTML = scores.map(s => `
-      <div class="admin-row">
-        <div>${s.display_name}
-          <span class="meta">position ${s.position_points} · score ${s.score_points} · scorer ${s.scorer_points} · first scorer ${s.first_scorer_points}</span>
+    container.innerHTML = scores.map((s, i) => `
+      <div class="admin-row" style="flex-direction:column; align-items:stretch;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>${s.display_name}
+            <span class="meta">position ${s.position_points} · score ${s.score_points} · scorer ${s.scorer_points} · first scorer ${s.first_scorer_points}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <input type="number" class="score-override-input" data-score-id="${s.id}" value="${s.total_points}" style="width:60px; background:var(--ink); border:1px solid var(--line); color:var(--paper); padding:6px 8px; border-radius:6px; text-align:center;">
+            <button class="ghost-btn" data-override-save="${s.id}">Save</button>
+          </div>
         </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <input type="number" class="score-override-input" data-score-id="${s.id}" value="${s.total_points}" style="width:60px; background:var(--ink); border:1px solid var(--line); color:var(--paper); padding:6px 8px; border-radius:6px; text-align:center;">
-          <button class="ghost-btn" data-override-save="${s.id}">Save</button>
-        </div>
+        ${s.prediction ? `
+          <button class="ghost-btn" data-toggle-team="${i}" style="margin-top:8px; width:100%;">View team ▾</button>
+          <div id="team-detail-${i}" style="display:none; margin-top:8px; padding:10px; background:var(--ink); border:1px solid var(--line); border-radius:8px; font-size:13px;">
+            <div style="margin-bottom:6px;"><b>Formation:</b> ${s.prediction.formation || 'Unknown'} &middot; <b>Called it:</b> ${s.prediction.predicted_hull_score ?? '?'}-${s.prediction.predicted_opponent_score ?? '?'}${s.prediction.wildcard ? ` &middot; <b>Wildcard:</b> ${s.prediction.wildcard}` : ''}</div>
+            ${(s.prediction.lineup || []).map(p => `<span class="meta" style="display:inline-block; margin:2px 6px 2px 0;">${p.slot}: ${p.first_name} ${p.last_name}</span>`).join('')}
+          </div>
+        ` : `<p class="meta" style="margin-top:6px;">No saved prediction for this fixture (may be an auto-carried or missed week).</p>`}
       </div>`).join('');
+    container.querySelectorAll('[data-toggle-team]').forEach(btn=>btn.addEventListener('click', ()=>{
+      const detail = document.getElementById(`team-detail-${btn.dataset.toggleTeam}`);
+      const isOpen = detail.style.display === 'block';
+      detail.style.display = isOpen ? 'none' : 'block';
+      btn.textContent = isOpen ? 'View team ▾' : 'Hide team ▴';
+    }));
     container.querySelectorAll('[data-override-save]').forEach(btn=>btn.addEventListener('click', async ()=>{
       const id = btn.dataset.overrideSave;
       const input = container.querySelector(`.score-override-input[data-score-id="${id}"]`);
