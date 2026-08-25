@@ -512,9 +512,16 @@ Deno.serve(async (req) => {
         const { data: profiles } = userIds.length
           ? await supabase.from("profiles").select("user_id, email, display_name").in("user_id", userIds)
           : { data: [] };
+        // The actual predicted team, not just the resulting score, so a
+        // gameweek's top scorer can be pulled straight from here for a
+        // social post rather than needing to ask them for a screenshot.
+        const { data: predictions } = userIds.length
+          ? await supabase.from("predictions").select("*").eq("fixture_id", p.fixture_id).in("user_id", userIds)
+          : { data: [] };
         const withNames = (scores || []).map((s: any) => {
           const profile = (profiles || []).find((pr: any) => pr.user_id === s.user_id);
-          return { ...s, display_name: profile?.display_name || profile?.email || "Unknown" };
+          const prediction = (predictions || []).find((pr: any) => pr.user_id === s.user_id);
+          return { ...s, display_name: profile?.display_name || profile?.email || "Unknown", prediction: prediction || null };
         });
         return json({ ok: true, data: { scores: withNames } });
       }
