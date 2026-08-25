@@ -25,6 +25,23 @@
   }
   .admin-tab:hover{ border-color:var(--amber-deep); color:var(--paper); }
   .admin-tab.active{ background:var(--amber); color:var(--ink); border-color:var(--amber); font-weight:700; }
+
+  /* Ported from predictor.html, needed to render a saved team as an
+     actual pitch graphic here too, rather than plain text. */
+  .pitch-wrap{ position:relative; width:100%; max-width:400px; margin:10px auto; aspect-ratio:100/130; border-radius:12px; overflow:hidden; border:1px solid var(--line); }
+  .pitch-lines{ position:absolute; inset:0; width:100%; height:100%; }
+  .pitch-players{ position:absolute; inset:0; }
+  .pitch-player{ position:absolute; transform:translate(-50%,-50%); text-align:center; width:70px; }
+  .pitch-dot{
+    width:36px; height:36px; border-radius:50%; background:var(--amber); color:var(--ink);
+    font-family:var(--display); font-size:12.5px; display:flex; align-items:center; justify-content:center;
+    margin:0 auto 3px; border:2px solid var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+  .pitch-name{ font-family:var(--mono); font-size:9px; color:var(--paper); background:rgba(13,15,20,0.75); padding:2px 5px; border-radius:4px; white-space:nowrap; display:inline-block; max-width:70px; overflow:hidden; text-overflow:ellipsis; }
+  .winner-card{ background:linear-gradient(160deg, rgba(245,163,0,0.14), rgba(245,163,0,0.03)); border:1px solid var(--amber-deep); border-radius:14px; padding:18px; text-align:center; margin-top:10px; }
+  .winner-card .winner-tag{ font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--amber-soft); text-transform:uppercase; }
+  .winner-card .winner-name{ font-family:var(--display); font-weight:400; font-size:24px; color:var(--amber); margin:4px 0; }
+  .winner-card .winner-meta{ font-family:var(--mono); font-size:12px; color:var(--paper-dim); margin-bottom:14px; }
 </style>
 </head>
 <body>
@@ -1173,6 +1190,8 @@ async function loadFixtureScores(fixtureId){
     const data = await callAdmin('list_fixture_scores', { fixture_id: fixtureId });
     const scores = data.scores || [];
     if(!scores.length){ container.innerHTML = '<div class="meta">No scores calculated for this fixture yet.</div>'; return; }
+    const selectedOption = document.getElementById('score-fixture-select').selectedOptions[0];
+    const opponentLabel = selectedOption ? selectedOption.textContent.replace(/^vs\s*/, '').split(',')[0] : 'Hull';
     container.innerHTML = scores.map((s, i) => `
       <div class="admin-row" style="flex-direction:column; align-items:stretch;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1186,9 +1205,14 @@ async function loadFixtureScores(fixtureId){
         </div>
         ${s.prediction ? `
           <button class="ghost-btn" data-toggle-team="${i}" style="margin-top:8px; width:100%;">View team ▾</button>
-          <div id="team-detail-${i}" style="display:none; margin-top:8px; padding:10px; background:var(--ink); border:1px solid var(--line); border-radius:8px; font-size:13px;">
-            <div style="margin-bottom:6px;"><b>Formation:</b> ${s.prediction.formation || 'Unknown'} &middot; <b>Called it:</b> ${s.prediction.predicted_hull_score ?? '?'}-${s.prediction.predicted_opponent_score ?? '?'}${s.prediction.wildcard ? ` &middot; <b>Wildcard:</b> ${s.prediction.wildcard}` : ''}</div>
-            ${(s.prediction.lineup || []).map(p => `<span class="meta" style="display:inline-block; margin:2px 6px 2px 0;">${p.slot}: ${p.first_name} ${p.last_name}</span>`).join('')}
+          <div id="team-detail-${i}" style="display:none; margin-top:8px;">
+            <div class="winner-card" id="winner-card-${i}">
+              <div class="winner-tag">🔥 ${s.display_name}</div>
+              <div class="winner-name">${s.total_points} pts</div>
+              <div class="winner-meta">${s.prediction.formation || 'Unknown'} &middot; called it ${s.prediction.predicted_hull_score ?? '?'}-${s.prediction.predicted_opponent_score ?? '?'} vs ${escapeHtml(opponentLabel)}${s.prediction.wildcard ? ` &middot; ${s.prediction.wildcard}` : ''}</div>
+              ${renderAdminTeamPitch(s.prediction.lineup)}
+            </div>
+            <button class="primary-btn" style="width:100%; margin-top:10px;" data-share-winner="winner-card-${i}">📸 Share this team</button>
           </div>
         ` : `<p class="meta" style="margin-top:6px;">No saved prediction for this fixture (may be an auto-carried or missed week).</p>`}
       </div>`).join('');
@@ -1198,6 +1222,7 @@ async function loadFixtureScores(fixtureId){
       detail.style.display = isOpen ? 'none' : 'block';
       btn.textContent = isOpen ? 'View team ▾' : 'Hide team ▴';
     }));
+    container.querySelectorAll('[data-share-winner]').forEach(btn=>btn.addEventListener('click', ()=> shareAdminTeamImage(btn.dataset.shareWinner)));
     container.querySelectorAll('[data-override-save]').forEach(btn=>btn.addEventListener('click', async ()=>{
       const id = btn.dataset.overrideSave;
       const input = container.querySelector(`.score-override-input[data-score-id="${id}"]`);
@@ -1590,6 +1615,151 @@ document.querySelectorAll('.admin-tab').forEach(tab=>{
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 });
+</script>
+
+<div class="toast" id="toast"></div>
+
+<div class="share-modal-overlay" id="share-modal-overlay">
+  <div class="share-modal">
+    <h3>Share this prediction</h3>
+    <div class="share-modal-grid">
+      <a class="share-opt" id="share-x" target="_blank" rel="noopener"><span class="share-opt-icon">𝕏</span><span>X</span></a>
+      <a class="share-opt" id="share-whatsapp" target="_blank" rel="noopener"><span class="share-opt-icon">💬</span><span>WhatsApp</span></a>
+      <a class="share-opt" id="share-facebook" target="_blank" rel="noopener"><span class="share-opt-icon">📘</span><span>Facebook</span></a>
+      <button class="share-opt" id="share-more"><span class="share-opt-icon">⋯</span><span>More</span></button>
+      <button class="share-opt" id="share-copy"><span class="share-opt-icon">📋</span><span>Copy</span></button>
+    </div>
+    <button class="ghost-btn" id="share-modal-close" style="width:100%; margin-top:14px;">Close</button>
+  </div>
+</div>
+
+<div class="share-modal-overlay" id="image-share-modal-overlay">
+  <div class="share-modal">
+    <h3>Share this team sheet</h3>
+    <img id="image-share-preview" style="width:100%; max-height:220px; object-fit:contain; border-radius:8px; margin-bottom:14px; background:var(--ink);">
+    <div class="share-modal-grid" style="grid-template-columns:repeat(3,1fr);">
+      <button class="share-opt" id="image-share-save"><span class="share-opt-icon">💾</span><span>Save</span></button>
+      <button class="share-opt" id="image-share-copy"><span class="share-opt-icon">📋</span><span>Copy</span></button>
+      <button class="share-opt" id="image-share-more" style="display:none;"><span class="share-opt-icon">⋯</span><span>More</span></button>
+    </div>
+    <button class="ghost-btn" id="image-share-modal-close" style="width:100%; margin-top:14px;">Close</button>
+  </div>
+</div>
+
+<script src="assets/html2canvas-lib.js"></script>
+<script>
+/* ==================== Sharing another user's prediction ====================
+   Ported from predictor.html's own share flow, so shouting about a good
+   prediction from admin looks and works exactly the same way it would
+   from the site itself, rather than a separate, plainer version. */
+
+const ADMIN_PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function adminSpreadX(count, pos){
+  if(count <= 1) return [50];
+  const spacing = { GK:0, DF:22, MF:20, FW:17 }[pos] ?? 20;
+  const maxSpan = { GK:0, DF:74, MF:56, FW:40 }[pos] ?? 56;
+  const span = Math.min((count - 1) * spacing, maxSpan);
+  const step = span / (count - 1);
+  const start = 50 - span / 2;
+  return Array.from({length:count}, (_, i) => start + step*i);
+}
+
+function adminPitchSvg(){
+  return `<svg class="pitch-lines" viewBox="0 0 100 130" preserveAspectRatio="none">
+    <rect width="100" height="130" fill="#10231a"/>
+    <rect x="2" y="2" width="96" height="126" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <line x1="2" y1="65" x2="98" y2="65" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <circle cx="50" cy="65" r="11" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <rect x="24" y="2" width="52" height="16" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+    <rect x="24" y="112" width="52" height="16" fill="none" stroke="rgba(245,163,0,0.25)" stroke-width="0.4"/>
+  </svg>`;
+}
+
+// Renders a saved lineup as an actual pitch graphic instead of plain
+// text, grouped by slot the same way the Predictor itself draws one.
+function renderAdminTeamPitch(lineup){
+  const bySlot = { GK:[], DF:[], MF:[], FW:[] };
+  (lineup || []).forEach(p => { if(bySlot[p.slot]) bySlot[p.slot].push(p); });
+  let html = '';
+  Object.keys(bySlot).forEach(pos=>{
+    const players = bySlot[pos];
+    const xs = adminSpreadX(players.length, pos);
+    players.forEach((p, i)=>{
+      html += `<div class="pitch-player" style="left:${xs[i]}%; top:${ADMIN_PITCH_LINE_Y[pos]}%;">
+        <div class="pitch-dot">${pos}</div>
+        <div class="pitch-name">${p.last_name}</div>
+      </div>`;
+    });
+  });
+  return `<div class="pitch-wrap">${adminPitchSvg()}<div class="pitch-players">${html}</div></div>`;
+}
+
+function openShareModal(text){
+  const overlay = document.getElementById('share-modal-overlay');
+  const siteUrl = 'https://tigerdle.com/predictor.html';
+  document.getElementById('share-x').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  document.getElementById('share-whatsapp').href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  document.getElementById('share-facebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(siteUrl)}&quote=${encodeURIComponent(text)}`;
+  const moreBtn = document.getElementById('share-more');
+  if(navigator.share){ moreBtn.style.display=''; moreBtn.onclick=()=>navigator.share({text}).catch(()=>{}); }
+  else{ moreBtn.style.display='none'; }
+  document.getElementById('share-copy').onclick = ()=>{
+    navigator.clipboard?.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast(text));
+    overlay.classList.remove('open');
+  };
+  overlay.classList.add('open');
+}
+document.getElementById('share-modal-close').addEventListener('click', ()=> document.getElementById('share-modal-overlay').classList.remove('open'));
+document.getElementById('share-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='share-modal-overlay') e.currentTarget.classList.remove('open'); });
+
+let adminShareBlob = null;
+
+async function shareAdminTeamImage(targetId){
+  const target = document.getElementById(targetId);
+  if(!target || typeof html2canvas === 'undefined'){ toast("Couldn't build the image, try again in a moment."); return; }
+  toast('Building image…');
+  try{
+    const canvas = await html2canvas(target, { backgroundColor: '#10231a', scale: 2 });
+    canvas.toBlob((blob)=>{
+      if(!blob){ toast("Couldn't build the image."); return; }
+      adminShareBlob = blob;
+      document.getElementById('image-share-preview').src = URL.createObjectURL(blob);
+      const moreBtn = document.getElementById('image-share-more');
+      const canUseNativeFiles = navigator.canShare && navigator.canShare({ files: [new File([blob], 'team.png', { type: 'image/png' })] });
+      if(canUseNativeFiles){
+        moreBtn.style.display = '';
+        moreBtn.onclick = () => navigator.share({ files: [new File([blob], 'tigerdle-team.png', { type: 'image/png' })], title: 'Tigerdle prediction' }).catch(()=>{});
+      } else {
+        moreBtn.style.display = 'none';
+      }
+      document.getElementById('image-share-modal-overlay').classList.add('open');
+    }, 'image/png');
+  }catch(e){ toast('Could not build the image right now.'); }
+}
+document.getElementById('image-share-save').addEventListener('click', ()=>{
+  if(!adminShareBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(adminShareBlob);
+  a.download = 'tigerdle-team.png';
+  a.click();
+  toast('Image saved.');
+});
+document.getElementById('image-share-copy').addEventListener('click', async ()=>{
+  if(!adminShareBlob) return;
+  try{
+    await navigator.clipboard.write([ new ClipboardItem({ 'image/png': adminShareBlob }) ]);
+    toast('Image copied, paste it anywhere.');
+  }catch(e){ toast("Copy isn't supported in this browser, try Save instead."); }
+});
+document.getElementById('image-share-modal-close').addEventListener('click', ()=> document.getElementById('image-share-modal-overlay').classList.remove('open'));
+document.getElementById('image-share-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='image-share-modal-overlay') e.currentTarget.classList.remove('open'); });
 </script>
 </body>
 </html>
