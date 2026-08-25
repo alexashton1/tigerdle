@@ -1203,18 +1203,27 @@ async function loadFixtureScores(fixtureId){
             <button class="ghost-btn" data-override-save="${s.id}">Save</button>
           </div>
         </div>
-        ${s.prediction ? `
+        ${s.prediction ? (() => {
+          const scorers = s.prediction.scorers || [];
+          const anytime = scorers.find(sc => sc.type === 'predicted');
+          const first = scorers.find(sc => sc.type === 'first');
+          const scorerLine = [
+            anytime ? `⚽ ${anytime.first_name} ${anytime.last_name}` : null,
+            first ? `⚡ ${first.first_name} ${first.last_name} (first)` : null,
+          ].filter(Boolean).join(' &middot; ');
+          return `
           <button class="ghost-btn" data-toggle-team="${i}" style="margin-top:8px; width:100%;">View team ▾</button>
           <div id="team-detail-${i}" style="display:none; margin-top:8px;">
             <div class="winner-card" id="winner-card-${i}">
               <div class="winner-tag">🔥 ${s.display_name}</div>
               <div class="winner-name">${s.total_points} pts</div>
-              <div class="winner-meta">${s.prediction.formation || 'Unknown'} &middot; called it ${s.prediction.predicted_hull_score ?? '?'}-${s.prediction.predicted_opponent_score ?? '?'} vs ${escapeHtml(opponentLabel)}${s.prediction.wildcard ? ` &middot; ${s.prediction.wildcard}` : ''}</div>
+              <div class="winner-meta">${s.prediction.formation || 'Unknown'} &middot; called it ${s.prediction.hull_score ?? '?'}-${s.prediction.opponent_score ?? '?'} vs ${escapeHtml(opponentLabel)}${s.prediction.wildcard ? ` &middot; ${s.prediction.wildcard}` : ''}</div>
+              ${scorerLine ? `<div class="winner-meta" style="margin-top:-8px;">${scorerLine}</div>` : ''}
               ${renderAdminTeamPitch(s.prediction.lineup)}
             </div>
             <button class="primary-btn" style="width:100%; margin-top:10px;" data-share-winner="winner-card-${i}">📸 Share this team</button>
-          </div>
-        ` : `<p class="meta" style="margin-top:6px;">No saved prediction for this fixture (may be an auto-carried or missed week).</p>`}
+          </div>`;
+        })() : `<p class="meta" style="margin-top:6px;">No saved prediction for this fixture (may be an auto-carried or missed week).</p>`}
       </div>`).join('');
     container.querySelectorAll('[data-toggle-team]').forEach(btn=>btn.addEventListener('click', ()=>{
       const detail = document.getElementById(`team-detail-${btn.dataset.toggleTeam}`);
