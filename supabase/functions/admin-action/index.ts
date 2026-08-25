@@ -26,6 +26,63 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Identical to the client-side algorithm in assets/supabase-client.js.
+// same hash, same shuffle, so a bootstrap here produces the same kind
+// of well-varied order the games have always used, not a plain
+// insertion-order list.
+function hashStr(str: string): number {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) { h = ((h * 33) ^ str.charCodeAt(i)) >>> 0; }
+  return h >>> 0;
+}
+function seededShuffle<T>(pool: T[], salt: string): T[] {
+  const arr = pool.slice();
+  let s = hashStr(salt) || 1;
+  const rnd = () => { s = (s * 1103515245 + 12345) >>> 0; return s; };
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = rnd() % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Keeps m1/m2/m3's frozen rotation order in sync with a newly added
+// player, without ever touching the order of anyone already in it.
+// First time it runs for a mode, it bootstraps from every current
+// active player; every time after that, it only appends whoever's
+// missing, onto the end.
+async function syncRotationPools(supabase: any, newPlayer: { id: string; last_name: string }) {
+  const surnameLength = newPlayer.last_name.replace(/[^A-Za-z]/g, "").length;
+  const modes: Array<{ mode: string; salt: string; appendEligible: boolean }> = [
+    { mode: "m1", salt: "surname5", appendEligible: surnameLength === 5 },
+    { mode: "m2", salt: "guesstiger", appendEligible: true },
+    { mode: "m3", salt: "mysterytiger", appendEligible: true },
+  ];
+
+  for (const { mode, salt, appendEligible } of modes) {
+    const { data: existingPool } = await supabase.from("rotation_pools").select("player_ids").eq("mode", mode).maybeSingle();
+
+    if (!existingPool) {
+      // Bootstrapping always runs for every mode, regardless of
+      // whether the specific player that triggered this call would
+      // themselves be eligible for it. It pulls every active player
+      // fresh from the table, not just this one.
+      const { data: allPlayers } = await supabase.from("players").select("id, last_name").eq("active", true).order("id");
+      let pool = (allPlayers || []);
+      if (mode === "m1") pool = pool.filter((p: any) => p.last_name.replace(/[^A-Za-z]/g, "").length === 5);
+      const ids = seededShuffle(pool.map((p: any) => p.id), salt);
+      await supabase.from("rotation_pools").upsert({ mode, player_ids: ids, updated_at: new Date().toISOString() });
+    } else if (appendEligible) {
+      const ids: string[] = existingPool.player_ids || [];
+      if (!ids.includes(newPlayer.id)) {
+        await supabase.from("rotation_pools")
+          .update({ player_ids: [...ids, newPlayer.id], updated_at: new Date().toISOString() })
+          .eq("mode", mode);
+      }
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
@@ -52,6 +109,19 @@ Deno.serve(async (req) => {
     switch (action) {
       case "ping": {
         return json({ ok: true, data: { pong: true } });
+      }
+
+      case "bootstrap_rotation_pools": {
+        // One-time, run this once right after deploying the fix, so
+        // the frozen order exists immediately rather than waiting for
+        // the next player to be added. Safe to run again later too,
+        // any mode that's already bootstrapped is left untouched.
+        const { data: anyPlayer } = await supabase.from("players").select("id, last_name").eq("active", true).limit(1).single();
+        if (!anyPlayer) return json({ ok: false, error: "No active players found to bootstrap from." });
+        await syncRotationPools(supabase, anyPlayer);
+        const { data: pools } = await supabase.from("rotation_pools").select("mode, player_ids");
+        const summary = (pools || []).map((p: any) => `${p.mode}: ${p.player_ids.length} players`).join(", ");
+        return json({ ok: true, data: { summary } });
       }
 
       case "stats": {
@@ -119,6 +189,7 @@ Deno.serve(async (req) => {
           pitch_order: p.pitch_order ?? null,
         }).select().single();
         if (error) throw error;
+        await syncRotationPools(supabase, { id: data.id, last_name: data.last_name });
         return json({ ok: true, data });
       }
 
@@ -172,6 +243,9 @@ Deno.serve(async (req) => {
 
         const { data, error } = await supabase.from("players").insert(rows).select();
         if (error) throw error;
+        for (const newPlayer of data) {
+          await syncRotationPools(supabase, { id: newPlayer.id, last_name: newPlayer.last_name });
+        }
         return json({ ok: true, data: { inserted: data.length, skipped: errors, duplicatesSkipped: duplicateCount } });
       }
 
@@ -414,6 +488,14 @@ Deno.serve(async (req) => {
         const { data, error } = await supabase.rpc("calculate_fixture_scores", { fid: p.fixture_id });
         if (error) throw error;
         const scoredCount = data?.[0]?.scored_count ?? 0;
+        // The fixture itself needs marking as done too, otherwise the
+        // predictor's fixture list still treats it as the open one and
+        // never lets the next fixture become available to predict.
+        const { error: statusError } = await supabase
+          .from("fixtures")
+          .update({ status: "Completed" })
+          .eq("id", p.fixture_id);
+        if (statusError) throw statusError;
         return json({ ok: true, data: { scoredCount } });
       }
 

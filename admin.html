@@ -519,7 +519,7 @@ async function tryRestoreSession(){
 if(PASSPHRASE) tryRestoreSession(); else showGate('');
 
 async function refreshAll(){
-  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures(); refreshFormations(); refreshPitchLayout();
+  refreshStats(); refreshPlayers(); refreshPosts(); refreshGoals(); refreshSchedule(); refreshMatchdays(); refreshFixtures(); refreshFormations(); refreshPitchLayout(); loadFormationsForMatchday();
 }
 
 /* ---- Subscribers ---- */
@@ -1238,6 +1238,7 @@ document.getElementById('fm-save').addEventListener('click', async ()=>{
     msg.textContent = 'Saved.';
     resetFormationForm();
     refreshFormations();
+    loadFormationsForMatchday();
   }catch(e){ msg.textContent = e.message; }
 });
 
@@ -1260,7 +1261,7 @@ async function refreshFormations(){
     }));
     list.querySelectorAll('[data-delete-fm]').forEach(btn=>btn.addEventListener('click', async ()=>{
       if(!confirm(`Delete ${btn.dataset.deleteFm}? Anyone with a saved prediction using it keeps their pick, but nobody can choose it for a new one.`)) return;
-      try{ await callAdmin('delete_predictor_formation', { name: btn.dataset.deleteFm }); refreshFormations(); }
+      try{ await callAdmin('delete_predictor_formation', { name: btn.dataset.deleteFm }); refreshFormations(); loadFormationsForMatchday(); }
       catch(e){ toast(e.message); }
     }));
   }catch(e){ list.innerHTML = '<div class="meta">Could not load.</div>'; }
@@ -1305,24 +1306,38 @@ document.getElementById('pl-save').addEventListener('click', async ()=>{
 });
 
 /* ==================== Matchdays ==================== */
-const FORMATIONS = {
-  "4-4-2": ["GK","RB","CB","CB","LB","RM","CM","CM","LM","ST","ST"],
-  "4-3-3": ["GK","RB","CB","CB","LB","CM","CM","CM","RW","ST","LW"],
-  "4-2-3-1": ["GK","RB","CB","CB","LB","CDM","CDM","RW","CAM","LW","ST"],
-  "3-5-2": ["GK","CB","CB","CB","RWB","CM","CM","CM","LWB","ST","ST"],
-  "5-3-2": ["GK","RWB","CB","CB","CB","LWB","CM","CM","CM","ST","ST"],
+// Formations here come from the exact same predictor_formations table
+// the Predictor itself reads from, so adding one in "Add a formation"
+// makes it available here automatically too, nothing to keep in sync
+// by hand. The detailed slot labels (RB/CB/LB etc.) aren't stored
+// there though, just counts per broad position, so slots here are
+// labelled plainly (GK/DF/MF/FW) to match what the Predictor actually
+// tracks, rather than guessing at specific positions within a line.
+let ADMIN_FORMATIONS = {
+  "4-3-3": { gk: 1, df: 4, mf: 3, fw: 3 },
 };
 
-let editingMatchdayId = null;
-let subCounter = 0;
-
-(function populateFormationDropdown(){
+async function loadFormationsForMatchday(){
+  try{
+    const { data } = await sb.from('predictor_formations').select('*').order('sort_order', {ascending:true});
+    if(data && data.length){
+      ADMIN_FORMATIONS = {};
+      data.forEach(f => { ADMIN_FORMATIONS[f.name] = { gk: f.gk, df: f.df, mf: f.mf, fw: f.fw }; });
+    }
+  }catch(e){ /* keep the fallback default if this fails */ }
   const sel = document.getElementById('md-formation');
-  Object.keys(FORMATIONS).forEach(f=>{
+  const current = sel.value;
+  sel.innerHTML = '';
+  Object.keys(ADMIN_FORMATIONS).forEach(f=>{
     const opt = document.createElement('option'); opt.value = f; opt.textContent = f;
     sel.appendChild(opt);
   });
-})();
+  if(current && ADMIN_FORMATIONS[current]) sel.value = current;
+  renderSlots(sel.value);
+}
+
+let editingMatchdayId = null;
+let subCounter = 0;
 
 function activePlayerOptionsHtml(selectedId){
   const active = allPlayersCache.filter(p=>p.active && p.era === 'Current Squad').sort((a,b)=> a.last_name.localeCompare(b.last_name));
@@ -1333,7 +1348,13 @@ function activePlayerOptionsHtml(selectedId){
 
 function renderSlots(formation, existingLineup){
   const container = document.getElementById('md-slots');
-  const slots = FORMATIONS[formation] || [];
+  const counts = ADMIN_FORMATIONS[formation] || ADMIN_FORMATIONS['4-3-3'];
+  const slots = [
+    ...Array(counts.gk).fill('GK'),
+    ...Array(counts.df).fill('DF'),
+    ...Array(counts.mf).fill('MF'),
+    ...Array(counts.fw).fill('FW'),
+  ];
   const starters = (existingLineup || []).filter(r => !r.is_sub);
   container.innerHTML = slots.map((label, i)=>{
     const existing = starters[i];
