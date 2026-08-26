@@ -486,8 +486,13 @@ async function boot(user){
 
   const { data: pointsData } = await sb.from('player_season_points').select('*');
   const pointsById = {};
-  (pointsData || []).forEach(row => { pointsById[row.player_id] = row.season_points; });
-  allPlayersCache.forEach(p => { p.season_points = pointsById[p.id] || 0; });
+  (pointsData || []).forEach(row => { pointsById[row.player_id] = row; });
+  allPlayersCache.forEach(p => {
+    const row = pointsById[p.id];
+    p.season_points = row?.season_points || 0;
+    p.goals_scored = row?.goals_scored || 0;
+    p.first_goals_scored = row?.first_goals_scored || 0;
+  });
 
   await loadFormations();
   await loadPitchLayout();
@@ -1376,10 +1381,14 @@ function renderPicker(locked){
         ${players.map(p=>{
           const selected = isPlayerSelected(p.id);
           const disabled = !selected && totalHave >= totalNeed;
+          const goalBits = [
+            p.goals_scored ? `⚽${p.goals_scored}` : null,
+            p.first_goals_scored ? `⚡${p.first_goals_scored}` : null,
+          ].filter(Boolean).join(' ');
           return `<div class="player-card ${selected?'selected':''} ${disabled?'disabled':''}" data-player-id="${p.id}" data-player-natural-pos="${pos}">
             <div class="player-card-check">✓</div>
             <div class="player-card-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</div>
-            <div class="player-card-points">${p.season_points||0} pts</div>
+            <div class="player-card-points">${p.season_points||0} pts${goalBits ? ` <span style="opacity:.7;">&middot; ${goalBits}</span>` : ''}</div>
           </div>`;
         }).join('')}
       </div>`;
