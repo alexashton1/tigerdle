@@ -825,11 +825,20 @@ async function loadFixtureList(){
 
   // A wildcard is "used" for the season the moment it's attached to any
   // of this user's predictions, including ones not yet locked, so two
-  // fixtures can't both quietly claim the same wildcard at once.
+  // fixtures can't both quietly claim the same wildcard at once. Looks
+  // fixtures up by id directly here, rather than reusing the upcoming-
+  // fixtures list above, since that list only contains still-Scheduled
+  // fixtures. A used wildcard's fixture is usually already Completed
+  // by the time this runs, so relying on that list would make the
+  // wildcard silently look unused again the moment its match finishes.
   const currentSeason = footballSeason(new Date().toISOString());
   usedWildcardsThisSeason = new Set();
+  const wildcardFixtureIds = [...new Set((myPredictions||[]).filter(p=>p.wildcard).map(p=>p.fixture_id))];
+  const { data: wildcardFixtures } = wildcardFixtureIds.length
+    ? await sb.from('fixtures').select('id, match_date').in('id', wildcardFixtureIds)
+    : { data: [] };
   (myPredictions||[]).forEach(p=>{
-    const fx = fixtures.find(f=>f.id===p.fixture_id);
+    const fx = (wildcardFixtures||[]).find(f=>f.id===p.fixture_id);
     if(p.wildcard && fx && footballSeason(fx.match_date) === currentSeason) usedWildcardsThisSeason.add(p.wildcard);
   });
 
