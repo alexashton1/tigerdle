@@ -228,13 +228,36 @@
 <script>
 renderChrome('team');
 
-const FORMATION_COORDS = {
-  "4-4-2": [[50,8],[84,26],[36,24],[64,24],[16,26],[84,55],[38,52],[62,52],[16,55],[38,85],[62,85]],
-  "4-3-3": [[50,8],[84,26],[36,24],[64,24],[16,26],[30,50],[50,46],[70,50],[82,72],[50,85],[18,72]],
-  "4-2-3-1": [[50,8],[84,26],[36,24],[64,24],[16,26],[38,42],[62,42],[82,64],[50,60],[18,64],[50,85]],
-  "3-5-2": [[50,8],[30,22],[50,20],[70,22],[88,42],[30,50],[50,48],[70,50],[12,42],[38,85],[62,85]],
-  "5-3-2": [[50,8],[88,30],[30,22],[50,20],[70,22],[12,30],[30,52],[50,50],[70,52],[38,85],[62,85]],
-};
+// Positions are now worked out directly from the actual lineup's
+// slots, the same way the Predictor and admin's team view do it,
+// rather than a hardcoded list of known formations. That hardcoded
+// list didn't include every formation an admin could create (e.g.
+// "5-2-3"), and any formation missing from it silently collapsed
+// every player onto the same spot in the middle of the pitch.
+const PITCH_SPACING = { GK:0, DF:22, MF:20, FW:17 };
+const PITCH_MAX_SPAN = { GK:0, DF:74, MF:56, FW:40 };
+const PITCH_LINE_Y = { GK:8, DF:26, MF:52, FW:82 };
+function spreadX(count, pos){
+  if(count <= 1) return [50];
+  const spacing = PITCH_SPACING[pos] ?? 20;
+  const maxSpan = PITCH_MAX_SPAN[pos] ?? 56;
+  const totalSpan = Math.min((count - 1) * spacing, maxSpan);
+  const step = totalSpan / (count - 1);
+  const start = 50 - totalSpan / 2;
+  return Array.from({length:count}, (_, i) => start + step*i);
+}
+function coordsForLineup(starters){
+  const byPos = { GK:[], DF:[], MF:[], FW:[] };
+  starters.forEach((p, i) => { (byPos[p.slot] || byPos.FW).push(i); });
+  const coords = [];
+  Object.keys(byPos).forEach(pos=>{
+    const indices = byPos[pos];
+    if(!indices.length) return;
+    const xs = spreadX(indices.length, pos);
+    indices.forEach((originalIndex, i) => { coords[originalIndex] = [xs[i], PITCH_LINE_Y[pos]]; });
+  });
+  return coords;
+}
 
 function pitchSvg(){
   return `<svg class="pitch-lines" viewBox="0 0 100 130" preserveAspectRatio="none">
@@ -294,7 +317,7 @@ function renderMatchday(m){
   const content = document.getElementById('md-content');
   const starters = (m.lineup || []).filter(r => !r.is_sub);
   const subs = (m.lineup || []).filter(r => r.is_sub);
-  const coords = FORMATION_COORDS[m.formation] || [];
+  const coords = coordsForLineup(starters);
   const hasAnyRating = (m.lineup || []).some(r => r.rating != null);
 
   const score = (m.hull_score != null && m.opponent_score != null)
