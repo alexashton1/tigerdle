@@ -166,13 +166,67 @@
 renderChrome('play');
 
 let currentUser = null;
-sb.auth.onAuthStateChange((event, session)=>{ currentUser = session?.user || null; });
-sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; boot(); });
+let wasLoggedIn = false;
+sb.auth.onAuthStateChange((event, session)=>{
+  const nowLoggedIn = !!session?.user;
+  currentUser = session?.user || null;
+  // The moment a guest signs in or signs up, hand over today's guest
+  // score (if any) to their new account, so it isn't just left behind.
+  if(nowLoggedIn && !wasLoggedIn){ claimGuestScoreIfAny(); }
+  wasLoggedIn = nowLoggedIn;
+});
+sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; wasLoggedIn = !!currentUser; boot(); });
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && !currentUser){
     sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; });
   }
 });
+
+// A guest is identified by a token generated once and kept in this
+// browser's storage, not a real account, only used so their score can
+// appear on today's leaderboard and be reassigned if they sign up later.
+function getGuestToken(){
+  let token = localStorage.getItem('ss_guest_token');
+  if(!token){
+    token = 'g_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('ss_guest_token', token);
+  }
+  return token;
+}
+function getGuestLabel(){
+  let label = localStorage.getItem('ss_guest_label');
+  if(!label){
+    label = 'Guest-' + (1000 + Math.floor(Math.random() * 9000));
+    localStorage.setItem('ss_guest_label', label);
+  }
+  return label;
+}
+
+async function callSquadSpinAction(action, payload){
+  const { data: sessionData } = await sb.auth.getSession();
+  const token = sessionData?.session?.access_token || SUPABASE_ANON_KEY;
+  const res = await fetch(fnUrl('squad-spin-action'), {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
+    body: JSON.stringify({ action, payload })
+  });
+  const json = await res.json().catch(()=>({ok:false, error:'Bad response from server'}));
+  if(!json.ok) throw new Error(json.error || 'Something went wrong');
+  return json.data;
+}
+
+async function claimGuestScoreIfAny(){
+  const token = localStorage.getItem('ss_guest_token');
+  if(!token) return;
+  try{
+    const result = await callSquadSpinAction('claim_guest_score', { guest_token: token });
+    if(result.claimed){
+      localStorage.removeItem('ss_guest_token');
+      localStorage.removeItem('ss_guest_label');
+      bestScoreToday = result.score;
+    }
+  }catch(e){ console.error('Could not claim guest score', e); }
+}
 
 const TARGET_SCORE = 1904; // Hull City's founding year
 const SLOTS = [
@@ -335,21 +389,28 @@ async function finishGame(){
   document.getElementById('ss-final').classList.add('show');
   if(totalScore === TARGET_SCORE) document.getElementById('ss-jackpot').classList.add('show');
 
+  const squadPayload = filled.map(p=>({ id:p.id, name:playerName(p), appearances:p.appearances, career_goals:p.career_goals }));
+
   if(currentUser){
     // Unlimited attempts for signed-in fans, but only the best score of
     // the day is kept on the leaderboard, a worse retry never overwrites
-    // a better earlier one today.
+    // a better earlier one today. The edge function itself enforces this
+    // too, this check is just to skip a pointless network call.
     if(bestScoreToday === null || totalScore > bestScoreToday){
-      const squadPayload = filled.map(p=>({ id:p.id, name:playerName(p), appearances:p.appearances, career_goals:p.career_goals }));
-      const { error } = await sb.from('squad_spin_scores').upsert({
-        user_id: currentUser.id, puzzle_date: today, score: totalScore, squad: squadPayload
-      }, { onConflict: 'user_id,puzzle_date' });
-      if(error) console.error('Could not save squad spin score', error);
-      else bestScoreToday = totalScore;
+      try{
+        const result = await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload });
+        if(result.saved) bestScoreToday = result.bestScoreToday;
+      }catch(e){ console.error('Could not save squad spin score', e); }
     }
     document.getElementById('ss-play-again-btn').style.display = 'block';
   } else {
+    // Not signed in: still goes on today's leaderboard, under a generated
+    // guest label, kept in this browser only. Signing in later the same
+    // day hands this score over to their real account automatically.
     localStorage.setItem('ss_played_' + today, String(totalScore));
+    try{
+      await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload, guest_token: getGuestToken(), guest_label: getGuestLabel() });
+    }catch(e){ console.error('Could not save guest squad spin score', e); }
     document.getElementById('ss-signin-cta').style.display = 'block';
   }
   await renderLeaderboard('ss-leaderboard');

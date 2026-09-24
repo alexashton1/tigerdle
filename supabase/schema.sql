@@ -1594,13 +1594,27 @@ create policy "users update own completions" on daily_completions
 -- ---------- squad spin scores & leaderboard ----------
 create table if not exists squad_spin_scores (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  guest_token text,
+  guest_label text,
   puzzle_date date not null default current_date,
   score int not null,
   squad jsonb not null,
   created_at timestamptz not null default now(),
-  unique (user_id, puzzle_date)
+  unique (user_id, puzzle_date),
+  constraint squad_spin_scores_identity check (
+    (user_id is not null and guest_token is null) or
+    (user_id is null and guest_token is not null)
+  )
 );
+
+-- A guest is identified by a token generated and kept in their own
+-- browser's storage, not a real account, so this enforces one score
+-- per guest per day the same way the user-based constraint does for
+-- signed-in players.
+create unique index if not exists squad_spin_scores_guest_daily
+  on squad_spin_scores (guest_token, puzzle_date)
+  where guest_token is not null;
 
 alter table squad_spin_scores enable row level security;
 
@@ -1608,19 +1622,20 @@ drop policy if exists "public read squad spin scores" on squad_spin_scores;
 create policy "public read squad spin scores" on squad_spin_scores
   for select using (true);
 
+-- Writes (both a normal save and claiming a guest score onto a real
+-- account) go through the squad-spin-action edge function, which uses
+-- the service role key and its own validated logic, not direct client
+-- access. That keeps guest rows safe from being edited by anyone else's
+-- anonymous session, which a simple "user_id is null" RLS policy could
+-- not have prevented on its own.
 drop policy if exists "users insert own squad spin score" on squad_spin_scores;
-create policy "users insert own squad spin score" on squad_spin_scores
-  for insert with check (auth.uid() = user_id);
-
 drop policy if exists "users update own squad spin score" on squad_spin_scores;
-create policy "users update own squad spin score" on squad_spin_scores
-  for update using (auth.uid() = user_id);
 
 create or replace view squad_spin_leaderboard
 with (security_invoker = true) as
 select
   s.user_id,
-  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  coalesce(p.display_name, p.email, s.guest_label, 'Unknown') as display_name,
   s.score,
   s.puzzle_date
 from squad_spin_scores s
@@ -1635,7 +1650,7 @@ create or replace view squad_spin_daily_jackpots
 with (security_invoker = true) as
 select
   s.user_id,
-  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  coalesce(p.display_name, p.email, s.guest_label, 'Unknown') as display_name,
   s.score,
   s.puzzle_date
 from squad_spin_scores s
@@ -1646,6 +1661,9 @@ order by s.created_at asc;
 grant select on squad_spin_daily_jackpots to anon, authenticated;
 
 -- All-time best single score per user, across every day they've played.
+-- Guests are deliberately excluded: without a real account there's no
+-- stable identity to aggregate across different days, so grouping them
+-- would just create one confusing combined "Unknown" entry.
 create or replace view squad_spin_overall_leaderboard
 with (security_invoker = true) as
 select
@@ -1654,12 +1672,14 @@ select
   max(s.score) as score
 from squad_spin_scores s
 left join profiles p on p.user_id = s.user_id
+where s.user_id is not null
 group by s.user_id, p.display_name, p.email
 order by score desc;
 
 grant select on squad_spin_overall_leaderboard to anon, authenticated;
 
 -- Hall of fame: everyone who has ever hit 1904, and the day they first did it.
+-- Same reasoning as above, real accounts only.
 create or replace view squad_spin_overall_jackpots
 with (security_invoker = true) as
 select
@@ -1668,7 +1688,7 @@ select
   min(s.puzzle_date) as first_hit_date
 from squad_spin_scores s
 left join profiles p on p.user_id = s.user_id
-where s.score = 1904
+where s.score = 1904 and s.user_id is not null
 group by s.user_id, p.display_name, p.email
 order by first_hit_date asc;
 
