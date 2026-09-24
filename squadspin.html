@@ -54,6 +54,9 @@
   .ss-login-msg{ font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-top:16px; }
   .ss-login-msg a{ color:var(--amber); }
   .ss-leaderboard{ text-align:left; margin-top:20px; max-width:420px; margin-left:auto; margin-right:auto; }
+  .ss-lb-tabs{ display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; justify-content:center; }
+  .ss-lb-tab{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); background:var(--ink); border:1px solid var(--line); border-radius:20px; padding:6px 12px; cursor:pointer; }
+  .ss-lb-tab.active{ color:var(--amber); border-color:var(--amber-deep,#c67f00); background:rgba(245,163,0,.1); }
   .ss-lb-title{ font-family:var(--mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; text-align:center; }
   .ss-lb-row{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:13px; padding:8px 0; border-bottom:1px solid var(--line); color:var(--paper-dim); }
   .ss-lb-row.you{ color:var(--amber); font-weight:bold; }
@@ -81,7 +84,7 @@
       <div style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-bottom:10px;">Signed-in fans get unlimited spins every day</div>
       <a href="account.html" class="ss-spin-btn" style="display:inline-block; text-decoration:none; padding:12px 28px; width:auto;">Sign in for unlimited attempts</a>
     </div>
-    <div class="ss-leaderboard" id="ss-already-leaderboard"></div>
+    <div id="ss-already-leaderboard"></div>
   </div>
 
   <div id="ss-game" style="display:none;">
@@ -89,6 +92,7 @@
       <div class="ss-score-label">Total score</div>
       <div class="ss-score-num" id="ss-score-num">0</div>
       <div class="ss-spins-left" id="ss-spins-left">11 shirts to fill</div>
+      <button id="ss-restart-btn" style="display:none; margin-top:10px; background:none; border:1px solid var(--line); color:var(--paper-dim); font-family:var(--mono); font-size:11px; padding:5px 12px; border-radius:14px; cursor:pointer;">Restart</button>
     </div>
 
     <div class="ss-pitch-wrap">
@@ -119,13 +123,41 @@
       <a href="account.html" class="ss-spin-btn" style="display:inline-block; text-decoration:none; padding:12px 28px; width:auto;">Sign in for unlimited attempts</a>
     </div>
     <button class="ss-spin-btn" id="ss-play-again-btn" style="display:none; max-width:280px; margin:16px auto 0;">Play again, try to beat this</button>
-    <div class="ss-leaderboard" id="ss-leaderboard"></div>
+    <button class="ss-spin-btn" id="ss-share-btn" style="max-width:280px; margin:12px auto 0; background:transparent; border:1px solid var(--amber-deep,#c67f00); color:var(--amber);">📸 Share your team</button>
+    <div id="ss-leaderboard"></div>
   </div>
 </main>
+
+<!-- Hidden capture card: never shown directly, only rendered off-screen so
+     html2canvas can screenshot a clean, purpose-built image rather than
+     the busy live page. -->
+<div id="ss-share-card" style="position:fixed; left:-9999px; top:0; width:420px; background:#14110d; padding:28px 24px; font-family:var(--mono);">
+  <div style="text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;">Hull City AFC &middot; Squad Spin</div>
+  <div style="font-family:var(--display); font-weight:400; font-size:26px; color:#f4ede0; text-align:center; margin:4px 0 14px;">MY SPUN XI</div>
+  <div style="text-align:center; margin-bottom:16px;">
+    <div style="font-family:var(--mono); font-size:11px; color:#a89f8c; text-transform:uppercase; letter-spacing:.05em;">Final score</div>
+    <div style="font-family:var(--display); font-size:48px; color:var(--amber);" id="ss-share-score">0</div>
+  </div>
+  <div id="ss-share-jackpot" style="display:none; text-align:center; background:rgba(245,163,0,.18); border:1px solid var(--amber); border-radius:8px; padding:8px; margin-bottom:14px; font-family:var(--mono); font-size:12px; color:var(--amber);">🎉 Hit 1904, Hull City's founding year</div>
+  <div id="ss-share-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+  <div style="text-align:center; font-family:var(--mono); font-size:10px; color:#a89f8c; margin-top:16px;">tigerdle.com/squadspin</div>
+</div>
+
+<div class="ss-share-modal-overlay" id="ss-share-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); align-items:center; justify-content:center; z-index:50;">
+  <div style="background:var(--ink-2); border:1px solid var(--line); border-radius:14px; padding:20px; max-width:420px; width:90%; text-align:center;">
+    <img id="ss-share-preview" style="width:100%; border-radius:8px; margin-bottom:14px;">
+    <div style="display:flex; gap:10px;">
+      <button id="ss-share-save" class="ss-spin-btn" style="flex:1;">Save image</button>
+      <button id="ss-share-copy" class="ss-spin-btn" style="flex:1; background:transparent; border:1px solid var(--amber-deep,#c67f00); color:var(--amber);">Copy</button>
+    </div>
+    <button id="ss-share-close" style="margin-top:12px; background:none; border:none; color:var(--paper-dim); font-family:var(--mono); font-size:12px; cursor:pointer;">Close</button>
+  </div>
+</div>
 
 <div id="site-footer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script src="assets/chrome.js"></script>
 <script>
@@ -186,6 +218,7 @@ async function boot(){
     return;
   }
   document.getElementById('ss-game').style.display = 'block';
+  document.getElementById('ss-restart-btn').style.display = currentUser ? 'inline-block' : 'none';
   renderPitch();
   resetReel();
 }
@@ -320,7 +353,7 @@ async function finishGame(){
   await renderLeaderboard('ss-leaderboard');
 }
 
-document.getElementById('ss-play-again-btn').addEventListener('click', ()=>{
+function resetGame(){
   currentSlot = 0;
   totalScore = 0;
   filled = [];
@@ -335,20 +368,90 @@ document.getElementById('ss-play-again-btn').addEventListener('click', ()=>{
   document.getElementById('ss-score-num').textContent = '0';
   renderPitch();
   resetReel();
+}
+
+document.getElementById('ss-play-again-btn').addEventListener('click', resetGame);
+
+// Restart is only ever visible to logged-in users (boot() controls that),
+// letting them abandon a run partway through and start fresh, since
+// they've got unlimited attempts anyway.
+document.getElementById('ss-restart-btn').addEventListener('click', ()=>{
+  if(!confirm('Restart this XI? Your current spins for this attempt will be lost.')) return;
+  resetGame();
 });
 
+const LEADERBOARD_VIEWS = {
+  daily: { table: 'squad_spin_leaderboard', tab: "Today's scores", title: "Today's top scores", orderCol: 'score', ascending: false },
+  dailyJackpot: { table: 'squad_spin_daily_jackpots', tab: 'Today\'s 1904s', title: 'Hit 1904 today', orderCol: 'score', ascending: false },
+  overall: { table: 'squad_spin_overall_leaderboard', tab: 'All-time best', title: 'All-time best scores', orderCol: 'score', ascending: false },
+  overallJackpot: { table: 'squad_spin_overall_jackpots', tab: '1904 hall of fame', title: 'Everyone who has ever hit 1904', orderCol: 'first_hit_date', ascending: true },
+};
+
 async function renderLeaderboard(targetId){
-  const { data, error } = await sb.from('squad_spin_leaderboard').select('*').order('score', {ascending:false}).limit(10);
   const el = document.getElementById(targetId);
+  el.className = 'ss-leaderboard';
+  el.innerHTML = `<div class="ss-lb-tabs">` +
+    Object.keys(LEADERBOARD_VIEWS).map((key,i)=>`<button class="ss-lb-tab ${i===0?'active':''}" data-view="${key}">${LEADERBOARD_VIEWS[key].tab}</button>`).join('') +
+    `</div><div class="ss-lb-content"></div>`;
+  el.querySelectorAll('.ss-lb-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      el.querySelectorAll('.ss-lb-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      loadLeaderboardView(el, btn.dataset.view);
+    });
+  });
+  await loadLeaderboardView(el, 'daily');
+}
+
+async function loadLeaderboardView(el, viewKey){
+  const config = LEADERBOARD_VIEWS[viewKey];
+  const content = el.querySelector('.ss-lb-content');
+  content.innerHTML = `<div class="ss-lb-title">${config.title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Loading…</div>`;
+  const { data, error } = await sb.from(config.table).select('*').order(config.orderCol, {ascending: config.ascending}).limit(10);
   if(error || !data || !data.length){
-    el.innerHTML = '';
+    content.innerHTML = `<div class="ss-lb-title">${config.title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Nobody yet, be the first.</div>`;
     return;
   }
-  el.innerHTML = `<div class="ss-lb-title">Today's leaderboard</div>` + data.map((row, i)=>{
+  content.innerHTML = `<div class="ss-lb-title">${config.title}</div>` + data.map((row, i)=>{
     const isYou = currentUser && row.user_id === currentUser.id;
-    return `<div class="ss-lb-row ${isYou?'you':''}"><span>${i+1}. ${isYou?'You':row.display_name}</span><span>${row.score}</span></div>`;
+    const value = viewKey === 'overallJackpot' ? new Date(row.first_hit_date).toLocaleDateString() : row.score;
+    return `<div class="ss-lb-row ${isYou?'you':''}"><span>${i+1}. ${isYou?'You':row.display_name}</span><span>${value}</span></div>`;
   }).join('');
 }
+
+/* ---------- share as image ---------- */
+document.getElementById('ss-share-btn').addEventListener('click', async ()=>{
+  toast('Building image…');
+  try{
+    document.getElementById('ss-share-score').textContent = totalScore;
+    document.getElementById('ss-share-jackpot').style.display = totalScore === TARGET_SCORE ? 'block' : 'none';
+    document.getElementById('ss-share-list').innerHTML = filled.map(p=>{
+      const pts = p.appearances + p.career_goals;
+      return `<div style="display:flex; justify-content:space-between; align-items:center; background:#1c1811; border:1px solid #3a352c; border-radius:6px; padding:8px 12px;">
+        <span style="font-family:var(--display); font-size:14px; color:#f4ede0;">${playerName(p)}</span>
+        <span style="font-family:var(--mono); font-size:11px; color:#a89f8c;">${p.appearances} apps + ${p.career_goals} goals = <span style="color:var(--amber);">${pts}</span></span>
+      </div>`;
+    }).join('');
+    const canvas = await html2canvas(document.getElementById('ss-share-card'), { backgroundColor: '#14110d', scale: 2 });
+    canvas.toBlob((blob)=>{
+      window.ssShareBlob = blob;
+      document.getElementById('ss-share-preview').src = URL.createObjectURL(blob);
+      document.getElementById('ss-share-modal-overlay').style.display = 'flex';
+    }, 'image/png');
+  }catch(e){ toast('Could not build the image right now.'); }
+});
+document.getElementById('ss-share-close').addEventListener('click', ()=> document.getElementById('ss-share-modal-overlay').style.display = 'none');
+document.getElementById('ss-share-modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='ss-share-modal-overlay') document.getElementById('ss-share-modal-overlay').style.display = 'none'; });
+document.getElementById('ss-share-save').addEventListener('click', ()=>{
+  if(!window.ssShareBlob) return;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(window.ssShareBlob); a.download = 'tigerdle-squad-spin.png'; a.click();
+  toast('Image saved.');
+});
+document.getElementById('ss-share-copy').addEventListener('click', async ()=>{
+  if(!window.ssShareBlob) return;
+  try{ await navigator.clipboard.write([new ClipboardItem({'image/png': window.ssShareBlob})]); toast('Image copied.'); }
+  catch(e){ toast('Copy not supported on this device, use Save instead.'); }
+});
 </script>
 </body>
 </html>

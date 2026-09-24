@@ -17,6 +17,7 @@ create table if not exists players (
   birth_date date,
   appearances int,
   appearances_updated_at timestamptz,
+  career_goals int,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -29,6 +30,7 @@ create policy "public read active players" on players
 
 -- Left-to-right placement within a position line on any pitch view.
 alter table players add column if not exists pitch_order int;
+alter table players add column if not exists career_goals int;
 -- No insert/update/delete policies for anon/authenticated: all writes go
 -- through the admin-action edge function using the service role key.
 
@@ -480,6 +482,7 @@ create policy "league mates see each others scored predictions" on predictions
 create or replace function slot_to_broad_position(slot text) returns text as $$
   select case slot
     when 'GK' then 'GK'
+    when 'DF' then 'DF' when 'MF' then 'MF' when 'FW' then 'FW'
     when 'RB' then 'DF' when 'CB' then 'DF' when 'LB' then 'DF'
     when 'RWB' then 'DF' when 'LWB' then 'DF'
     when 'CDM' then 'MF' when 'CM' then 'MF' when 'CAM' then 'MF'
@@ -548,11 +551,13 @@ begin
       if lineup_item->>'slot' in ('GK','DF') then
         gk_df_count := gk_df_count + 1;
       end if;
+      -- Just being in the actual starting XI earns this, regardless of
+      -- which slot was predicted versus which slot they actually
+      -- played. Not an exact-position match anymore.
       if exists (
         select 1 from jsonb_array_elements(md.lineup) a_item
         where a_item->>'player_id' = lineup_item->>'player_id'
           and a_item->>'is_sub' = 'false'
-          and slot_to_broad_position(a_item->>'slot') = lineup_item->>'slot'
       ) then
         pos_pts := pos_pts + 2;
         correct_positions := correct_positions || jsonb_build_object(
@@ -744,10 +749,24 @@ alter table profiles add column if not exists display_name text;
 create or replace function handle_new_user() returns trigger as $$
 declare
   v_name text;
+  v_overall_id uuid;
 begin
   v_name := 'Tiger' || (1000 + floor(random() * 9000))::int;
   insert into public.profiles (user_id, email, display_name) values (new.id, new.email, v_name)
   on conflict (user_id) do nothing;
+
+  -- Everyone lands in the public "Overall" league automatically, no
+  -- separate join step to notice and click. This got accidentally
+  -- dropped once before when this function was redefined for the
+  -- random-name feature without carrying this part across, so it's
+  -- deliberately kept in the same function as the naming now rather
+  -- than left as a separate migration someone could overwrite again.
+  select id into v_overall_id from leagues where code = 'OVERALL';
+  if v_overall_id is not null then
+    insert into league_members (league_id, user_id) values (v_overall_id, new.id)
+    on conflict (league_id, user_id) do nothing;
+  end if;
+
   return new;
 end;
 $$ language plpgsql security definer;
@@ -755,6 +774,14 @@ $$ language plpgsql security definer;
 -- Backfill anyone who already signed up before this existed.
 update profiles set display_name = 'Tiger' || (1000 + floor(random() * 9000))::int
 where display_name is null;
+
+-- Backfill anyone missing from Overall specifically, whether they're
+-- missing a display name or not, since those are two separate gaps.
+insert into league_members (league_id, user_id)
+select (select id from leagues where code = 'OVERALL'), u.id
+from auth.users u
+where exists (select 1 from leagues where code = 'OVERALL')
+on conflict (league_id, user_id) do nothing;
 
 -- =========================================================
 -- 2. Blocked words: a real table, not hardcoded logic, so you can
@@ -912,38 +939,87 @@ alter table prediction_reminders_sent enable row level security;
 -- touches this table.
 
 
--- ---------- player season points (aggregated from scoring breakdowns) ----------
-create or replace view player_season_points
+-- ---------- player season points (real performance, using the same tiers as prediction scoring) ----------
+-- Uses the exact same scoring tiers already used to score user
+-- predictions:
+--   Anytime goalscorer: GK/DF 10, MF 7, FW 5
+--   First goalscorer:   GK/DF 20, MF 15, FW 10
+-- Plus 3 points for every match a player started, and 1 point for
+-- every match they appeared as a substitute. Not counting the
+-- players.appearances field at all, since that's a manually-entered
+-- career-long total, not a per-season count, and would badly skew
+-- this toward long-serving players regardless of how they're
+-- actually playing right now.
+--
+-- Goals stack per the same rule used elsewhere: if a goal was the
+-- match's first goal, it earns the higher first-scorer tier only, not
+-- the anytime tier as well on top of it. Any other goal in that same
+-- match, by a different player, earns the normal anytime tier for
+-- their own position.
+--
+-- goals_scored (shown in the Predictor's player picker) is the
+-- player's total goals this season, first-goals included. Points
+-- still count a first goal only once, at its own higher rate.
+--
+-- Dropped and recreated rather than "create or replace", since
+-- Postgres won't let a replace insert new columns ahead of an
+-- existing one, only add them at the very end.
+drop view if exists player_season_points;
+
+create view player_season_points
 with (security_invoker = true) as
-with position_pts as (
-  select (elem->>'player_id')::uuid as player_id, 2 as points
-  from prediction_scores ps, jsonb_array_elements(ps.breakdown->'correct_positions') elem
+with starts as (
+  select (l->>'player_id')::uuid as player_id, count(*) as starts_count
+  from matchdays md, jsonb_array_elements(md.lineup) l
+  where l->>'is_sub' = 'false'
+  group by (l->>'player_id')::uuid
 ),
-predicted_scorer_pts as (
-  select
-    (ps.breakdown->'predicted_scorer'->>'player_id')::uuid as player_id,
-    (ps.breakdown->'predicted_scorer'->>'points')::int as points
-  from prediction_scores ps
-  where ps.breakdown->'predicted_scorer'->>'hit' = 'true'
-    and ps.breakdown->'predicted_scorer'->>'player_id' is not null
+sub_appearances as (
+  select (l->>'player_id')::uuid as player_id, count(*) as sub_count
+  from matchdays md, jsonb_array_elements(md.lineup) l
+  where l->>'is_sub' = 'true'
+  group by (l->>'player_id')::uuid
 ),
-first_scorer_pts as (
-  select
-    (ps.breakdown->'first_scorer'->>'player_id')::uuid as player_id,
-    (ps.breakdown->'first_scorer'->>'points')::int as points
-  from prediction_scores ps
-  where ps.breakdown->'first_scorer'->>'hit' = 'true'
-    and ps.breakdown->'first_scorer'->>'player_id' is not null
+-- Split into "the first goal" and "every other goal" by array
+-- position, not by matching player_id, since matching by player_id
+-- would wrongly tag someone's second goal as "first" too if they
+-- happened to have also scored the actual first goal of the match.
+first_goals as (
+  select (md.goalscorers->0->>'player_id')::uuid as player_id, count(*) as first_goals_scored
+  from matchdays md
+  where jsonb_array_length(md.goalscorers) > 0
+  group by (md.goalscorers->0->>'player_id')::uuid
 ),
-all_pts as (
-  select * from position_pts
-  union all select * from predicted_scorer_pts
-  union all select * from first_scorer_pts
+nonfirst_goals as (
+  select (g->>'player_id')::uuid as player_id, count(*) as nonfirst_goals_scored
+  from matchdays md, jsonb_array_elements(md.goalscorers - 0) g
+  where jsonb_array_length(md.goalscorers) > 0
+  group by (g->>'player_id')::uuid
+),
+total_goals as (
+  select player_id, sum(goals) as goals_scored from (
+    select player_id, first_goals_scored as goals from first_goals
+    union all
+    select player_id, nonfirst_goals_scored as goals from nonfirst_goals
+  ) combined
+  group by player_id
 )
-select player_id, sum(points)::int as season_points
-from all_pts
-where player_id is not null
-group by player_id;
+select
+  p.id as player_id,
+  coalesce(tg.goals_scored, 0)::int as goals_scored,
+  coalesce(fg.first_goals_scored, 0)::int as first_goals_scored,
+  (
+    coalesce(s.starts_count, 0) * 3
+    + coalesce(sa.sub_count, 0) * 1
+    + coalesce(nfg.nonfirst_goals_scored, 0) * (case p.position when 'GK' then 10 when 'DF' then 10 when 'MF' then 7 when 'FW' then 5 else 0 end)
+    + coalesce(fg.first_goals_scored, 0) * (case p.position when 'GK' then 20 when 'DF' then 20 when 'MF' then 15 when 'FW' then 10 else 0 end)
+  )::int as season_points
+from players p
+left join starts s on s.player_id = p.id
+left join sub_appearances sa on sa.player_id = p.id
+left join total_goals tg on tg.player_id = p.id
+left join first_goals fg on fg.player_id = p.id
+left join nonfirst_goals nfg on nfg.player_id = p.id;
 
 grant select on player_season_points to anon, authenticated;
 
@@ -1467,3 +1543,133 @@ $$ language plpgsql security definer;
 -- again. chrome.js checks for unseen ones on every page load while
 -- signed in and marks them seen right after showing the toast.
 alter table user_achievements add column if not exists seen boolean not null default false;
+
+-- ---------- site puzzle stats (homepage flip-board) ----------
+create or replace view site_puzzle_stats as
+select
+  coalesce(sum((stats->'m1'->>'played')::int), 0)
+  + coalesce(sum((stats->'m2'->>'played')::int), 0)
+  + coalesce(sum((stats->'m3'->>'played')::int), 0)
+  + coalesce(sum((stats->'m4'->>'played')::int), 0) as total_puzzles_played
+from user_stats;
+
+grant select on site_puzzle_stats to anon, authenticated;
+
+-- ---------- rotation pools (frozen daily-game order) ----------
+create table if not exists rotation_pools (
+  mode text primary key check (mode in ('m1','m2','m3')),
+  player_ids jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table rotation_pools enable row level security;
+drop policy if exists "public read rotation pools" on rotation_pools;
+create policy "public read rotation pools" on rotation_pools
+  for select using (true);
+
+-- ---------- daily_completions (server-authoritative per-account state) ----------
+create table if not exists daily_completions (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  mode text not null check (mode in ('m1','m2','m3','m4')),
+  date_key text not null,
+  state jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, mode, date_key)
+);
+
+alter table daily_completions enable row level security;
+
+drop policy if exists "users read own completions" on daily_completions;
+create policy "users read own completions" on daily_completions
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "users insert own completions" on daily_completions;
+create policy "users insert own completions" on daily_completions
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "users update own completions" on daily_completions;
+create policy "users update own completions" on daily_completions
+  for update using (auth.uid() = user_id);
+
+-- ---------- squad spin scores & leaderboard ----------
+create table if not exists squad_spin_scores (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  puzzle_date date not null default current_date,
+  score int not null,
+  squad jsonb not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, puzzle_date)
+);
+
+alter table squad_spin_scores enable row level security;
+
+drop policy if exists "public read squad spin scores" on squad_spin_scores;
+create policy "public read squad spin scores" on squad_spin_scores
+  for select using (true);
+
+drop policy if exists "users insert own squad spin score" on squad_spin_scores;
+create policy "users insert own squad spin score" on squad_spin_scores
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "users update own squad spin score" on squad_spin_scores;
+create policy "users update own squad spin score" on squad_spin_scores
+  for update using (auth.uid() = user_id);
+
+create or replace view squad_spin_leaderboard
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  s.score,
+  s.puzzle_date
+from squad_spin_scores s
+left join profiles p on p.user_id = s.user_id
+where s.puzzle_date = current_date
+order by s.score desc;
+
+grant select on squad_spin_leaderboard to anon, authenticated;
+
+-- Everyone who's hit the 1904 target today specifically.
+create or replace view squad_spin_daily_jackpots
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  s.score,
+  s.puzzle_date
+from squad_spin_scores s
+left join profiles p on p.user_id = s.user_id
+where s.puzzle_date = current_date and s.score = 1904
+order by s.created_at asc;
+
+grant select on squad_spin_daily_jackpots to anon, authenticated;
+
+-- All-time best single score per user, across every day they've played.
+create or replace view squad_spin_overall_leaderboard
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  max(s.score) as score
+from squad_spin_scores s
+left join profiles p on p.user_id = s.user_id
+group by s.user_id, p.display_name, p.email
+order by score desc;
+
+grant select on squad_spin_overall_leaderboard to anon, authenticated;
+
+-- Hall of fame: everyone who has ever hit 1904, and the day they first did it.
+create or replace view squad_spin_overall_jackpots
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  min(s.puzzle_date) as first_hit_date
+from squad_spin_scores s
+left join profiles p on p.user_id = s.user_id
+where s.score = 1904
+group by s.user_id, p.display_name, p.email
+order by first_hit_date asc;
+
+grant select on squad_spin_overall_jackpots to anon, authenticated;

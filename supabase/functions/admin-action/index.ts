@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
           birth_date: p.birth_date || null,
           appearances: p.appearances ?? null,
           appearances_updated_at: p.appearances != null ? new Date().toISOString() : null,
+          career_goals: p.career_goals ?? null,
           active: p.active !== false,
           pitch_order: p.pitch_order ?? null,
         }).select().single();
