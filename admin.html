@@ -97,12 +97,12 @@
     <div class="formcard">
       <h3>Bulk add players</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
-        One player per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">First,Last,Position,Nationality,Era,Age,BirthDate,Appearances</code><br>
+        One player per line: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">First,Last,Position,Nationality,Era,Age,BirthDate,Appearances,CareerGoals</code><br>
         Position must be GK, DF, MF or FW. Everything after that is optional, leave blank if unsure.
         BirthDate as YYYY-MM-DD (e.g. 1996-04-02): if you know it, it's better than Age since the age then updates itself forever.<br>
-        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Jimmy,Bullard,MF,England,Premier League Era,,,</code>
+        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Jimmy,Bullard,MF,England,Premier League Era,,,,</code>
       </p>
-      <div class="field"><textarea id="bulk-players" placeholder="Jimmy,Bullard,MF,England,Premier League Era,,,&#10;Nick,Barmby,MF,England,2000s Local Hero,,1974-02-11,"></textarea></div>
+      <div class="field"><textarea id="bulk-players" placeholder="Jimmy,Bullard,MF,England,Premier League Era,,,,&#10;Nick,Barmby,MF,England,2000s Local Hero,,1974-02-11,,"></textarea></div>
       <button class="primary-btn" id="bulk-submit">Add all</button>
       <div class="subscribe-msg" id="bulk-msg"></div>
     </div>
@@ -112,10 +112,10 @@
       <h3>Bulk fix existing players</h3>
       <p style="font-size:12px; color:var(--paper-dim); margin-top:-6px;">
         Same format, but this <b>updates</b> players already in the pool instead of adding new ones, matched by first + last name.
-        Leave any column blank to leave that field unchanged. Use this to fix missing ages/birth dates, correct eras, or refresh appearance counts in bulk.<br>
-        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Ahmed,Elmohamady,,,2012-2017,,,217</code> only changes the era and appearances, leaves everything else as-is.
+        Leave any column blank to leave that field unchanged. Use this to fix missing ages/birth dates, correct eras, or refresh appearance and goals counts in bulk.<br>
+        Example: <code style="background:var(--ink); padding:1px 5px; border-radius:4px;">Ahmed,Elmohamady,,,2012-2017,,,217,</code> only changes the era and appearances, leaves everything else as-is.
       </p>
-      <div class="field"><textarea id="bulk-update" placeholder="Ahmed,Elmohamady,,,2012-2017,,,217&#10;Sam,Clucas,,,2015-2017,,1993-09-25,"></textarea></div>
+      <div class="field"><textarea id="bulk-update" placeholder="Ahmed,Elmohamady,,,2012-2017,,,217,&#10;Sam,Clucas,,,2015-2017,,1993-09-25,,"></textarea></div>
       <button class="primary-btn" id="bulk-update-submit">Update all</button>
       <div class="subscribe-msg" id="bulk-update-msg"></div>
     </div>
@@ -142,6 +142,9 @@
         </div>
         <div class="field"><label>Appearances <span style="text-transform:none; opacity:.7;">(club career total, optional)</span></label>
           <input type="number" id="p-apps" min="0" placeholder="e.g. 217">
+        </div>
+        <div class="field"><label>Career goals <span style="text-transform:none; opacity:.7;">(club career total, optional)</span></label>
+          <input type="number" id="p-goals" min="0" placeholder="e.g. 45">
         </div>
       </div>
       <div class="field-row">
@@ -606,7 +609,7 @@ document.getElementById('bulk-submit').addEventListener('click', async ()=>{
   const badLines = [];
   lines.forEach((line, i)=>{
     const parts = line.split(',').map(p=>p.trim());
-    const [first_name, last_name, position, nationality, era, age, birth_date, appearances] = parts;
+    const [first_name, last_name, position, nationality, era, age, birth_date, appearances, career_goals] = parts;
     if(!first_name || !last_name || !position){ badLines.push(i+1); return; }
     players.push({
       first_name, last_name,
@@ -615,7 +618,8 @@ document.getElementById('bulk-submit').addEventListener('click', async ()=>{
       era: era || undefined,
       age: age ? Number(age) : null,
       birth_date: birth_date || undefined,
-      appearances: appearances ? Number(appearances) : null
+      appearances: appearances ? Number(appearances) : null,
+      career_goals: career_goals ? Number(career_goals) : null
     });
   });
   if(!players.length){ document.getElementById('bulk-msg').textContent = 'No valid lines found, check the format.'; return; }
@@ -637,7 +641,7 @@ document.getElementById('p-export').addEventListener('click', async ()=>{
   try{
     const { data } = await sb.from('players').select('*').order('last_name');
     if(!data || !data.length){ toast('No players to export'); return; }
-    const text = data.map(p => [p.first_name, p.last_name, p.position, p.nationality, p.era, p.age ?? '', p.birth_date ?? '', p.appearances ?? ''].join(',')).join('\n');
+    const text = data.map(p => [p.first_name, p.last_name, p.position, p.nationality, p.era, p.age ?? '', p.birth_date ?? '', p.appearances ?? '', p.career_goals ?? ''].join(',')).join('\n');
     await navigator.clipboard.writeText(text);
     toast(`Copied ${data.length} players to clipboard`);
   }catch(e){ toast('Could not copy, clipboard access blocked?'); }
@@ -674,6 +678,7 @@ function startEditPlayer(id){
   document.getElementById('p-birthdate').value = p.birth_date || '';
   setAgeField(p.age);
   document.getElementById('p-apps').value = p.appearances ?? '';
+  document.getElementById('p-goals').value = p.career_goals ?? '';
   setNatField(p.nationality);
   document.getElementById('p-era').value = p.era || '';
   document.getElementById('p-pitch-order').value = p.pitch_order ?? '';
@@ -698,9 +703,10 @@ function renderPlayerList(){
     const appsLabel = p.appearances
       ? `${p.appearances} apps${p.appearances_updated_at ? ' (as of '+new Date(p.appearances_updated_at).toLocaleDateString()+')' : ''}`
       : '';
+    const goalsLabel = p.career_goals ? `${p.career_goals} goals` : '';
     return `
     <div class="admin-row">
-      <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.nationality ? ' · '+p.nationality : ''} · ${ageLabel}${appsLabel ? ' · '+appsLabel : ''}${p.active?'':' · inactive'}</span></div>
+      <div>${p.first_name} ${p.last_name} <span class="meta">${p.position} · ${p.era}${p.nationality ? ' · '+p.nationality : ''} · ${ageLabel}${appsLabel ? ' · '+appsLabel : ''}${goalsLabel ? ' · '+goalsLabel : ''}${p.active?'':' · inactive'}</span></div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="ghost-btn" data-edit="${p.id}">Edit</button>
         <button class="ghost-btn" data-id="${p.id}" data-active="${p.active}">${p.active?'Deactivate':'Reactivate'}</button>
@@ -725,6 +731,7 @@ function exitEditMode(){
   document.getElementById('p-age').value = '';
   setAgeField('');
   document.getElementById('p-apps').value = '';
+  document.getElementById('p-goals').value = '';
   setNatField('');
   document.getElementById('p-era').value = 'Current Squad';
   document.getElementById('p-pitch-order').value = '';
@@ -758,6 +765,7 @@ document.getElementById('p-submit').addEventListener('click', async ()=>{
     birth_date: document.getElementById('p-birthdate').value || null,
     age: getAgeValue(),
     appearances: document.getElementById('p-apps').value ? Number(document.getElementById('p-apps').value) : null,
+    career_goals: document.getElementById('p-goals').value ? Number(document.getElementById('p-goals').value) : null,
     nationality: getNatValue() || 'Unknown',
     era: document.getElementById('p-era').value.trim() || 'Current Squad',
     pitch_order: document.getElementById('p-pitch-order').value ? Number(document.getElementById('p-pitch-order').value) : null,
@@ -790,11 +798,12 @@ document.getElementById('bulk-update-submit').addEventListener('click', async ()
   const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
   if(!lines.length){ document.getElementById('bulk-update-msg').textContent = 'Paste at least one line first.'; return; }
   const updates = lines.map(line=>{
-    const [first_name, last_name, position, nationality, era, age, birth_date, appearances] = line.split(',').map(p=>p.trim());
+    const [first_name, last_name, position, nationality, era, age, birth_date, appearances, career_goals] = line.split(',').map(p=>p.trim());
     return {
       first_name, last_name,
       position: position || undefined, nationality: nationality || undefined, era: era || undefined,
-      age: age || undefined, birth_date: birth_date || undefined, appearances: appearances || undefined
+      age: age || undefined, birth_date: birth_date || undefined, appearances: appearances || undefined,
+      career_goals: career_goals || undefined
     };
   }).filter(u=>u.first_name && u.last_name);
   if(!updates.length){ document.getElementById('bulk-update-msg').textContent = 'No valid lines found, check the format.'; return; }

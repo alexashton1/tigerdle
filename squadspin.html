@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Squad Spin: Tigerdle</title>
+<link rel="canonical" href="https://tigerdle.com/squadspin.html">
+<meta name="description" content="Spin your Hull City XI. Real club appearances and goals build your score. Hit 1904 for something special.">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .ss-intro{ text-align:center; font-size:13px; color:var(--paper-dim); max-width:480px; margin:0 auto 20px; }
+  .ss-score-bar{ background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:18px; text-align:center; max-width:480px; margin-left:auto; margin-right:auto; }
+  .ss-score-label{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.05em; }
+  .ss-score-num{ font-family:var(--display); font-size:44px; color:var(--amber); }
+  .ss-spins-left{ font-family:var(--mono); font-size:12px; color:var(--paper-dim); margin-top:4px; }
+  .ss-pitch-wrap{ position:relative; width:100%; max-width:360px; margin:0 auto 22px; aspect-ratio:100/95; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#16241c; }
+  .ss-pitch-lines{ position:absolute; inset:0; width:100%; height:100%; }
+  .ss-pitch-players{ position:absolute; inset:0; }
+  .ss-pitch-slot{ position:absolute; transform:translate(-50%,-50%); text-align:center; width:58px; }
+  .ss-pitch-dot{ width:32px; height:32px; border-radius:50%; background:var(--line); border:2px dashed #4a453a; margin:0 auto 3px; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:14px; color:var(--paper-dim); transition:all .3s ease; }
+  .ss-pitch-dot.filled{ background:var(--amber); border:2px solid var(--ink); color:var(--ink); font-family:var(--display); font-size:13px; }
+  .ss-pitch-dot.active{ border:2px solid var(--amber); animation:ssGlow 1s infinite; }
+  @keyframes ssGlow{ 0%,100%{ box-shadow:0 0 0 0 rgba(245,163,0,.5); } 50%{ box-shadow:0 0 0 6px rgba(245,163,0,0); } }
+  .ss-pitch-name{ font-family:var(--mono); font-size:7px; color:var(--paper-dim); }
+  .ss-panel{ background:var(--ink-2); border:1px solid var(--line); border-radius:12px; padding:18px; max-width:480px; margin:0 auto; }
+  .ss-heading{ text-align:center; font-family:var(--mono); font-size:12px; color:var(--amber); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; }
+  .ss-reel{ display:flex; gap:8px; margin-bottom:16px; }
+  .ss-reel-card{ flex:1; background:var(--ink); border:2px solid var(--line); border-radius:8px; padding:16px 6px; text-align:center; min-height:74px; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:all .15s ease; cursor:default; }
+  .ss-reel-card.revealed{ cursor:pointer; }
+  .ss-reel-card.revealed:hover{ border-color:var(--amber-deep,#c67f00); }
+  .ss-reel-card.chosen{ border-color:var(--amber); background:rgba(245,163,0,.18); }
+  .ss-reel-mystery{ font-family:var(--display); font-size:26px; color:var(--paper-dim); }
+  .ss-reel-name{ font-family:var(--display); font-size:14px; color:var(--paper); }
+  .ss-reel-stats{ font-family:var(--mono); font-size:10px; color:var(--paper-dim); margin-top:4px; }
+  .ss-spin-btn{ width:100%; background:var(--amber); color:var(--ink); font-family:var(--display); font-size:17px; padding:15px; border:none; border-radius:10px; cursor:pointer; }
+  .ss-spin-btn:disabled{ background:var(--line); color:var(--paper-dim); cursor:not-allowed; }
+  .ss-pick-hint{ text-align:center; font-family:var(--mono); font-size:12px; color:var(--amber-deep,#c67f00); margin-top:12px; display:none; }
+  .ss-pick-hint.show{ display:block; }
+  .ss-landed-banner{ text-align:center; padding:12px; margin-top:14px; background:rgba(95,143,82,.15); border:1px solid var(--good,#5f8f52); border-radius:8px; font-family:var(--mono); font-size:13px; color:var(--good,#5f8f52); display:none; }
+  .ss-landed-banner.show{ display:block; }
+  .ss-final{ display:none; text-align:center; max-width:480px; margin:0 auto; }
+  .ss-final.show{ display:block; }
+  .ss-final-num{ font-family:var(--display); font-size:64px; color:var(--amber); margin:10px 0; }
+  .ss-jackpot{ display:none; background:linear-gradient(135deg, rgba(245,163,0,.25), rgba(198,127,0,.1)); border:2px solid var(--amber); border-radius:12px; padding:18px; margin:16px 0; }
+  .ss-jackpot.show{ display:block; }
+  .ss-jackpot .jp-num{ font-family:var(--display); font-size:32px; color:var(--amber); }
+  .ss-login-msg{ font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-top:16px; }
+  .ss-login-msg a{ color:var(--amber); }
+  .ss-leaderboard{ text-align:left; margin-top:20px; max-width:420px; margin-left:auto; margin-right:auto; }
+  .ss-lb-title{ font-family:var(--mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; text-align:center; }
+  .ss-lb-row{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:13px; padding:8px 0; border-bottom:1px solid var(--line); color:var(--paper-dim); }
+  .ss-lb-row.you{ color:var(--amber); font-weight:bold; }
+  .ss-error-box{ text-align:center; font-family:var(--mono); font-size:13px; color:var(--paper-dim); max-width:480px; margin:30px auto; padding:20px; background:var(--ink-2); border:1px solid var(--line); border-radius:10px; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap" style="padding-top:20px; padding-bottom:60px;">
+  <div class="eyebrow" style="text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;">Hull City AFC &middot; Squad Spin</div>
+  <h1 style="font-family:var(--display); font-weight:400; font-size:32px; color:var(--paper); text-align:center; margin:4px 0 2px;">SPIN YOUR XI</h1>
+  <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. One attempt a day.</div>
+
+  <div id="ss-loading" class="ss-err-box">Loading today's squad pool…</div>
+  <div id="ss-error" class="ss-err-box" style="display:none;"></div>
+
+  <div id="ss-already-played" style="display:none; max-width:480px; margin:0 auto; text-align:center;">
+    <div class="ss-score-bar">
+      <div class="ss-score-label">You've already spun today</div>
+      <div class="ss-score-num" id="ss-already-score">0</div>
+    </div>
+    <div id="ss-already-jackpot" class="ss-jackpot"><div class="jp-num">1904</div>Hull City's founding year, exactly. Nice one.</div>
+    <div class="ss-signin-cta" id="ss-already-signin-cta" style="margin:16px 0;">
+      <div style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-bottom:10px;">Signed-in fans get unlimited spins every day</div>
+      <a href="account.html" class="ss-spin-btn" style="display:inline-block; text-decoration:none; padding:12px 28px; width:auto;">Sign in for unlimited attempts</a>
+    </div>
+    <div class="ss-leaderboard" id="ss-already-leaderboard"></div>
+  </div>
+
+  <div id="ss-game" style="display:none;">
+    <div class="ss-score-bar">
+      <div class="ss-score-label">Total score</div>
+      <div class="ss-score-num" id="ss-score-num">0</div>
+      <div class="ss-spins-left" id="ss-spins-left">11 shirts to fill</div>
+    </div>
+
+    <div class="ss-pitch-wrap">
+      <svg class="ss-pitch-lines" viewBox="0 0 100 95" preserveAspectRatio="none">
+        <rect x="2" y="2" width="96" height="91" fill="none" stroke="#2c4433" stroke-width="0.5"/>
+        <line x1="2" y1="47.5" x2="98" y2="47.5" stroke="#2c4433" stroke-width="0.5"/>
+        <circle cx="50" cy="47.5" r="10" fill="none" stroke="#2c4433" stroke-width="0.5"/>
+      </svg>
+      <div class="ss-pitch-players" id="ss-pitch-players"></div>
+    </div>
+
+    <div class="ss-panel" id="ss-panel">
+      <div class="ss-heading" id="ss-heading">Spinning for: Goalkeeper</div>
+      <div class="ss-reel" id="ss-reel"></div>
+      <button class="ss-spin-btn" id="ss-spin-btn">Spin</button>
+      <div class="ss-pick-hint" id="ss-pick-hint">Pick one, their stats reveal once you do</div>
+      <div class="ss-landed-banner" id="ss-landed-banner"></div>
+    </div>
+  </div>
+
+  <div class="ss-final" id="ss-final">
+    <div style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.05em;">Full XI spun. Final score</div>
+    <div class="ss-final-num" id="ss-final-score">0</div>
+    <div class="ss-jackpot" id="ss-jackpot"><div class="jp-num">1904</div>Hull City's founding year, exactly. Nice one.</div>
+    <div style="font-family:var(--mono); font-size:12px; color:var(--paper-dim);">Same spin luck, different players every day</div>
+    <div class="ss-signin-cta" id="ss-signin-cta" style="display:none; margin:16px 0;">
+      <div style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-bottom:10px;">That's your one free spin for today. Sign in for unlimited attempts.</div>
+      <a href="account.html" class="ss-spin-btn" style="display:inline-block; text-decoration:none; padding:12px 28px; width:auto;">Sign in for unlimited attempts</a>
+    </div>
+    <button class="ss-spin-btn" id="ss-play-again-btn" style="display:none; max-width:280px; margin:16px auto 0;">Play again, try to beat this</button>
+    <div class="ss-leaderboard" id="ss-leaderboard"></div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('play');
+
+let currentUser = null;
+sb.auth.onAuthStateChange((event, session)=>{ currentUser = session?.user || null; });
+sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; boot(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && !currentUser){
+    sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; });
+  }
+});
+
+const TARGET_SCORE = 1904; // Hull City's founding year
+const SLOTS = [
+  {pos:'GK', label:'Goalkeeper', x:50, y:10},
+  {pos:'DF', label:'Defender', x:20, y:32}, {pos:'DF', label:'Defender', x:40, y:32},
+  {pos:'DF', label:'Defender', x:60, y:32}, {pos:'DF', label:'Defender', x:80, y:32},
+  {pos:'MF', label:'Midfielder', x:25, y:60}, {pos:'MF', label:'Midfielder', x:50, y:60}, {pos:'MF', label:'Midfielder', x:75, y:60},
+  {pos:'FW', label:'Forward', x:25, y:85}, {pos:'FW', label:'Forward', x:50, y:85}, {pos:'FW', label:'Forward', x:75, y:85},
+];
+let POOL = { GK:[], DF:[], MF:[], FW:[] };
+let currentSlot = 0;
+let totalScore = 0;
+let filled = [];
+let spinning = false;
+let revealed = null;
+const today = new Date().toISOString().slice(0,10);
+
+let bestScoreToday = null; // logged-in users' existing best score for today, if any
+
+async function boot(){
+  // Logged-out visitors get one spin a day, tracked locally since there's
+  // no account to key off. Logged-in users are never blocked here, they
+  // get unlimited attempts, but we still fetch today's existing score (if
+  // any) so a later attempt only overwrites it when it's actually better.
+  if(currentUser){
+    const { data: existing } = await sb.from('squad_spin_scores').select('score').eq('user_id', currentUser.id).eq('puzzle_date', today).maybeSingle();
+    bestScoreToday = existing ? existing.score : null;
+  } else if(localStorage.getItem('ss_played_' + today)){
+    showAlreadyPlayed(Number(localStorage.getItem('ss_played_' + today)));
+    return;
+  }
+
+  const { data, error } = await sb.from('players').select('id, first_name, last_name, position, appearances, career_goals').eq('active', true).not('appearances', 'is', null).not('career_goals', 'is', null);
+  document.getElementById('ss-loading').style.display = 'none';
+  if(error){
+    document.getElementById('ss-error').style.display = 'block';
+    document.getElementById('ss-error').textContent = 'Could not load players right now, try again shortly.';
+    return;
+  }
+  ['GK','DF','MF','FW'].forEach(pos=>{ POOL[pos] = (data||[]).filter(p=>p.position===pos); });
+  const shortPositions = ['GK','DF','MF','FW'].filter(pos => POOL[pos].length < 3);
+  if(shortPositions.length){
+    document.getElementById('ss-error').style.display = 'block';
+    document.getElementById('ss-error').textContent = `Not enough players with both appearances and goals entered yet for: ${shortPositions.join(', ')}. Add at least 3 per position in admin before this can go live.`;
+    return;
+  }
+  document.getElementById('ss-game').style.display = 'block';
+  renderPitch();
+  resetReel();
+}
+
+async function showAlreadyPlayed(score){
+  document.getElementById('ss-loading').style.display = 'none';
+  document.getElementById('ss-already-played').style.display = 'block';
+  document.getElementById('ss-already-score').textContent = score;
+  if(score === TARGET_SCORE) document.getElementById('ss-already-jackpot').classList.add('show');
+  await renderLeaderboard('ss-already-leaderboard');
+}
+
+function playerName(p){ return `${p.first_name} ${p.last_name}`; }
+
+function spreadX(count){
+  if(count<=1) return [50];
+  const span = Math.min((count-1)*22, 80);
+  const step = span/(count-1);
+  const start = 50-span/2;
+  return Array.from({length:count}, (_, i) => start + step*i);
+}
+
+function renderPitch(){
+  const container = document.getElementById('ss-pitch-players');
+  container.innerHTML = SLOTS.map((slot, i)=>{
+    const p = filled[i];
+    const isActive = i === currentSlot && !p;
+    const xs = spreadX(SLOTS.filter(s=>s.pos===slot.pos).length);
+    return `<div class="ss-pitch-slot" style="left:${slot.x}%; top:${slot.y}%;">
+      <div class="ss-pitch-dot ${p?'filled':''} ${isActive?'active':''}">${p ? playerName(p)[0] : slot.pos}</div>
+      <div class="ss-pitch-name">${p ? playerName(p) : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function resetReel(){
+  const slot = SLOTS[currentSlot];
+  document.getElementById('ss-heading').textContent = 'Spinning for: ' + slot.label;
+  document.getElementById('ss-reel').innerHTML = [0,1,2].map(i=>`<div class="ss-reel-card" data-idx="${i}"><div class="ss-reel-mystery">?</div></div>`).join('');
+  document.getElementById('ss-spin-btn').style.display = 'block';
+  document.getElementById('ss-spin-btn').disabled = false;
+  document.getElementById('ss-spin-btn').textContent = 'Spin';
+  document.getElementById('ss-pick-hint').classList.remove('show');
+  document.getElementById('ss-landed-banner').classList.remove('show');
+  revealed = null;
+}
+
+document.getElementById('ss-spin-btn').addEventListener('click', ()=>{
+  if(spinning) return;
+  spinning = true;
+  document.getElementById('ss-spin-btn').disabled = true;
+  const slot = SLOTS[currentSlot];
+  const pool = POOL[slot.pos].filter(p => !filled.some(f => f && f.id === p.id));
+  const usablePool = pool.length >= 3 ? pool : POOL[slot.pos];
+  const shuffled = [...usablePool].sort(()=>Math.random()-0.5);
+  const picks = [shuffled[0], shuffled[1] || shuffled[0], shuffled[2] || shuffled[0]];
+  const cards = document.querySelectorAll('.ss-reel-card');
+  let ticks = 0;
+  const maxTicks = 16;
+  const interval = setInterval(()=>{
+    cards.forEach(card=>{
+      const randomPlayer = usablePool[Math.floor(Math.random()*usablePool.length)];
+      card.innerHTML = `<div class="ss-reel-name">${playerName(randomPlayer)}</div>`;
+    });
+    ticks++;
+    if(ticks >= maxTicks){
+      clearInterval(interval);
+      cards.forEach((card, i)=>{
+        card.classList.add('revealed');
+        card.innerHTML = `<div class="ss-reel-name">${playerName(picks[i])}</div>`;
+      });
+      revealed = picks;
+      document.getElementById('ss-spin-btn').style.display = 'none';
+      document.getElementById('ss-pick-hint').classList.add('show');
+      spinning = false;
+    }
+  }, 70);
+});
+
+document.getElementById('ss-reel').addEventListener('click', async (e)=>{
+  const card = e.target.closest('.ss-reel-card');
+  if(!card || !revealed || spinning) return;
+  const idx = parseInt(card.dataset.idx);
+  const winner = revealed[idx];
+  document.querySelectorAll('.ss-reel-card').forEach(c=>c.classList.remove('chosen'));
+  card.classList.add('chosen');
+  const points = winner.appearances + winner.career_goals;
+  totalScore += points;
+  filled[currentSlot] = winner;
+  document.getElementById('ss-score-num').textContent = totalScore;
+  renderPitch();
+  document.getElementById('ss-pick-hint').classList.remove('show');
+  const banner = document.getElementById('ss-landed-banner');
+  banner.textContent = `${playerName(winner)}: ${winner.appearances} apps + ${winner.career_goals} goals = +${points}`;
+  banner.classList.add('show');
+  setTimeout(async ()=>{
+    currentSlot++;
+    if(currentSlot >= SLOTS.length){
+      await finishGame();
+    } else {
+      document.getElementById('ss-spins-left').textContent = (SLOTS.length - currentSlot) + ' shirts to fill';
+      resetReel();
+      renderPitch();
+    }
+  }, 1400);
+});
+
+async function finishGame(){
+  document.getElementById('ss-panel').style.display = 'none';
+  document.getElementById('ss-final-score').textContent = totalScore;
+  document.getElementById('ss-intro').textContent = 'Full XI spun.';
+  document.getElementById('ss-final').classList.add('show');
+  if(totalScore === TARGET_SCORE) document.getElementById('ss-jackpot').classList.add('show');
+
+  if(currentUser){
+    // Unlimited attempts for signed-in fans, but only the best score of
+    // the day is kept on the leaderboard, a worse retry never overwrites
+    // a better earlier one today.
+    if(bestScoreToday === null || totalScore > bestScoreToday){
+      const squadPayload = filled.map(p=>({ id:p.id, name:playerName(p), appearances:p.appearances, career_goals:p.career_goals }));
+      const { error } = await sb.from('squad_spin_scores').upsert({
+        user_id: currentUser.id, puzzle_date: today, score: totalScore, squad: squadPayload
+      }, { onConflict: 'user_id,puzzle_date' });
+      if(error) console.error('Could not save squad spin score', error);
+      else bestScoreToday = totalScore;
+    }
+    document.getElementById('ss-play-again-btn').style.display = 'block';
+  } else {
+    localStorage.setItem('ss_played_' + today, String(totalScore));
+    document.getElementById('ss-signin-cta').style.display = 'block';
+  }
+  await renderLeaderboard('ss-leaderboard');
+}
+
+document.getElementById('ss-play-again-btn').addEventListener('click', ()=>{
+  currentSlot = 0;
+  totalScore = 0;
+  filled = [];
+  spinning = false;
+  revealed = null;
+  document.getElementById('ss-final').classList.remove('show');
+  document.getElementById('ss-jackpot').classList.remove('show');
+  document.getElementById('ss-play-again-btn').style.display = 'none';
+  document.getElementById('ss-intro').textContent = 'Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score.';
+  document.getElementById('ss-panel').style.display = 'block';
+  document.getElementById('ss-spins-left').textContent = SLOTS.length + ' shirts to fill';
+  document.getElementById('ss-score-num').textContent = '0';
+  renderPitch();
+  resetReel();
+});
+
+async function renderLeaderboard(targetId){
+  const { data, error } = await sb.from('squad_spin_leaderboard').select('*').order('score', {ascending:false}).limit(10);
+  const el = document.getElementById(targetId);
+  if(error || !data || !data.length){
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = `<div class="ss-lb-title">Today's leaderboard</div>` + data.map((row, i)=>{
+    const isYou = currentUser && row.user_id === currentUser.id;
+    return `<div class="ss-lb-row ${isYou?'you':''}"><span>${i+1}. ${isYou?'You':row.display_name}</span><span>${row.score}</span></div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

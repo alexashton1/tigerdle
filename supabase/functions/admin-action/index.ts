@@ -233,6 +233,7 @@ Deno.serve(async (req) => {
             birth_date: row.birth_date || null,
             appearances: row.appearances ?? null,
             appearances_updated_at: row.appearances != null ? new Date().toISOString() : null,
+            career_goals: row.career_goals ?? null,
             active: true,
           });
         }
@@ -298,6 +299,9 @@ Deno.serve(async (req) => {
             patch.appearances = Number(row.appearances);
             patch.appearances_updated_at = new Date().toISOString();
           }
+          if (row.career_goals !== undefined && row.career_goals !== null && row.career_goals !== "") {
+            patch.career_goals = Number(row.career_goals);
+          }
           if (!Object.keys(patch).length) continue;
 
           const { error } = await supabase.from("players").update(patch).eq("id", id);
@@ -310,7 +314,7 @@ Deno.serve(async (req) => {
         const p = payload || {};
         if (!p.id) return json({ ok: false, error: "id is required" }, 400);
         const patch: Record<string, unknown> = {};
-        for (const k of ["first_name", "last_name", "position", "nationality", "era", "age", "birth_date", "appearances", "active", "pitch_order"]) {
+        for (const k of ["first_name", "last_name", "position", "nationality", "era", "age", "birth_date", "appearances", "career_goals", "active", "pitch_order"]) {
           if (k in p) patch[k] = p[k];
         }
         if ("appearances" in patch) {
@@ -515,13 +519,23 @@ Deno.serve(async (req) => {
         // The actual predicted team, not just the resulting score, so a
         // gameweek's top scorer can be pulled straight from here for a
         // social post rather than needing to ask them for a screenshot.
-        const { data: predictions } = userIds.length
+        // Matched primarily via prediction_id, the direct reference each
+        // score row was actually calculated from, since matching by
+        // user_id + fixture_id alone turned out to miss real rows.
+        const predictionIds = (scores || []).map((s: any) => s.prediction_id).filter(Boolean);
+        const { data: predictionsById } = predictionIds.length
+          ? await supabase.from("predictions").select("*").in("id", predictionIds)
+          : { data: [] };
+        const { data: predictionsByUser } = userIds.length
           ? await supabase.from("predictions").select("*").eq("fixture_id", p.fixture_id).in("user_id", userIds)
           : { data: [] };
         const withNames = (scores || []).map((s: any) => {
           const profile = (profiles || []).find((pr: any) => pr.user_id === s.user_id);
-          const prediction = (predictions || []).find((pr: any) => pr.user_id === s.user_id);
-          return { ...s, display_name: profile?.display_name || profile?.email || "Unknown", prediction: prediction || null };
+          const prediction =
+            (predictionsById || []).find((pr: any) => pr.id === s.prediction_id) ||
+            (predictionsByUser || []).find((pr: any) => pr.user_id === s.user_id) ||
+            null;
+          return { ...s, display_name: profile?.display_name || profile?.email || "Unknown", prediction };
         });
         return json({ ok: true, data: { scores: withNames } });
       }
