@@ -69,7 +69,7 @@
 <main class="wrap" style="padding-top:20px; padding-bottom:60px;">
   <div class="eyebrow" style="text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;">Hull City AFC &middot; Squad Spin</div>
   <h1 style="font-family:var(--display); font-weight:400; font-size:32px; color:var(--paper); text-align:center; margin:4px 0 2px;">SPIN YOUR XI</h1>
-  <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. One attempt a day.</div>
+  <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City's founding year, for something special. One attempt a day.</div>
 
   <div id="ss-loading" class="ss-err-box">Loading today's squad pool…</div>
   <div id="ss-error" class="ss-err-box" style="display:none;"></div>
@@ -78,6 +78,7 @@
     <div class="ss-score-bar">
       <div class="ss-score-label">You've already spun today</div>
       <div class="ss-score-num" id="ss-already-score">0</div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--amber-deep,#c67f00); margin-top:6px;">🎯 Target: 1904, Hull City's founding year</div>
     </div>
     <div id="ss-already-jackpot" class="ss-jackpot"><div class="jp-num">1904</div>Hull City's founding year, exactly. Nice one.</div>
     <div class="ss-signin-cta" id="ss-already-signin-cta" style="margin:16px 0;">
@@ -92,6 +93,7 @@
       <div class="ss-score-label">Total score</div>
       <div class="ss-score-num" id="ss-score-num">0</div>
       <div class="ss-spins-left" id="ss-spins-left">11 shirts to fill</div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--amber-deep,#c67f00); margin-top:6px;">🎯 Target: 1904</div>
       <button id="ss-restart-btn" style="display:none; margin-top:10px; background:none; border:1px solid var(--line); color:var(--paper-dim); font-family:var(--mono); font-size:11px; padding:5px 12px; border-radius:14px; cursor:pointer;">Restart</button>
     </div>
 
@@ -362,7 +364,7 @@ function resetGame(){
   document.getElementById('ss-final').classList.remove('show');
   document.getElementById('ss-jackpot').classList.remove('show');
   document.getElementById('ss-play-again-btn').style.display = 'none';
-  document.getElementById('ss-intro').textContent = 'Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score.';
+  document.getElementById('ss-intro').innerHTML = 'Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City\'s founding year, for something special.';
   document.getElementById('ss-panel').style.display = 'block';
   document.getElementById('ss-spins-left').textContent = SLOTS.length + ' shirts to fill';
   document.getElementById('ss-score-num').textContent = '0';
