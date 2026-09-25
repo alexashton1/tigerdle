@@ -72,9 +72,10 @@
   <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City's founding year, for something special. <span style="color:var(--amber); font-weight:bold;">One attempt a day, unlimited if you're signed in.</span></div>
 
   <div id="ss-mode-select" style="max-width:480px; margin:0 auto 24px; text-align:center;">
-    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:14px;">
-      <button class="ss-mode-btn active" data-mode="normal" style="flex:1; max-width:180px; background:var(--ink-2); border:2px solid var(--amber); color:var(--amber); font-family:var(--display); font-size:15px; padding:12px; border-radius:10px; cursor:pointer;">Normal</button>
-      <button class="ss-mode-btn" data-mode="hardcore" style="flex:1; max-width:180px; background:var(--ink-2); border:2px solid var(--line); color:var(--paper-dim); font-family:var(--display); font-size:15px; padding:12px; border-radius:10px; cursor:pointer;">🔥 Hardcore</button>
+    <div style="display:flex; gap:8px; justify-content:center; margin-bottom:14px;">
+      <button class="ss-mode-btn active" data-mode="normal" style="flex:1; max-width:140px; background:var(--ink-2); border:2px solid var(--amber); color:var(--amber); font-family:var(--display); font-size:14px; padding:12px 6px; border-radius:10px; cursor:pointer;">Normal</button>
+      <button class="ss-mode-btn" data-mode="modern" style="flex:1; max-width:140px; background:var(--ink-2); border:2px solid var(--line); color:var(--paper-dim); font-family:var(--display); font-size:14px; padding:12px 6px; border-radius:10px; cursor:pointer;">🕐 Modern</button>
+      <button class="ss-mode-btn" data-mode="hardcore" style="flex:1; max-width:140px; background:var(--ink-2); border:2px solid var(--line); color:var(--paper-dim); font-family:var(--display); font-size:14px; padding:12px 6px; border-radius:10px; cursor:pointer;">🔥 Hardcore</button>
     </div>
     <div id="ss-difficulty-row" style="display:flex; gap:8px; justify-content:center; margin-bottom:16px;">
       <button class="ss-diff-btn" data-diff="easy" style="background:var(--ink-2); border:1px solid var(--line); color:var(--paper-dim); font-family:var(--mono); font-size:12px; padding:8px 16px; border-radius:16px; cursor:pointer;">Easy</button>
@@ -306,10 +307,17 @@ function initModeSelect(){
         b.style.borderColor = active ? 'var(--amber)' : 'var(--line)';
         b.style.color = active ? 'var(--amber)' : 'var(--paper-dim)';
       });
-      document.getElementById('ss-difficulty-row').style.display = gameMode === 'normal' ? 'flex' : 'none';
-      document.getElementById('ss-mode-description').textContent = gameMode === 'normal'
-        ? DIFFICULTY_DESCRIPTIONS[difficulty]
-        : "Land exactly on 1904 or it's a loss, nothing in between. One attempt a day, sign-in required.";
+      // Modern still uses the same difficulty options as Normal, it's
+      // just a narrower pool underneath, the two filters are independent.
+      const usesDifficulty = gameMode === 'normal' || gameMode === 'modern';
+      document.getElementById('ss-difficulty-row').style.display = usesDifficulty ? 'flex' : 'none';
+      if(gameMode === 'hardcore'){
+        document.getElementById('ss-mode-description').textContent = "Land exactly on 1904 or it's a loss, nothing in between. One attempt a day, sign-in required.";
+      } else if(gameMode === 'modern'){
+        document.getElementById('ss-mode-description').textContent = `Only players born from 1981 onwards. ${DIFFICULTY_DESCRIPTIONS[difficulty]}`;
+      } else {
+        document.getElementById('ss-mode-description').textContent = DIFFICULTY_DESCRIPTIONS[difficulty];
+      }
     });
   });
   document.querySelectorAll('.ss-diff-btn').forEach(btn=>{
@@ -322,7 +330,9 @@ function initModeSelect(){
         b.style.borderColor = active ? 'var(--amber)' : 'var(--line)';
         b.style.color = active ? 'var(--amber)' : 'var(--paper-dim)';
       });
-      document.getElementById('ss-mode-description').textContent = DIFFICULTY_DESCRIPTIONS[difficulty];
+      document.getElementById('ss-mode-description').textContent = gameMode === 'modern'
+        ? `Only players born from 1981 onwards. ${DIFFICULTY_DESCRIPTIONS[difficulty]}`
+        : DIFFICULTY_DESCRIPTIONS[difficulty];
     });
   });
   document.getElementById('ss-mode-start-btn').addEventListener('click', ()=>{
@@ -362,18 +372,27 @@ async function boot(){
     return;
   }
 
-  const { data, error } = await sb.from('players').select('id, first_name, last_name, position, appearances, career_goals').eq('active', true).not('appearances', 'is', null).not('career_goals', 'is', null);
+  const { data, error } = await sb.from('players').select('id, first_name, last_name, position, appearances, career_goals, birth_date').eq('active', true).not('appearances', 'is', null).not('career_goals', 'is', null);
   document.getElementById('ss-loading').style.display = 'none';
   if(error){
     document.getElementById('ss-error').style.display = 'block';
     document.getElementById('ss-error').textContent = 'Could not load players right now, try again shortly.';
     return;
   }
-  ['GK','DF','MF','FW'].forEach(pos=>{ POOL[pos] = (data||[]).filter(p=>p.position===pos); });
+  let pool = data || [];
+  if(gameMode === 'modern'){
+    // Only counts players with a birth date actually entered, someone
+    // with just an age on file won't show up here even if they're
+    // genuinely modern, since there's no way to tell from age alone.
+    pool = pool.filter(p => p.birth_date && p.birth_date >= '1981-01-01');
+  }
+  ['GK','DF','MF','FW'].forEach(pos=>{ POOL[pos] = pool.filter(p=>p.position===pos); });
   const shortPositions = ['GK','DF','MF','FW'].filter(pos => POOL[pos].length < 3);
   if(shortPositions.length){
     document.getElementById('ss-error').style.display = 'block';
-    document.getElementById('ss-error').textContent = `Not enough players with both appearances and goals entered yet for: ${shortPositions.join(', ')}. Add at least 3 per position in admin before this can go live.`;
+    document.getElementById('ss-error').textContent = gameMode === 'modern'
+      ? `Not enough players born from 1981 onwards with a birth date on file for: ${shortPositions.join(', ')}. This only counts players with an actual birth date entered in admin, not just an age.`
+      : `Not enough players with both appearances and goals entered yet for: ${shortPositions.join(', ')}. Add at least 3 per position in admin before this can go live.`;
     return;
   }
   applyDifficultyFilter();
