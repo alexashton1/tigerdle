@@ -95,7 +95,11 @@
       <div class="ss-spins-left" id="ss-spins-left">11 shirts to fill</div>
       <div style="font-family:var(--mono); font-size:11px; color:var(--amber-deep,#c67f00); margin-top:6px;">🎯 Target: 1904</div>
       <button id="ss-restart-btn" style="display:none; margin-top:10px; background:none; border:1px solid var(--line); color:var(--paper-dim); font-family:var(--mono); font-size:11px; padding:5px 12px; border-radius:14px; cursor:pointer;">Restart</button>
+      <div style="margin-top:8px;">
+        <button id="ss-pregame-lb-toggle" style="background:none; border:none; color:var(--paper-dim); font-family:var(--mono); font-size:11px; text-decoration:underline; cursor:pointer; padding:2px;">🏆 Leaderboards</button>
+      </div>
     </div>
+    <div id="ss-pregame-leaderboard" style="display:none; margin-bottom:18px;"></div>
 
     <div class="ss-pitch-wrap">
       <svg class="ss-pitch-lines" viewBox="0 0 100 95" preserveAspectRatio="none">
@@ -184,7 +188,7 @@ document.addEventListener('visibilitychange', ()=>{
 
 // A guest is identified by a token generated once and kept in this
 // browser's storage, not a real account, only used so their score can
-// appear on today's leaderboard and be reassigned if they sign up later.
+// appear on the all-time leaderboard if they sign up later.
 function getGuestToken(){
   let token = localStorage.getItem('ss_guest_token');
   if(!token){
@@ -400,17 +404,17 @@ async function finishGame(){
       try{
         const result = await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload });
         if(result.saved) bestScoreToday = result.bestScoreToday;
-      }catch(e){ console.error('Could not save squad spin score', e); }
+      }catch(e){ console.error('Could not save squad spin score', e); toast('Could not save your score, try again in a moment.'); }
     }
     document.getElementById('ss-play-again-btn').style.display = 'block';
   } else {
-    // Not signed in: still goes on today's leaderboard, under a generated
-    // guest label, kept in this browser only. Signing in later the same
-    // day hands this score over to their real account automatically.
+    // Not signed in: still counted toward the all-time board if they sign
+    // up later today, under a generated guest label kept in this browser
+    // only until then.
     localStorage.setItem('ss_played_' + today, String(totalScore));
     try{
       await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload, guest_token: getGuestToken(), guest_label: getGuestLabel() });
-    }catch(e){ console.error('Could not save guest squad spin score', e); }
+    }catch(e){ console.error('Could not save guest squad spin score', e); toast('Could not save your score, try again in a moment.'); }
     document.getElementById('ss-signin-cta').style.display = 'block';
   }
   await renderLeaderboard('ss-leaderboard');
@@ -444,8 +448,6 @@ document.getElementById('ss-restart-btn').addEventListener('click', ()=>{
 });
 
 const LEADERBOARD_VIEWS = {
-  daily: { table: 'squad_spin_leaderboard', tab: "Today's scores", title: "Today's top scores", orderCol: 'score', ascending: false },
-  dailyJackpot: { table: 'squad_spin_daily_jackpots', tab: 'Today\'s 1904s', title: 'Hit 1904 today', orderCol: 'score', ascending: false },
   overall: { table: 'squad_spin_overall_leaderboard', tab: 'All-time best', title: 'All-time best scores', orderCol: 'score', ascending: false },
   overallJackpot: { table: 'squad_spin_overall_jackpots', tab: '1904 hall of fame', title: 'Everyone who has ever hit 1904', orderCol: 'first_hit_date', ascending: true },
 };
@@ -463,7 +465,7 @@ async function renderLeaderboard(targetId){
       loadLeaderboardView(el, btn.dataset.view);
     });
   });
-  await loadLeaderboardView(el, 'daily');
+  await loadLeaderboardView(el, 'overall');
 }
 
 async function loadLeaderboardView(el, viewKey){
@@ -514,6 +516,19 @@ document.getElementById('ss-share-copy').addEventListener('click', async ()=>{
   if(!window.ssShareBlob) return;
   try{ await navigator.clipboard.write([new ClipboardItem({'image/png': window.ssShareBlob})]); toast('Image copied.'); }
   catch(e){ toast('Copy not supported on this device, use Save instead.'); }
+});
+
+// Discreet leaderboard access before a single spin has happened, not just
+// after finishing a run.
+let pregameLeaderboardLoaded = false;
+document.getElementById('ss-pregame-lb-toggle').addEventListener('click', async ()=>{
+  const box = document.getElementById('ss-pregame-leaderboard');
+  const showing = box.style.display === 'block';
+  box.style.display = showing ? 'none' : 'block';
+  if(!showing && !pregameLeaderboardLoaded){
+    pregameLeaderboardLoaded = true;
+    await renderLeaderboard('ss-pregame-leaderboard');
+  }
 });
 </script>
 </body>
