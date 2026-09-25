@@ -1717,3 +1717,45 @@ group by s.user_id, p.display_name, p.email
 order by first_hit_date asc;
 
 grant select on squad_spin_overall_jackpots to anon, authenticated;
+
+-- ---------- Squad Spin: Hardcore mode ----------
+-- A completely separate game from the normal score-building mode: the
+-- only goal is landing exactly on 1904, win or lose, nothing in between.
+-- Its own daily attempt limit, separate from the normal mode's, and its
+-- own leaderboard, since mixing win/loss counts in with a score-based
+-- board wouldn't mean anything. Sign-in required, no guest attempts,
+-- since tracking wins over time only makes sense for a real account.
+create table if not exists squad_spin_hardcore_attempts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  puzzle_date date not null default current_date,
+  won boolean not null,
+  final_score int not null,
+  squad jsonb not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, puzzle_date)
+);
+
+alter table squad_spin_hardcore_attempts enable row level security;
+
+drop policy if exists "public read squad spin hardcore attempts" on squad_spin_hardcore_attempts;
+create policy "public read squad spin hardcore attempts" on squad_spin_hardcore_attempts
+  for select using (true);
+
+-- Writes go through the squad-spin-action edge function using the
+-- service role key, same as the normal mode, not direct client access.
+
+create or replace view squad_spin_hardcore_leaderboard
+with (security_invoker = true) as
+select
+  h.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  count(*) filter (where h.won) as wins,
+  count(*) as attempts
+from squad_spin_hardcore_attempts h
+left join profiles p on p.user_id = h.user_id
+group by h.user_id, p.display_name, p.email
+having count(*) filter (where h.won) > 0
+order by wins desc, attempts asc;
+
+grant select on squad_spin_hardcore_leaderboard to anon, authenticated;

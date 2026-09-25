@@ -71,7 +71,21 @@
   <h1 style="font-family:var(--display); font-weight:400; font-size:32px; color:var(--paper); text-align:center; margin:4px 0 2px;">SPIN YOUR XI</h1>
   <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City's founding year, for something special. <span style="color:var(--amber); font-weight:bold;">One attempt a day, unlimited if you're signed in.</span></div>
 
-  <div id="ss-loading" class="ss-err-box">Loading today's squad pool…</div>
+  <div id="ss-mode-select" style="max-width:480px; margin:0 auto 24px; text-align:center;">
+    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:14px;">
+      <button class="ss-mode-btn active" data-mode="normal" style="flex:1; max-width:180px; background:var(--ink-2); border:2px solid var(--amber); color:var(--amber); font-family:var(--display); font-size:15px; padding:12px; border-radius:10px; cursor:pointer;">Normal</button>
+      <button class="ss-mode-btn" data-mode="hardcore" style="flex:1; max-width:180px; background:var(--ink-2); border:2px solid var(--line); color:var(--paper-dim); font-family:var(--display); font-size:15px; padding:12px; border-radius:10px; cursor:pointer;">🔥 Hardcore</button>
+    </div>
+    <div id="ss-difficulty-row" style="display:flex; gap:8px; justify-content:center; margin-bottom:16px;">
+      <button class="ss-diff-btn" data-diff="easy" style="background:var(--ink-2); border:1px solid var(--line); color:var(--paper-dim); font-family:var(--mono); font-size:12px; padding:8px 16px; border-radius:16px; cursor:pointer;">Easy</button>
+      <button class="ss-diff-btn active" data-diff="medium" style="background:rgba(245,163,0,.14); border:1px solid var(--amber); color:var(--amber); font-family:var(--mono); font-size:12px; padding:8px 16px; border-radius:16px; cursor:pointer;">Medium</button>
+      <button class="ss-diff-btn" data-diff="hard" style="background:var(--ink-2); border:1px solid var(--line); color:var(--paper-dim); font-family:var(--mono); font-size:12px; padding:8px 16px; border-radius:16px; cursor:pointer;">Hard</button>
+    </div>
+    <div id="ss-mode-description" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim);">Medium trims some of the lowest-scoring players from each pool. Hard is the full squad, nobody's ruled out.</div>
+    <button class="ss-spin-btn" id="ss-mode-start-btn" style="max-width:280px; margin:16px auto 0;">Let's go</button>
+  </div>
+
+  <div id="ss-loading" class="ss-err-box" style="display:none;">Loading today's squad pool…</div>
   <div id="ss-error" class="ss-err-box" style="display:none;"></div>
 
   <div id="ss-already-played" style="display:none; max-width:480px; margin:0 auto; text-align:center;">
@@ -86,6 +100,29 @@
       <a href="account.html" class="ss-spin-btn" style="display:inline-block; text-decoration:none; padding:12px 28px; width:auto;">Sign in for unlimited attempts</a>
     </div>
     <div id="ss-already-leaderboard"></div>
+  </div>
+
+  <div id="ss-hardcore-signin-required" style="display:none; max-width:480px; margin:0 auto; text-align:center;">
+    <div class="ss-score-bar">
+      <div class="ss-score-label">🔥 Hardcore needs an account</div>
+      <div style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-top:8px;">Tracking wins over time only makes sense with a real account, no guest attempts on this mode.</div>
+    </div>
+    <a href="account.html" class="ss-spin-btn" style="display:inline-block; text-decoration:none; padding:12px 28px;">Sign in to play Hardcore</a>
+  </div>
+
+  <div id="ss-hardcore-already-played" style="display:none; max-width:480px; margin:0 auto; text-align:center;">
+    <div class="ss-score-bar">
+      <div class="ss-score-label">You've already gone Hardcore today</div>
+      <div class="ss-score-num" id="ss-hardcore-already-result">-</div>
+    </div>
+    <div id="ss-hardcore-already-leaderboard"></div>
+  </div>
+
+  <div id="ss-hardcore-final" style="display:none; max-width:480px; margin:0 auto; text-align:center;">
+    <div class="ss-final-num" id="ss-hardcore-verdict" style="font-family:var(--display); font-size:44px;"></div>
+    <div id="ss-hardcore-detail" style="font-family:var(--mono); font-size:14px; color:var(--paper-dim); margin-bottom:16px;"></div>
+    <button class="ss-spin-btn" id="ss-hardcore-share-btn" style="max-width:280px; margin:0 auto 12px;">📸 Share your attempt</button>
+    <div id="ss-hardcore-leaderboard"></div>
   </div>
 
   <div id="ss-game" style="display:none;">
@@ -179,7 +216,7 @@ sb.auth.onAuthStateChange((event, session)=>{
   if(nowLoggedIn && !wasLoggedIn){ claimGuestScoreIfAny(); }
   wasLoggedIn = nowLoggedIn;
 });
-sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; wasLoggedIn = !!currentUser; boot(); });
+sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; wasLoggedIn = !!currentUser; initModeSelect(); });
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && !currentUser){
     sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; });
@@ -250,6 +287,68 @@ const today = new Date().toISOString().slice(0,10);
 
 let bestScoreToday = null; // logged-in users' existing best score for today, if any
 
+let gameMode = 'normal'; // 'normal' or 'hardcore'
+let difficulty = 'medium'; // 'easy', 'medium', or 'hard' (normal mode only)
+
+const DIFFICULTY_DESCRIPTIONS = {
+  easy: "Easy cuts out roughly half of each position's lowest scorers, the players left are all fairly strong picks.",
+  medium: "Medium trims some of the lowest-scoring players from each pool. Hard is the full squad, nobody's ruled out.",
+  hard: "Hard is the full squad, every player's in the pool, nobody's ruled out.",
+};
+
+function initModeSelect(){
+  document.querySelectorAll('.ss-mode-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      gameMode = btn.dataset.mode;
+      document.querySelectorAll('.ss-mode-btn').forEach(b=>{
+        const active = b === btn;
+        b.classList.toggle('active', active);
+        b.style.borderColor = active ? 'var(--amber)' : 'var(--line)';
+        b.style.color = active ? 'var(--amber)' : 'var(--paper-dim)';
+      });
+      document.getElementById('ss-difficulty-row').style.display = gameMode === 'normal' ? 'flex' : 'none';
+      document.getElementById('ss-mode-description').textContent = gameMode === 'normal'
+        ? DIFFICULTY_DESCRIPTIONS[difficulty]
+        : "Land exactly on 1904 or it's a loss, nothing in between. One attempt a day, sign-in required.";
+    });
+  });
+  document.querySelectorAll('.ss-diff-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      difficulty = btn.dataset.diff;
+      document.querySelectorAll('.ss-diff-btn').forEach(b=>{
+        const active = b === btn;
+        b.classList.toggle('active', active);
+        b.style.background = active ? 'rgba(245,163,0,.14)' : 'var(--ink-2)';
+        b.style.borderColor = active ? 'var(--amber)' : 'var(--line)';
+        b.style.color = active ? 'var(--amber)' : 'var(--paper-dim)';
+      });
+      document.getElementById('ss-mode-description').textContent = DIFFICULTY_DESCRIPTIONS[difficulty];
+    });
+  });
+  document.getElementById('ss-mode-start-btn').addEventListener('click', ()=>{
+    document.getElementById('ss-mode-select').style.display = 'none';
+    document.getElementById('ss-loading').style.display = 'block';
+    if(gameMode === 'hardcore') bootHardcore();
+    else boot();
+  });
+}
+
+// Cuts the bottom slice of each position's pool by (appearances + goals),
+// so easier settings mostly offer strong picks, rather than truly random
+// ones. Never lets a position drop below 3 remaining, since the spin
+// needs at least that many options to offer each time.
+function applyDifficultyFilter(){
+  if(difficulty === 'hard') return;
+  const cutFraction = difficulty === 'easy' ? 0.5 : 0.25;
+  ['GK','DF','MF','FW'].forEach(pos=>{
+    const sorted = [...POOL[pos]].sort((a,b)=>(a.appearances+a.career_goals)-(b.appearances+b.career_goals));
+    const cutCount = Math.floor(sorted.length * cutFraction);
+    const keepCount = sorted.length - cutCount;
+    if(keepCount < 3) return; // not enough left to filter safely, leave this position's pool as-is
+    POOL[pos] = sorted.slice(cutCount);
+  });
+}
+
 async function boot(){
   // Logged-out visitors get one spin a day, tracked locally since there's
   // no account to key off. Logged-in users are never blocked here, they
@@ -277,8 +376,48 @@ async function boot(){
     document.getElementById('ss-error').textContent = `Not enough players with both appearances and goals entered yet for: ${shortPositions.join(', ')}. Add at least 3 per position in admin before this can go live.`;
     return;
   }
+  applyDifficultyFilter();
   document.getElementById('ss-game').style.display = 'block';
   document.getElementById('ss-restart-btn').style.display = currentUser ? 'inline-block' : 'none';
+  renderPitch();
+  resetReel();
+}
+
+async function bootHardcore(){
+  document.getElementById('ss-loading').style.display = 'none';
+  if(!currentUser){
+    document.getElementById('ss-hardcore-signin-required').style.display = 'block';
+    return;
+  }
+  const { data: existing } = await sb.from('squad_spin_hardcore_attempts').select('won, final_score').eq('user_id', currentUser.id).eq('puzzle_date', today).maybeSingle();
+  if(existing){
+    document.getElementById('ss-hardcore-already-played').style.display = 'block';
+    const resultEl = document.getElementById('ss-hardcore-already-result');
+    resultEl.textContent = existing.won ? 'WON 🎉' : `Lost, ${existing.final_score} (${Math.abs(existing.final_score-1904)} away)`;
+    resultEl.style.color = existing.won ? 'var(--good,#5f8f52)' : 'var(--paper)';
+    await renderHardcoreLeaderboard('ss-hardcore-already-leaderboard');
+    return;
+  }
+
+  const { data, error } = await sb.from('players').select('id, first_name, last_name, position, appearances, career_goals').eq('active', true).not('appearances', 'is', null).not('career_goals', 'is', null);
+  if(error){
+    document.getElementById('ss-error').style.display = 'block';
+    document.getElementById('ss-error').textContent = 'Could not load players right now, try again shortly.';
+    return;
+  }
+  ['GK','DF','MF','FW'].forEach(pos=>{ POOL[pos] = (data||[]).filter(p=>p.position===pos); });
+  const shortPositions = ['GK','DF','MF','FW'].filter(pos => POOL[pos].length < 3);
+  if(shortPositions.length){
+    document.getElementById('ss-error').style.display = 'block';
+    document.getElementById('ss-error').textContent = `Not enough players with both appearances and goals entered yet for: ${shortPositions.join(', ')}. Add at least 3 per position in admin before this can go live.`;
+    return;
+  }
+  // No difficulty filtering in Hardcore, full pool always, exactly
+  // hitting 1904 is the whole challenge already.
+  document.getElementById('ss-game').style.display = 'block';
+  document.getElementById('ss-restart-btn').style.display = 'inline-block';
+  document.getElementById('ss-pregame-lb-toggle').style.display = 'none';
+  document.getElementById('ss-intro').innerHTML = '🔥 <span style="color:var(--amber); font-weight:bold;">Hardcore.</span> Land exactly on 1904 or it\'s a loss. One attempt today, no do-overs once you\'ve seen the result.';
   renderPitch();
   resetReel();
 }
@@ -387,6 +526,8 @@ document.getElementById('ss-reel').addEventListener('click', async (e)=>{
 });
 
 async function finishGame(){
+  if(gameMode === 'hardcore'){ await finishHardcoreGame(); return; }
+
   document.getElementById('ss-panel').style.display = 'none';
   document.getElementById('ss-final-score').textContent = totalScore;
   document.getElementById('ss-intro').textContent = 'Full XI spun.';
@@ -426,6 +567,40 @@ async function finishGame(){
     document.getElementById('ss-signin-cta').style.display = 'block';
   }
   await renderLeaderboard('ss-leaderboard');
+}
+
+async function finishHardcoreGame(){
+  document.getElementById('ss-panel').style.display = 'none';
+  const won = totalScore === TARGET_SCORE;
+  const verdictEl = document.getElementById('ss-hardcore-verdict');
+  const detailEl = document.getElementById('ss-hardcore-detail');
+  verdictEl.textContent = won ? '🎉 WON' : 'LOST';
+  verdictEl.style.color = won ? 'var(--good,#5f8f52)' : 'var(--bad,#c65252)';
+  detailEl.textContent = won
+    ? '1904, exactly. Hull City\'s founding year.'
+    : `Final score: ${totalScore}, ${Math.abs(totalScore - 1904)} away from 1904.`;
+  document.getElementById('ss-hardcore-final').style.display = 'block';
+
+  const squadPayload = filled.map(p=>({ id:p.id, name:playerName(p), appearances:p.appearances, career_goals:p.career_goals }));
+  try{
+    await callSquadSpinAction('save_hardcore_attempt', { won, final_score: totalScore, squad: squadPayload });
+  }catch(e){ console.error('Could not save hardcore attempt', e); toast('Could not save your attempt, try again in a moment.'); }
+
+  await renderHardcoreLeaderboard('ss-hardcore-leaderboard');
+}
+
+async function renderHardcoreLeaderboard(targetId){
+  const el = document.getElementById(targetId);
+  el.innerHTML = `<div class="ss-lb-title">🔥 Hardcore hall of fame</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Loading…</div>`;
+  const { data, error } = await sb.from('squad_spin_hardcore_leaderboard').select('*').order('wins', {ascending:false}).limit(10);
+  if(error || !data || !data.length){
+    el.innerHTML = `<div class="ss-lb-title">🔥 Hardcore hall of fame</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Nobody's won yet, be the first.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="ss-lb-title">🔥 Hardcore hall of fame</div>` + data.map((row, i)=>{
+    const isYou = currentUser && row.user_id === currentUser.id;
+    return `<div class="ss-lb-row ${isYou?'you':''}"><span>${i+1}. ${isYou?'You':row.display_name}</span><span>${row.wins} win${row.wins===1?'':'s'}</span></div>`;
+  }).join('');
 }
 
 function resetGame(){
@@ -524,6 +699,28 @@ document.getElementById('ss-share-copy').addEventListener('click', async ()=>{
   if(!window.ssShareBlob) return;
   try{ await navigator.clipboard.write([new ClipboardItem({'image/png': window.ssShareBlob})]); toast('Image copied.'); }
   catch(e){ toast('Copy not supported on this device, use Save instead.'); }
+});
+
+document.getElementById('ss-hardcore-share-btn').addEventListener('click', async ()=>{
+  toast('Building image…');
+  try{
+    const won = totalScore === TARGET_SCORE;
+    document.getElementById('ss-share-score').textContent = won ? 'WON' : totalScore;
+    document.getElementById('ss-share-jackpot').style.display = won ? 'block' : 'none';
+    document.getElementById('ss-share-list').innerHTML = filled.map(p=>{
+      const pts = p.appearances + p.career_goals;
+      return `<div style="display:flex; justify-content:space-between; align-items:center; background:#1c1811; border:1px solid #3a352c; border-radius:6px; padding:8px 12px;">
+        <span style="font-family:var(--display); font-size:14px; color:#f4ede0;">${playerName(p)}</span>
+        <span style="font-family:var(--mono); font-size:11px; color:#a89f8c;">${p.appearances} apps + ${p.career_goals} goals = <span style="color:var(--amber);">${pts}</span></span>
+      </div>`;
+    }).join('');
+    const canvas = await html2canvas(document.getElementById('ss-share-card'), { backgroundColor: '#14110d', scale: 2 });
+    canvas.toBlob((blob)=>{
+      window.ssShareBlob = blob;
+      document.getElementById('ss-share-preview').src = URL.createObjectURL(blob);
+      document.getElementById('ss-share-modal-overlay').style.display = 'flex';
+    }, 'image/png');
+  }catch(e){ toast('Could not build the image right now.'); }
 });
 
 // Discreet leaderboard access before a single spin has happened, not just
