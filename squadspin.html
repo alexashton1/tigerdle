@@ -69,7 +69,7 @@
 <main class="wrap" style="padding-top:20px; padding-bottom:60px;">
   <div class="eyebrow" style="text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;">Hull City AFC &middot; Squad Spin</div>
   <h1 style="font-family:var(--display); font-weight:400; font-size:32px; color:var(--paper); text-align:center; margin:4px 0 2px;">SPIN YOUR XI</h1>
-  <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City's founding year, for something special. One attempt a day.</div>
+  <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City's founding year, for something special. <span style="color:var(--amber); font-weight:bold;">One attempt a day, unlimited if you're signed in.</span></div>
 
   <div id="ss-loading" class="ss-err-box">Loading today's squad pool…</div>
   <div id="ss-error" class="ss-err-box" style="display:none;"></div>
@@ -125,7 +125,7 @@
     <div class="ss-jackpot" id="ss-jackpot"><div class="jp-num">1904</div>Hull City's founding year, exactly. Nice one.</div>
     <div style="font-family:var(--mono); font-size:12px; color:var(--paper-dim);">Same spin luck, different players every day</div>
     <div class="ss-signin-cta" id="ss-signin-cta" style="display:none; margin:16px 0;">
-      <div style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-bottom:10px;">That's your one free spin for today. Sign in for unlimited attempts.</div>
+      <div id="ss-signin-cta-text" style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-bottom:10px;">That's your one free spin for today. Sign in for unlimited attempts.</div>
       <a href="account.html" class="ss-spin-btn" style="display:inline-block; text-decoration:none; padding:12px 28px; width:auto;">Sign in for unlimited attempts</a>
     </div>
     <button class="ss-spin-btn" id="ss-play-again-btn" style="display:none; max-width:280px; margin:16px auto 0;">Play again, try to beat this</button>
@@ -408,13 +408,21 @@ async function finishGame(){
     }
     document.getElementById('ss-play-again-btn').style.display = 'block';
   } else {
-    // Not signed in: still counted toward the all-time board if they sign
-    // up later today, under a generated guest label kept in this browser
-    // only until then.
+    // Not signed in: saved under a generated guest label, but the
+    // all-time board deliberately never shows guests (no way to
+    // recognize the same person day to day without an account), so
+    // this needs its own explicit confirmation rather than just
+    // showing a leaderboard they'll never actually appear on.
     localStorage.setItem('ss_played_' + today, String(totalScore));
+    const ctaText = document.getElementById('ss-signin-cta-text');
     try{
       await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload, guest_token: getGuestToken(), guest_label: getGuestLabel() });
-    }catch(e){ console.error('Could not save guest squad spin score', e); toast('Could not save your score, try again in a moment.'); }
+      if(ctaText) ctaText.textContent = `Score saved. That's your one free spin for today, sign in for unlimited attempts and to get this score on the all-time board.`;
+    }catch(e){
+      console.error('Could not save guest squad spin score', e);
+      toast('Could not save your score, try again in a moment.');
+      if(ctaText) ctaText.textContent = `That's your one free spin for today. Sign in for unlimited attempts.`;
+    }
     document.getElementById('ss-signin-cta').style.display = 'block';
   }
   await renderLeaderboard('ss-leaderboard');
@@ -429,7 +437,7 @@ function resetGame(){
   document.getElementById('ss-final').classList.remove('show');
   document.getElementById('ss-jackpot').classList.remove('show');
   document.getElementById('ss-play-again-btn').style.display = 'none';
-  document.getElementById('ss-intro').innerHTML = 'Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City\'s founding year, for something special.';
+  document.getElementById('ss-intro').innerHTML = 'Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City\'s founding year, for something special. <span style="color:var(--amber); font-weight:bold;">One attempt a day, unlimited if you\'re signed in.</span>';
   document.getElementById('ss-panel').style.display = 'block';
   document.getElementById('ss-spins-left').textContent = SLOTS.length + ' shirts to fill';
   document.getElementById('ss-score-num').textContent = '0';
