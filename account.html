@@ -112,6 +112,7 @@
     </div>
 
     <div id="stats-dashboard"></div>
+    <div id="squadspin-stats"></div>
 
     <a href="achievements.html" style="display:flex; align-items:center; gap:14px; padding:16px 18px; background:var(--ink-2); border:1px solid var(--line); border-radius:12px; text-decoration:none; transition:all .15s ease; margin-bottom:20px;" onmouseover="this.style.borderColor='var(--amber-deep)'" onmouseout="this.style.borderColor='var(--line)'">
       <span style="font-size:24px; flex-shrink:0;">🏅</span>
@@ -252,6 +253,42 @@ async function showSignedIn(user){
   await loadDisplayName(user.id);
   const stats = await syncStatsForUser(user.id);
   renderStatsDashboard(stats);
+  renderSquadSpinStats(user.id);
+}
+
+async function renderSquadSpinStats(userId){
+  const container = document.getElementById('squadspin-stats');
+  const { data: myScores } = await sb.from('squad_spin_scores').select('score, puzzle_date').eq('user_id', userId);
+  if(!myScores || !myScores.length){
+    container.innerHTML = '';
+    return;
+  }
+  const bestScore = Math.max(...myScores.map(s=>s.score));
+  const closest = myScores.reduce((best, s) =>
+    Math.abs(s.score - 1904) < Math.abs(best.score - 1904) ? s : best
+  );
+  const hitJackpot = myScores.some(s => s.score === 1904);
+
+  // Rank is worked out client-side against the full all-time board,
+  // rather than needing a dedicated ranked view just for this one number.
+  const { data: board } = await sb.from('squad_spin_overall_leaderboard').select('user_id, score').order('score', {ascending:false});
+  let rankLabel = '';
+  if(board && board.length){
+    const idx = board.findIndex(row => row.user_id === userId);
+    if(idx >= 0) rankLabel = `#${idx+1} of ${board.length}`;
+  }
+
+  container.innerHTML = `
+    <div class="mode-stat-card">
+      <div class="mode-name"><span class="mode-icon">🎰</span>Squad Spin</div>
+      <div class="mode-stat-row">
+        <div><div class="num">${bestScore}</div><div class="lab">Best score</div></div>
+        <div><div class="num">${closest.score}</div><div class="lab">Closest to 1904${hitJackpot ? ' 🎯' : ''}</div></div>
+        <div><div class="num">${rankLabel || 'Unranked'}</div><div class="lab">All-time rank</div></div>
+        <div><div class="num">${myScores.length}</div><div class="lab">XIs spun</div></div>
+      </div>
+    </div>
+  `;
 }
 
 async function loadDisplayName(userId){

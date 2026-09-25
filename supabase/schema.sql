@@ -1208,7 +1208,15 @@ insert into achievement_definitions (key, category, name, icon, tier, descriptio
   ('leagues_joined_silver', 'Leagues', 'Social Butterfly', '🤝', 'silver', 'In 5 leagues at once', 35, 71),
   ('leagues_joined_gold', 'Leagues', 'Social Butterfly', '🤝', 'gold', 'In 10 leagues at once', 100, 72),
   ('leagues_top3_silver', 'Leagues', 'League Success', '🏆', 'silver', 'Top 3 in any league', 60, 73),
-  ('leagues_won_gold', 'Leagues', 'League Success', '🏆', 'gold', 'Currently rank 1 in any league', 220, 74)
+  ('leagues_won_gold', 'Leagues', 'League Success', '🏆', 'gold', 'Currently rank 1 in any league', 220, 74),
+
+  ('squadspin_played_bronze', 'Squad Spin', 'Regular Spinner', '🎰', 'bronze', '5 XIs spun', 10, 80),
+  ('squadspin_played_silver', 'Squad Spin', 'Regular Spinner', '🎰', 'silver', '20 XIs spun', 40, 81),
+  ('squadspin_played_gold', 'Squad Spin', 'Regular Spinner', '🎰', 'gold', '50 XIs spun', 150, 82),
+  ('squadspin_score_bronze', 'Squad Spin', 'Big Score', '📈', 'bronze', 'Score 1500 or more', 15, 83),
+  ('squadspin_score_silver', 'Squad Spin', 'Big Score', '📈', 'silver', 'Score 2500 or more', 50, 84),
+  ('squadspin_score_gold', 'Squad Spin', 'Big Score', '📈', 'gold', 'Score 3500 or more', 180, 85),
+  ('squadspin_jackpot_platinum', 'Squad Spin', 'Founded 1904', '🎯', 'platinum', 'Land your score on exactly 1904', 500, 86)
 on conflict (key) do nothing;
 
 -- Works out which achievements a user has actually earned, checked
@@ -1402,6 +1410,7 @@ declare
   league_count int;
   league_founded int;
   best_league_rank int;
+  squadspin_played int; squadspin_best_score int;
 begin
   select s.stats into stats from user_stats s where s.user_id = uid;
   if stats is null then stats := '{}'::jsonb; end if;
@@ -1536,6 +1545,21 @@ begin
   ) r where r.user_id = uid;
   if best_league_rank <= 3 then insert into user_achievements values (uid, 'leagues_top3_silver', now()) on conflict do nothing; end if;
   if best_league_rank = 1 then insert into user_achievements values (uid, 'leagues_won_gold', now()) on conflict do nothing; end if;
+
+  -- Squad Spin
+  select count(*) into squadspin_played from squad_spin_scores where user_id = uid;
+  if squadspin_played >= 5 then insert into user_achievements values (uid, 'squadspin_played_bronze', now()) on conflict do nothing; end if;
+  if squadspin_played >= 20 then insert into user_achievements values (uid, 'squadspin_played_silver', now()) on conflict do nothing; end if;
+  if squadspin_played >= 50 then insert into user_achievements values (uid, 'squadspin_played_gold', now()) on conflict do nothing; end if;
+
+  select max(score) into squadspin_best_score from squad_spin_scores where user_id = uid;
+  if squadspin_best_score >= 1500 then insert into user_achievements values (uid, 'squadspin_score_bronze', now()) on conflict do nothing; end if;
+  if squadspin_best_score >= 2500 then insert into user_achievements values (uid, 'squadspin_score_silver', now()) on conflict do nothing; end if;
+  if squadspin_best_score >= 3500 then insert into user_achievements values (uid, 'squadspin_score_gold', now()) on conflict do nothing; end if;
+
+  if exists (select 1 from squad_spin_scores where user_id = uid and score = 1904) then
+    insert into user_achievements values (uid, 'squadspin_jackpot_platinum', now()) on conflict do nothing;
+  end if;
 end;
 $$ language plpgsql security definer;
 
