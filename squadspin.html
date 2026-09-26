@@ -262,10 +262,13 @@ async function claimGuestScoreIfAny(){
   if(!token) return;
   try{
     const result = await callSquadSpinAction('claim_guest_score', { guest_token: token });
-    if(result.claimed){
+    const claimedModes = Object.keys(result.claimedByMode || {});
+    if(claimedModes.length){
       localStorage.removeItem('ss_guest_token');
       localStorage.removeItem('ss_guest_label');
-      bestScoreToday = result.score;
+      // bestScoreToday only tracks whichever mode is currently active on
+      // this page load, if that one happened to be claimed, reflect it.
+      if(result.claimedByMode[gameMode] !== undefined) bestScoreToday = result.claimedByMode[gameMode];
     }
   }catch(e){ console.error('Could not claim guest score', e); }
 }
@@ -360,15 +363,16 @@ function applyDifficultyFilter(){
 }
 
 async function boot(){
-  // Logged-out visitors get one spin a day, tracked locally since there's
-  // no account to key off. Logged-in users are never blocked here, they
-  // get unlimited attempts, but we still fetch today's existing score (if
-  // any) so a later attempt only overwrites it when it's actually better.
+  // Logged-out visitors get one spin a day per mode, tracked locally
+  // since there's no account to key off. Logged-in users are never
+  // blocked here, they get unlimited attempts, but we still fetch
+  // today's existing score for this mode (if any) so a later attempt
+  // only overwrites it when it's actually better.
   if(currentUser){
-    const { data: existing } = await sb.from('squad_spin_scores').select('score').eq('user_id', currentUser.id).eq('puzzle_date', today).maybeSingle();
+    const { data: existing } = await sb.from('squad_spin_scores').select('score').eq('user_id', currentUser.id).eq('puzzle_date', today).eq('mode', gameMode).eq('difficulty', difficulty).maybeSingle();
     bestScoreToday = existing ? existing.score : null;
-  } else if(localStorage.getItem('ss_played_' + today)){
-    showAlreadyPlayed(Number(localStorage.getItem('ss_played_' + today)));
+  } else if(localStorage.getItem('ss_played_' + gameMode + '_' + today)){
+    showAlreadyPlayed(Number(localStorage.getItem('ss_played_' + gameMode + '_' + today)));
     return;
   }
 
@@ -562,7 +566,7 @@ async function finishGame(){
     // too, this check is just to skip a pointless network call.
     if(bestScoreToday === null || totalScore > bestScoreToday){
       try{
-        const result = await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload });
+        const result = await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload, mode: gameMode, difficulty });
         if(result.saved) bestScoreToday = result.bestScoreToday;
       }catch(e){ console.error('Could not save squad spin score', e); toast('Could not save your score, try again in a moment.'); }
     }
@@ -573,10 +577,10 @@ async function finishGame(){
     // recognize the same person day to day without an account), so
     // this needs its own explicit confirmation rather than just
     // showing a leaderboard they'll never actually appear on.
-    localStorage.setItem('ss_played_' + today, String(totalScore));
+    localStorage.setItem('ss_played_' + gameMode + '_' + today, String(totalScore));
     const ctaText = document.getElementById('ss-signin-cta-text');
     try{
-      await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload, guest_token: getGuestToken(), guest_label: getGuestLabel() });
+      await callSquadSpinAction('save_score', { score: totalScore, squad: squadPayload, guest_token: getGuestToken(), guest_label: getGuestLabel(), mode: gameMode, difficulty });
       if(ctaText) ctaText.textContent = `Score saved. That's your one free spin for today, sign in for unlimited attempts and to get this score on the all-time board.`;
     }catch(e){
       console.error('Could not save guest squad spin score', e);
@@ -649,32 +653,59 @@ document.getElementById('ss-restart-btn').addEventListener('click', ()=>{
   resetGame();
 });
 
-const LEADERBOARD_VIEWS = {
-  overall: { table: 'squad_spin_overall_leaderboard', tab: 'All-time best', title: 'All-time best scores', orderCol: 'score', ascending: false },
-  overallJackpot: { table: 'squad_spin_overall_jackpots', tab: '1904 hall of fame', title: 'Everyone who has ever hit 1904', orderCol: 'first_hit_date', ascending: true },
-};
+function leaderboardViewsForMode(mode){
+  return {
+    overall: { table: mode === 'modern' ? 'squad_spin_modern_leaderboard' : 'squad_spin_overall_leaderboard', tab: 'Best scores', title: mode === 'modern' ? 'Modern best scores' : 'All-time best scores', orderCol: 'score', ascending: false, hasDifficultyFilter: true },
+    overallJackpot: { table: mode === 'modern' ? 'squad_spin_modern_jackpots' : 'squad_spin_overall_jackpots', tab: '1904 hall of fame', title: 'Everyone who has ever hit 1904', orderCol: 'first_hit_date', ascending: true, hasDifficultyFilter: false },
+  };
+}
 
 async function renderLeaderboard(targetId){
   const el = document.getElementById(targetId);
+  const views = leaderboardViewsForMode(gameMode);
   el.className = 'ss-leaderboard';
   el.innerHTML = `<div class="ss-lb-tabs">` +
-    Object.keys(LEADERBOARD_VIEWS).map((key,i)=>`<button class="ss-lb-tab ${i===0?'active':''}" data-view="${key}">${LEADERBOARD_VIEWS[key].tab}</button>`).join('') +
-    `</div><div class="ss-lb-content"></div>`;
+    Object.keys(views).map((key,i)=>`<button class="ss-lb-tab ${i===0?'active':''}" data-view="${key}">${views[key].tab}</button>`).join('') +
+    `</div><div class="ss-lb-diff-filter" style="display:flex; gap:6px; justify-content:center; margin-bottom:10px;"></div><div class="ss-lb-content"></div>`;
   el.querySelectorAll('.ss-lb-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       el.querySelectorAll('.ss-lb-tab').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      loadLeaderboardView(el, btn.dataset.view);
+      loadLeaderboardView(el, btn.dataset.view, 'all');
     });
   });
-  await loadLeaderboardView(el, 'overall');
+  await loadLeaderboardView(el, 'overall', 'all');
 }
 
-async function loadLeaderboardView(el, viewKey){
-  const config = LEADERBOARD_VIEWS[viewKey];
+async function loadLeaderboardView(el, viewKey, diffFilter){
+  const views = leaderboardViewsForMode(gameMode);
+  const config = views[viewKey];
+  const filterBox = el.querySelector('.ss-lb-diff-filter');
   const content = el.querySelector('.ss-lb-content');
+
+  if(config.hasDifficultyFilter){
+    filterBox.innerHTML = ['all','easy','medium','hard'].map(d=>
+      `<button class="ss-lb-diff-btn ${d===diffFilter?'active':''}" data-diff="${d}" style="background:${d===diffFilter?'rgba(245,163,0,.14)':'var(--ink)'}; border:1px solid ${d===diffFilter?'var(--amber)':'var(--line)'}; color:${d===diffFilter?'var(--amber)':'var(--paper-dim)'}; font-family:var(--mono); font-size:10px; padding:4px 10px; border-radius:12px; cursor:pointer;">${d==='all'?'All':d[0].toUpperCase()+d.slice(1)}</button>`
+    ).join('');
+    filterBox.querySelectorAll('.ss-lb-diff-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=> loadLeaderboardView(el, viewKey, btn.dataset.diff));
+    });
+  } else {
+    filterBox.innerHTML = '';
+  }
+
   content.innerHTML = `<div class="ss-lb-title">${config.title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Loading…</div>`;
-  const { data, error } = await sb.from(config.table).select('*').order(config.orderCol, {ascending: config.ascending}).limit(10);
+
+  let query;
+  if(config.hasDifficultyFilter && diffFilter !== 'all'){
+    // A specific difficulty needs the granular per-(user, mode,
+    // difficulty) view, rather than the mode-wide one, which only knows
+    // each user's single best regardless of which difficulty it came from.
+    query = sb.from('squad_spin_scores_by_difficulty').select('*').eq('mode', gameMode).eq('difficulty', diffFilter).order('score', {ascending:false}).limit(10);
+  } else {
+    query = sb.from(config.table).select('*').order(config.orderCol, {ascending: config.ascending}).limit(10);
+  }
+  const { data, error } = await query;
   if(error || !data || !data.length){
     content.innerHTML = `<div class="ss-lb-title">${config.title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Nobody yet, be the first.</div>`;
     return;

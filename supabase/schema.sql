@@ -1622,10 +1622,12 @@ create table if not exists squad_spin_scores (
   guest_token text,
   guest_label text,
   puzzle_date date not null default current_date,
+  mode text not null default 'normal' check (mode in ('normal', 'modern')),
+  difficulty text not null default 'medium' check (difficulty in ('easy', 'medium', 'hard')),
   score int not null,
   squad jsonb not null,
   created_at timestamptz not null default now(),
-  unique (user_id, puzzle_date),
+  unique (user_id, puzzle_date, mode, difficulty),
   constraint squad_spin_scores_identity check (
     (user_id is not null and guest_token is null) or
     (user_id is null and guest_token is not null)
@@ -1634,10 +1636,11 @@ create table if not exists squad_spin_scores (
 
 -- A guest is identified by a token generated and kept in their own
 -- browser's storage, not a real account, so this enforces one score
--- per guest per day the same way the user-based constraint does for
--- signed-in players.
+-- per guest per day per mode, the same way the user-based constraint
+-- does for signed-in players. Normal and Modern are independent here,
+-- same as they are for signed-in players, a guest gets one go at each.
 create unique index if not exists squad_spin_scores_guest_daily
-  on squad_spin_scores (guest_token, puzzle_date)
+  on squad_spin_scores (guest_token, puzzle_date, mode)
   where guest_token is not null;
 
 alter table squad_spin_scores enable row level security;
@@ -1684,7 +1687,10 @@ order by s.created_at asc;
 
 grant select on squad_spin_daily_jackpots to anon, authenticated;
 
--- All-time best single score per user, across every day they've played.
+-- All-time best single score per user, across every day they've played,
+-- Normal mode only, any difficulty. Kept under this exact name since
+-- account.html's rank lookup already depends on it; Modern gets its own
+-- view below rather than changing what this one means.
 -- Guests are deliberately excluded: without a real account there's no
 -- stable identity to aggregate across different days, so grouping them
 -- would just create one confusing combined "Unknown" entry.
@@ -1696,11 +1702,47 @@ select
   max(s.score) as score
 from squad_spin_scores s
 left join profiles p on p.user_id = s.user_id
-where s.user_id is not null
+where s.user_id is not null and s.mode = 'normal'
 group by s.user_id, p.display_name, p.email
 order by score desc;
 
 grant select on squad_spin_overall_leaderboard to anon, authenticated;
+
+-- Same as above, but for Modern mode, its own separate leaderboard since
+-- it's a genuinely different player pool, not a fair comparison against
+-- Normal.
+create or replace view squad_spin_modern_leaderboard
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  max(s.score) as score
+from squad_spin_scores s
+left join profiles p on p.user_id = s.user_id
+where s.user_id is not null and s.mode = 'modern'
+group by s.user_id, p.display_name, p.email
+order by score desc;
+
+grant select on squad_spin_modern_leaderboard to anon, authenticated;
+
+-- Best score per user, broken out by mode AND difficulty, so a specific
+-- "top Easy scores" or "top Hard scores" filter can be queried directly
+-- rather than needing a separate view for every combination.
+create or replace view squad_spin_scores_by_difficulty
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  s.mode,
+  s.difficulty,
+  max(s.score) as score
+from squad_spin_scores s
+left join profiles p on p.user_id = s.user_id
+where s.user_id is not null
+group by s.user_id, p.display_name, p.email, s.mode, s.difficulty
+order by score desc;
+
+grant select on squad_spin_scores_by_difficulty to anon, authenticated;
 
 -- Hall of fame: everyone who has ever hit 1904, and the day they first did it.
 -- Same reasoning as above, real accounts only.
@@ -1712,11 +1754,26 @@ select
   min(s.puzzle_date) as first_hit_date
 from squad_spin_scores s
 left join profiles p on p.user_id = s.user_id
-where s.score = 1904 and s.user_id is not null
+where s.score = 1904 and s.user_id is not null and s.mode = 'normal'
 group by s.user_id, p.display_name, p.email
 order by first_hit_date asc;
 
 grant select on squad_spin_overall_jackpots to anon, authenticated;
+
+-- Same hall of fame, for Modern mode.
+create or replace view squad_spin_modern_jackpots
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  min(s.puzzle_date) as first_hit_date
+from squad_spin_scores s
+left join profiles p on p.user_id = s.user_id
+where s.score = 1904 and s.user_id is not null and s.mode = 'modern'
+group by s.user_id, p.display_name, p.email
+order by first_hit_date asc;
+
+grant select on squad_spin_modern_jackpots to anon, authenticated;
 
 -- ---------- Squad Spin: Hardcore mode ----------
 -- A completely separate game from the normal score-building mode: the

@@ -68,6 +68,8 @@ Deno.serve(async (req) => {
         if (typeof p.score !== "number" || !p.squad) {
           return json({ ok: false, error: "score and squad are required" }, 400);
         }
+        const mode = ["normal", "modern"].includes(p.mode) ? p.mode : "normal";
+        const difficulty = ["easy", "medium", "hard"].includes(p.difficulty) ? p.difficulty : "medium";
         const today = new Date().toISOString().slice(0, 10);
 
         if (realUserId) {
@@ -76,14 +78,16 @@ Deno.serve(async (req) => {
             .select("score")
             .eq("user_id", realUserId)
             .eq("puzzle_date", today)
+            .eq("mode", mode)
+            .eq("difficulty", difficulty)
             .maybeSingle();
           if (existing && existing.score >= p.score) {
             return json({ ok: true, data: { saved: false, bestScoreToday: existing.score } });
           }
           const { error } = await supabase.from("squad_spin_scores").upsert({
             user_id: realUserId, guest_token: null, guest_label: null,
-            puzzle_date: today, score: p.score, squad: p.squad,
-          }, { onConflict: "user_id,puzzle_date" });
+            puzzle_date: today, mode, difficulty, score: p.score, squad: p.squad,
+          }, { onConflict: "user_id,puzzle_date,mode,difficulty" });
           if (error) throw error;
           return json({ ok: true, data: { saved: true, bestScoreToday: p.score } });
         }
@@ -96,68 +100,98 @@ Deno.serve(async (req) => {
           .select("score")
           .eq("guest_token", p.guest_token)
           .eq("puzzle_date", today)
+          .eq("mode", mode)
           .maybeSingle();
         if (existingGuest && existingGuest.score >= p.score) {
           return json({ ok: true, data: { saved: false, bestScoreToday: existingGuest.score } });
         }
         const { error } = await supabase.from("squad_spin_scores").upsert({
           user_id: null, guest_token: p.guest_token, guest_label: p.guest_label || "Guest",
-          puzzle_date: today, score: p.score, squad: p.squad,
-        }, { onConflict: "guest_token,puzzle_date" });
+          puzzle_date: today, mode, difficulty, score: p.score, squad: p.squad,
+        }, { onConflict: "guest_token,puzzle_date,mode" });
         if (error) throw error;
         return json({ ok: true, data: { saved: true, bestScoreToday: p.score } });
       }
 
       // Reassigns today's guest row (if any) onto the caller's real
-      // account, the moment they sign in or sign up. Requires a real,
-      // verified caller, a guest_token alone proves nothing on its own.
+      // Reassigns today's guest row(s) onto the caller's real account, the
+      // moment they sign in or sign up. Requires a real, verified caller,
+      // a guest_token alone proves nothing on its own. Checks both modes
+      // separately, since a guest could have played Normal and Modern
+      // today before signing in, and both should transfer.
       case "claim_guest_score": {
         if (!realUserId) return json({ ok: false, error: "Sign in required to claim a score" }, 401);
         const p = payload || {};
         if (!p.guest_token) return json({ ok: false, error: "guest_token is required" }, 400);
         const today = new Date().toISOString().slice(0, 10);
+        const claimedByMode: Record<string, number> = {};
 
-        const { data: guestRow } = await supabase
-          .from("squad_spin_scores")
-          .select("id, score")
-          .eq("guest_token", p.guest_token)
-          .eq("puzzle_date", today)
-          .is("user_id", null)
-          .maybeSingle();
-        if (!guestRow) return json({ ok: true, data: { claimed: false, reason: "No guest score for today" } });
+        for (const mode of ["normal", "modern"]) {
+          const { data: guestRow } = await supabase
+            .from("squad_spin_scores")
+            .select("id, score, difficulty")
+            .eq("guest_token", p.guest_token)
+            .eq("puzzle_date", today)
+            .eq("mode", mode)
+            .is("user_id", null)
+            .maybeSingle();
+          if (!guestRow) continue;
 
-        const { data: ownRow } = await supabase
-          .from("squad_spin_scores")
-          .select("id, score")
+          const { data: ownRow } = await supabase
+            .from("squad_spin_scores")
+            .select("id, score")
+            .eq("user_id", realUserId)
+            .eq("puzzle_date", today)
+            .eq("mode", mode)
+            .eq("difficulty", guestRow.difficulty)
+            .maybeSingle();
+
+          if (!ownRow) {
+            const { error } = await supabase
+              .from("squad_spin_scores")
+              .update({ user_id: realUserId, guest_token: null, guest_label: null })
+              .eq("id", guestRow.id);
+            if (error) throw error;
+            claimedByMode[mode] = guestRow.score;
+          } else if (guestRow.score > ownRow.score) {
+            await supabase.from("squad_spin_scores").delete().eq("id", ownRow.id);
+            const { error } = await supabase
+              .from("squad_spin_scores")
+              .update({ user_id: realUserId, guest_token: null, guest_label: null })
+              .eq("id", guestRow.id);
+            if (error) throw error;
+            claimedByMode[mode] = guestRow.score;
+          } else {
+            await supabase.from("squad_spin_scores").delete().eq("id", guestRow.id);
+          }
+        }
+        return json({ ok: true, data: { claimedByMode } });
+      }
+
+      // Hardcore: one attempt a day, win or lose, requires a real
+      // account since there's no guest support for this mode, tracking
+      // wins over time only means something with a persistent identity.
+      case "save_hardcore_attempt": {
+        if (!realUserId) return json({ ok: false, error: "Sign in required to play Hardcore" }, 401);
+        const p = payload || {};
+        if (typeof p.won !== "boolean" || typeof p.final_score !== "number" || !p.squad) {
+          return json({ ok: false, error: "won, final_score and squad are required" }, 400);
+        }
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: existing } = await supabase
+          .from("squad_spin_hardcore_attempts")
+          .select("id")
           .eq("user_id", realUserId)
           .eq("puzzle_date", today)
           .maybeSingle();
-
-        if (!ownRow) {
-          // No score of their own yet today, simplest case: the guest
-          // row just becomes theirs.
-          const { error } = await supabase
-            .from("squad_spin_scores")
-            .update({ user_id: realUserId, guest_token: null, guest_label: null })
-            .eq("id", guestRow.id);
-          if (error) throw error;
-          return json({ ok: true, data: { claimed: true, score: guestRow.score } });
+        if (existing) {
+          return json({ ok: true, data: { saved: false, reason: "Already attempted Hardcore today" } });
         }
-
-        // They already have a score today too (unlikely, but possible),
-        // keep whichever is higher and drop the other row.
-        if (guestRow.score > ownRow.score) {
-          await supabase.from("squad_spin_scores").delete().eq("id", ownRow.id);
-          const { error } = await supabase
-            .from("squad_spin_scores")
-            .update({ user_id: realUserId, guest_token: null, guest_label: null })
-            .eq("id", guestRow.id);
-          if (error) throw error;
-          return json({ ok: true, data: { claimed: true, score: guestRow.score } });
-        } else {
-          await supabase.from("squad_spin_scores").delete().eq("id", guestRow.id);
-          return json({ ok: true, data: { claimed: false, reason: "Existing score was already higher", score: ownRow.score } });
-        }
+        const { error } = await supabase.from("squad_spin_hardcore_attempts").insert({
+          user_id: realUserId, puzzle_date: today, won: p.won, final_score: p.final_score, squad: p.squad,
+        });
+        if (error) throw error;
+        return json({ ok: true, data: { saved: true } });
       }
 
       default:

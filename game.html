@@ -538,10 +538,18 @@ function attachAutocomplete(inputEl, dropdownEl, items, opts){
     if(opts.onSelect) opts.onSelect(item);
   }
   function search(){
-    const q = inputEl.value.trim().toLowerCase();
+    // Split into words and require each one to appear somewhere in the
+    // item, rather than the whole query as one exact substring. A stray
+    // double space or extra whitespace in a stored name (or typing the
+    // words in a different order) would otherwise silently break an
+    // exact-substring match even though the player is genuinely there.
+    const words = inputEl.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     highlighted = -1;
-    if(!q){ filtered = []; render(); return; }
-    filtered = items.filter(it => it.value.toLowerCase().includes(q)).slice(0, maxResults);
+    if(!words.length){ filtered = []; render(); return; }
+    filtered = items.filter(it => {
+      const target = it.value.toLowerCase().replace(/\s+/g, ' ');
+      return words.every(w => target.includes(w));
+    }).slice(0, maxResults);
     render();
   }
   inputEl.addEventListener('input', search);
