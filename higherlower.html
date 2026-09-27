@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Higher or Lower: Tigerdle</title>
+<link rel="canonical" href="https://tigerdle.com/higherlower.html">
+<meta name="description" content="Guess higher or lower on Hull City career appearances. Build your streak, Standard or Modern-players-only.">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .hl-intro{ text-align:center; font-size:13px; color:var(--paper-dim); max-width:480px; margin:0 auto 20px; }
+  .hl-mode-select{ max-width:480px; margin:0 auto 24px; text-align:center; }
+  .hl-mode-btn{ flex:1; max-width:200px; background:var(--ink-2); border:2px solid var(--line); color:var(--paper-dim); font-family:var(--display); font-size:15px; padding:12px 6px; border-radius:10px; cursor:pointer; }
+  .hl-mode-btn.active{ border-color:var(--amber); color:var(--amber); }
+  .hl-mode-description{ font-family:var(--mono); font-size:12px; color:var(--paper-dim); margin:12px 0; }
+  .hl-err-box{ text-align:center; font-family:var(--mono); font-size:13px; color:var(--paper-dim); max-width:480px; margin:30px auto; padding:20px; background:var(--ink-2); border:1px solid var(--line); border-radius:10px; }
+  .hl-streak-bar{ background:var(--ink-2); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:18px; text-align:center; max-width:480px; margin-left:auto; margin-right:auto; }
+  .hl-streak-label{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.05em; }
+  .hl-streak-num{ font-family:var(--display); font-size:44px; color:var(--amber); }
+  .hl-cards{ max-width:480px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+  .hl-card{ background:var(--ink-2); border:2px solid var(--line); border-radius:14px; padding:24px 18px; text-align:center; }
+  .hl-card.current{ border-color:var(--amber-deep,#c67f00); }
+  .hl-card-name{ font-family:var(--display); font-size:22px; color:var(--paper); margin-bottom:6px; }
+  .hl-card-sub{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; }
+  .hl-card-value{ font-family:var(--display); font-size:36px; color:var(--amber); }
+  .hl-card-value.hidden-value{ color:var(--paper-dim); font-size:28px; }
+  .hl-vs{ text-align:center; font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.1em; }
+  .hl-guess-row{ display:flex; gap:10px; margin-top:4px; }
+  .hl-guess-btn{ flex:1; background:var(--amber); color:var(--ink); font-family:var(--display); font-size:16px; padding:16px; border:none; border-radius:10px; cursor:pointer; }
+  .hl-guess-btn:disabled{ background:var(--line); color:var(--paper-dim); cursor:not-allowed; }
+  .hl-result-banner{ text-align:center; padding:10px; font-family:var(--mono); font-size:13px; border-radius:8px; display:none; }
+  .hl-result-banner.correct{ background:rgba(95,143,82,.15); border:1px solid var(--good,#5f8f52); color:var(--good,#5f8f52); }
+  .hl-result-banner.wrong{ background:rgba(198,82,82,.15); border:1px solid var(--bad,#c65252); color:var(--bad,#c65252); }
+  .hl-final{ display:none; max-width:480px; margin:0 auto; text-align:center; }
+  .hl-final-num{ font-family:var(--display); font-size:64px; color:var(--amber); margin:10px 0; }
+  .hl-signin-cta{ margin:16px 0; }
+  .hl-lb-title{ font-family:var(--mono); font-size:11px; color:var(--amber); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; text-align:center; }
+  .hl-lb-row{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:13px; padding:8px 0; border-bottom:1px solid var(--line); color:var(--paper-dim); }
+  .hl-lb-row.you{ color:var(--amber); font-weight:bold; }
+  .hl-lb-tabs{ display:flex; gap:6px; justify-content:center; margin-bottom:14px; }
+  .hl-lb-tab{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); background:var(--ink); border:1px solid var(--line); border-radius:20px; padding:6px 12px; cursor:pointer; }
+  .hl-lb-tab.active{ color:var(--amber); border-color:var(--amber-deep,#c67f00); background:rgba(245,163,0,.1); }
+  .hl-restart-btn{ display:none; margin-top:10px; background:none; border:1px solid var(--line); color:var(--paper-dim); font-family:var(--mono); font-size:11px; padding:5px 12px; border-radius:14px; cursor:pointer; }
+  .hl-lb-toggle{ background:none; border:none; color:var(--paper-dim); font-family:var(--mono); font-size:11px; text-decoration:underline; cursor:pointer; padding:2px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap" style="padding-top:20px; padding-bottom:60px;">
+  <div class="eyebrow" style="text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;">Hull City AFC &middot; Higher or Lower</div>
+  <h1 style="font-family:var(--display); font-weight:400; font-size:32px; color:var(--paper); text-align:center; margin:4px 0 2px;">HIGHER OR LOWER</h1>
+  <div class="hl-intro" id="hl-intro">Guess whether the next player has more or fewer career appearances than the one shown. Get it right, the streak builds. One attempt a day, unlimited if you're signed in.</div>
+
+  <div id="hl-mode-select" class="hl-mode-select">
+    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:14px;">
+      <button class="hl-mode-btn active" data-mode="standard">Standard</button>
+      <button class="hl-mode-btn" data-mode="modern">Modern</button>
+    </div>
+    <div class="hl-mode-description" id="hl-mode-description">Every player in the archive, GK to legends.</div>
+    <button class="hl-guess-btn" id="hl-mode-start-btn" style="max-width:280px; margin:0 auto;">Let's go</button>
+  </div>
+
+  <div id="hl-loading" class="hl-err-box" style="display:none;">Loading today's players…</div>
+  <div id="hl-error" class="hl-err-box" style="display:none;"></div>
+
+  <div id="hl-already-played" style="display:none; max-width:480px; margin:0 auto; text-align:center;">
+    <div class="hl-streak-bar">
+      <div class="hl-streak-label">You've already played today</div>
+      <div class="hl-streak-num" id="hl-already-streak">0</div>
+    </div>
+    <div class="hl-signin-cta" id="hl-already-signin-cta" style="display:none;">
+      <div style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-bottom:10px;">Signed-in fans get unlimited attempts every day</div>
+      <a href="account.html" class="hl-guess-btn" style="display:inline-block; text-decoration:none; padding:12px 28px; width:auto;">Sign in for unlimited attempts</a>
+    </div>
+    <div id="hl-already-leaderboard"></div>
+  </div>
+
+  <div id="hl-game" style="display:none;">
+    <div class="hl-streak-bar">
+      <div class="hl-streak-label">Streak</div>
+      <div class="hl-streak-num" id="hl-streak-num">0</div>
+      <div>
+        <button class="hl-restart-btn" id="hl-restart-btn">Restart</button>
+      </div>
+      <button class="hl-lb-toggle" id="hl-pregame-lb-toggle">🏆 Leaderboards</button>
+    </div>
+    <div id="hl-pregame-leaderboard" style="display:none; margin-bottom:18px;"></div>
+
+    <div class="hl-cards">
+      <div class="hl-card current">
+        <div class="hl-card-sub">Current player</div>
+        <div class="hl-card-name" id="hl-current-name">-</div>
+        <div class="hl-card-value" id="hl-current-value">0</div>
+        <div class="hl-card-sub" style="margin-top:6px; margin-bottom:0;">career appearances</div>
+      </div>
+      <div class="hl-vs">then</div>
+      <div class="hl-card" id="hl-next-card">
+        <div class="hl-card-sub">Next player</div>
+        <div class="hl-card-name" id="hl-next-name">-</div>
+        <div class="hl-card-value hidden-value" id="hl-next-value">?</div>
+        <div class="hl-card-sub" style="margin-top:6px; margin-bottom:0;">career appearances, higher or lower?</div>
+      </div>
+      <div class="hl-guess-row">
+        <button class="hl-guess-btn" id="hl-lower-btn">⬇ Lower</button>
+        <button class="hl-guess-btn" id="hl-higher-btn">⬆ Higher</button>
+      </div>
+      <div class="hl-result-banner" id="hl-result-banner"></div>
+    </div>
+  </div>
+
+  <div class="hl-final" id="hl-final">
+    <div style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.05em;">Final streak</div>
+    <div class="hl-final-num" id="hl-final-streak">0</div>
+    <div style="font-family:var(--mono); font-size:12px; color:var(--paper-dim);">Same players, different order every attempt</div>
+    <div class="hl-signin-cta" id="hl-signin-cta" style="display:none;">
+      <div id="hl-signin-cta-text" style="font-family:var(--mono); font-size:13px; color:var(--paper-dim); margin-bottom:10px;">That's your one free attempt for today. Sign in for unlimited attempts.</div>
+      <a href="account.html" class="hl-guess-btn" style="display:inline-block; text-decoration:none; padding:12px 28px;">Sign in for unlimited attempts</a>
+    </div>
+    <button class="hl-guess-btn" id="hl-play-again-btn" style="display:none; max-width:280px; margin:16px auto 0;">Play again, try to beat this</button>
+    <div id="hl-leaderboard" style="margin-top:16px;"></div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script>
+renderChrome('play');
+
+let currentUser = null;
+let wasLoggedIn = false;
+sb.auth.onAuthStateChange((event, session)=>{
+  const nowLoggedIn = !!session?.user;
+  currentUser = session?.user || null;
+  if(nowLoggedIn && !wasLoggedIn){ claimGuestScoreIfAny(); }
+  wasLoggedIn = nowLoggedIn;
+});
+sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; wasLoggedIn = !!currentUser; initModeSelect(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && !currentUser){
+    sb.auth.getSession().then(({data})=>{ currentUser = data?.session?.user || null; });
+  }
+});
+
+function getGuestToken(){
+  let token = localStorage.getItem('hl_guest_token');
+  if(!token){
+    token = 'g_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('hl_guest_token', token);
+  }
+  return token;
+}
+function getGuestLabel(){
+  let label = localStorage.getItem('hl_guest_label');
+  if(!label){
+    label = 'Guest-' + (1000 + Math.floor(Math.random() * 9000));
+    localStorage.setItem('hl_guest_label', label);
+  }
+  return label;
+}
+
+async function callHigherLowerAction(action, payload){
+  const { data: sessionData } = await sb.auth.getSession();
+  const token = sessionData?.session?.access_token || SUPABASE_ANON_KEY;
+  const res = await fetch(fnUrl('higher-lower-action'), {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + token},
+    body: JSON.stringify({ action, payload })
+  });
+  const json = await res.json().catch(()=>({ok:false, error:'Bad response from server'}));
+  if(!json.ok) throw new Error(json.error || 'Something went wrong');
+  return json.data;
+}
+
+async function claimGuestScoreIfAny(){
+  const token = localStorage.getItem('hl_guest_token');
+  if(!token) return;
+  try{
+    const result = await callHigherLowerAction('claim_guest_score', { guest_token: token });
+    const claimedModes = Object.keys(result.claimedByMode || {});
+    if(claimedModes.length){
+      localStorage.removeItem('hl_guest_token');
+      localStorage.removeItem('hl_guest_label');
+      if(result.claimedByMode[gameMode] !== undefined) bestStreakToday = result.claimedByMode[gameMode];
+    }
+  }catch(e){ console.error('Could not claim guest score', e); }
+}
+
+let gameMode = 'standard';
+let POOL = [];
+let currentPlayer = null;
+let nextPlayer = null;
+let streak = 0;
+let bestStreakToday = null;
+let guessing = false;
+const today = new Date().toISOString().slice(0,10);
+
+const MODE_DESCRIPTIONS = {
+  standard: "Every player in the archive, GK to legends.",
+  modern: "Only players born from 1981 onwards.",
+};
+
+function initModeSelect(){
+  document.querySelectorAll('.hl-mode-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      gameMode = btn.dataset.mode;
+      document.querySelectorAll('.hl-mode-btn').forEach(b=>b.classList.toggle('active', b===btn));
+      document.getElementById('hl-mode-description').textContent = MODE_DESCRIPTIONS[gameMode];
+    });
+  });
+  document.getElementById('hl-mode-start-btn').addEventListener('click', ()=>{
+    document.getElementById('hl-mode-select').style.display = 'none';
+    document.getElementById('hl-loading').style.display = 'block';
+    boot();
+  });
+}
+
+async function boot(){
+  if(currentUser){
+    const { data: existing } = await sb.from('higher_lower_scores').select('streak').eq('user_id', currentUser.id).eq('puzzle_date', today).eq('mode', gameMode).maybeSingle();
+    bestStreakToday = existing ? existing.streak : null;
+  } else if(localStorage.getItem('hl_played_' + gameMode + '_' + today)){
+    showAlreadyPlayed(Number(localStorage.getItem('hl_played_' + gameMode + '_' + today)));
+    return;
+  }
+
+  // Supabase silently caps a single query at 1000 rows, whatever the
+  // sort order. Paging through in batches gets every player regardless
+  // of how large the table grows, rather than an arbitrary slice of it.
+  let all = [];
+  let from = 0;
+  const pageSize = 1000;
+  while(true){
+    const { data, error } = await sb.from('players').select('id, first_name, last_name, appearances, birth_date').eq('active', true).not('appearances', 'is', null).range(from, from + pageSize - 1);
+    if(error){
+      document.getElementById('hl-loading').style.display = 'none';
+      document.getElementById('hl-error').style.display = 'block';
+      document.getElementById('hl-error').textContent = 'Could not load players right now, try again shortly.';
+      return;
+    }
+    if(!data || !data.length) break;
+    all = all.concat(data);
+    if(data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  document.getElementById('hl-loading').style.display = 'none';
+  if(gameMode === 'modern'){
+    all = all.filter(p => p.birth_date && p.birth_date >= '1981-01-01');
+  }
+  if(all.length < 2){
+    document.getElementById('hl-error').style.display = 'block';
+    document.getElementById('hl-error').textContent = gameMode === 'modern'
+      ? 'Not enough players born from 1981 onwards with both appearances and a birth date on file yet. Add more in admin before this can go live.'
+      : 'Not enough players with appearances entered yet. Add more in admin before this can go live.';
+    return;
+  }
+  POOL = all;
+  document.getElementById('hl-game').style.display = 'block';
+  document.getElementById('hl-restart-btn').style.display = currentUser ? 'inline-block' : 'none';
+  startRound();
+}
+
+function playerName(p){ return `${p.first_name} ${p.last_name}`; }
+
+function pickRandomPlayer(exclude){
+  const options = POOL.filter(p => !exclude.includes(p.id));
+  return options[Math.floor(Math.random() * options.length)];
+}
+
+function startRound(){
+  streak = 0;
+  currentPlayer = pickRandomPlayer([]);
+  nextPlayer = pickRandomPlayer([currentPlayer.id]);
+  renderRound();
+}
+
+function renderRound(){
+  document.getElementById('hl-streak-num').textContent = streak;
+  document.getElementById('hl-current-name').textContent = playerName(currentPlayer);
+  document.getElementById('hl-current-value').textContent = currentPlayer.appearances;
+  document.getElementById('hl-next-name').textContent = playerName(nextPlayer);
+  const nextValueEl = document.getElementById('hl-next-value');
+  nextValueEl.textContent = '?';
+  nextValueEl.className = 'hl-card-value hidden-value';
+  document.getElementById('hl-next-card').classList.remove('current');
+  document.getElementById('hl-result-banner').classList.remove('show','correct','wrong');
+  document.getElementById('hl-result-banner').style.display = 'none';
+  document.getElementById('hl-higher-btn').disabled = false;
+  document.getElementById('hl-lower-btn').disabled = false;
+  guessing = false;
+}
+
+async function makeGuess(guessHigher){
+  if(guessing) return;
+  guessing = true;
+  document.getElementById('hl-higher-btn').disabled = true;
+  document.getElementById('hl-lower-btn').disabled = true;
+
+  const nextValueEl = document.getElementById('hl-next-value');
+  nextValueEl.textContent = nextPlayer.appearances;
+  nextValueEl.className = 'hl-card-value';
+
+  // A tie counts as a correct guess either way, matching how these
+  // games are usually played.
+  const actuallyHigher = nextPlayer.appearances >= currentPlayer.appearances;
+  const correct = guessHigher === actuallyHigher;
+
+  const banner = document.getElementById('hl-result-banner');
+  banner.style.display = 'block';
+  banner.classList.add(correct ? 'correct' : 'wrong');
+  banner.textContent = correct
+    ? `Correct! ${playerName(nextPlayer)}: ${nextPlayer.appearances} appearances.`
+    : `Wrong. ${playerName(nextPlayer)}: ${nextPlayer.appearances} appearances.`;
+
+  if(correct){
+    streak++;
+    setTimeout(()=>{
+      currentPlayer = nextPlayer;
+      nextPlayer = pickRandomPlayer([currentPlayer.id]);
+      renderRound();
+    }, 1600);
+  } else {
+    setTimeout(()=> finishGame(), 1600);
+  }
+}
+
+document.getElementById('hl-higher-btn').addEventListener('click', ()=> makeGuess(true));
+document.getElementById('hl-lower-btn').addEventListener('click', ()=> makeGuess(false));
+
+async function finishGame(){
+  document.getElementById('hl-game').style.display = 'none';
+  document.getElementById('hl-final-streak').textContent = streak;
+  document.getElementById('hl-final').style.display = 'block';
+
+  const playersSeen = [currentPlayer, nextPlayer].map(p=>({ id:p.id, name: playerName(p), appearances: p.appearances }));
+
+  if(currentUser){
+    if(bestStreakToday === null || streak > bestStreakToday){
+      try{
+        const result = await callHigherLowerAction('save_score', { streak, players_seen: playersSeen, mode: gameMode });
+        if(result.saved) bestStreakToday = result.bestStreakToday;
+      }catch(e){ console.error('Could not save higher or lower score', e); toast('Could not save your score, try again in a moment.'); }
+    }
+    document.getElementById('hl-play-again-btn').style.display = 'block';
+  } else {
+    localStorage.setItem('hl_played_' + gameMode + '_' + today, String(streak));
+    const ctaText = document.getElementById('hl-signin-cta-text');
+    try{
+      await callHigherLowerAction('save_score', { streak, players_seen: playersSeen, guest_token: getGuestToken(), guest_label: getGuestLabel(), mode: gameMode });
+      if(ctaText) ctaText.textContent = `Streak saved. That's your one free attempt for today, sign in for unlimited attempts and to get this streak on the leaderboard.`;
+    }catch(e){
+      console.error('Could not save guest higher or lower score', e);
+      toast('Could not save your score, try again in a moment.');
+      if(ctaText) ctaText.textContent = `That's your one free attempt for today. Sign in for unlimited attempts.`;
+    }
+    document.getElementById('hl-signin-cta').style.display = 'block';
+  }
+  await renderLeaderboard('hl-leaderboard');
+}
+
+function resetGame(){
+  document.getElementById('hl-final').style.display = 'none';
+  document.getElementById('hl-play-again-btn').style.display = 'none';
+  document.getElementById('hl-signin-cta').style.display = 'none';
+  document.getElementById('hl-game').style.display = 'block';
+  startRound();
+}
+document.getElementById('hl-play-again-btn').addEventListener('click', resetGame);
+document.getElementById('hl-restart-btn').addEventListener('click', ()=>{
+  if(!confirm('Restart this run? Your current streak will be lost.')) return;
+  startRound();
+});
+
+async function showAlreadyPlayed(streakVal){
+  document.getElementById('hl-loading').style.display = 'none';
+  document.getElementById('hl-already-played').style.display = 'block';
+  document.getElementById('hl-already-streak').textContent = streakVal;
+  document.getElementById('hl-already-signin-cta').style.display = 'block';
+  await renderLeaderboard('hl-already-leaderboard');
+}
+
+function leaderboardTableForMode(mode){
+  return mode === 'modern' ? 'higher_lower_modern_leaderboard' : 'higher_lower_leaderboard';
+}
+
+async function renderLeaderboard(targetId){
+  const el = document.getElementById(targetId);
+  el.innerHTML = `<div class="hl-lb-tabs">
+    <button class="hl-lb-tab active" data-mode="standard">Standard</button>
+    <button class="hl-lb-tab" data-mode="modern">Modern</button>
+  </div><div class="hl-lb-content"></div>`;
+  el.querySelectorAll('.hl-lb-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      el.querySelectorAll('.hl-lb-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      loadLeaderboardMode(el, btn.dataset.mode);
+    });
+  });
+  await loadLeaderboardMode(el, 'standard');
+}
+
+async function loadLeaderboardMode(el, mode){
+  const content = el.querySelector('.hl-lb-content');
+  const title = mode === 'modern' ? 'Modern best streaks' : 'All-time best streaks';
+  content.innerHTML = `<div class="hl-lb-title">${title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Loading…</div>`;
+  const { data, error } = await sb.from(leaderboardTableForMode(mode)).select('*').order('streak', {ascending:false}).limit(10);
+  if(error || !data || !data.length){
+    content.innerHTML = `<div class="hl-lb-title">${title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Nobody yet, be the first.</div>`;
+    return;
+  }
+  content.innerHTML = `<div class="hl-lb-title">${title}</div>` + data.map((row, i)=>{
+    const isYou = currentUser && row.user_id === currentUser.id;
+    return `<div class="hl-lb-row ${isYou?'you':''}"><span>${i+1}. ${isYou?'You':row.display_name}</span><span>${row.streak}</span></div>`;
+  }).join('');
+}
+
+let pregameLeaderboardLoaded = false;
+document.getElementById('hl-pregame-lb-toggle').addEventListener('click', async ()=>{
+  const box = document.getElementById('hl-pregame-leaderboard');
+  const showing = box.style.display === 'block';
+  box.style.display = showing ? 'none' : 'block';
+  if(!showing && !pregameLeaderboardLoaded){
+    pregameLeaderboardLoaded = true;
+    await renderLeaderboard('hl-pregame-leaderboard');
+  }
+});
+</script>
+</body>
+</html>

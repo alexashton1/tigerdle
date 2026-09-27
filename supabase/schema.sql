@@ -1816,3 +1816,77 @@ having count(*) filter (where h.won) > 0
 order by wins desc, attempts asc;
 
 grant select on squad_spin_hardcore_leaderboard to anon, authenticated;
+
+-- ---------- Higher or Lower ----------
+-- Career appearances, guess higher or lower than the last player shown,
+-- streak-based, one attempt a day for guests, unlimited for signed-in
+-- players (best streak kept). Two separate modes from the outset, since
+-- Squad Spin's Normal/Modern split needed retrofitting later, this one
+-- doesn't: Standard draws from every player, Modern only from those born
+-- in 1981 or later. Guest support follows the same pattern as Squad
+-- Spin: identified by a token their own browser keeps, one attempt per
+-- mode per day, and that day's guest run transfers to a real account
+-- automatically if they sign in.
+create table if not exists higher_lower_scores (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  guest_token text,
+  guest_label text,
+  puzzle_date date not null default current_date,
+  mode text not null default 'standard' check (mode in ('standard', 'modern')),
+  streak int not null,
+  players_seen jsonb not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, puzzle_date, mode),
+  constraint higher_lower_scores_identity check (
+    (user_id is not null and guest_token is null) or
+    (user_id is null and guest_token is not null)
+  )
+);
+
+create unique index if not exists higher_lower_scores_guest_daily
+  on higher_lower_scores (guest_token, puzzle_date, mode)
+  where guest_token is not null;
+
+alter table higher_lower_scores enable row level security;
+
+drop policy if exists "public read higher lower scores" on higher_lower_scores;
+create policy "public read higher lower scores" on higher_lower_scores
+  for select using (true);
+
+-- Writes go through the higher-lower-action edge function using the
+-- service role key, same reasoning as squad-spin-action: keeps a
+-- guest's row safe from being edited by any other anonymous session,
+-- which a simple RLS policy on its own couldn't guarantee.
+
+-- Real accounts only, same reasoning as Squad Spin's overall boards: a
+-- guest's token isn't a stable identity across days, so including them
+-- would just scatter one-off "Guest-XXXX" rows rather than track anyone
+-- meaningfully over time.
+create or replace view higher_lower_leaderboard
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  max(s.streak) as streak
+from higher_lower_scores s
+left join profiles p on p.user_id = s.user_id
+where s.mode = 'standard' and s.user_id is not null
+group by s.user_id, p.display_name, p.email
+order by streak desc;
+
+grant select on higher_lower_leaderboard to anon, authenticated;
+
+create or replace view higher_lower_modern_leaderboard
+with (security_invoker = true) as
+select
+  s.user_id,
+  coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  max(s.streak) as streak
+from higher_lower_scores s
+left join profiles p on p.user_id = s.user_id
+where s.mode = 'modern' and s.user_id is not null
+group by s.user_id, p.display_name, p.email
+order by streak desc;
+
+grant select on higher_lower_modern_leaderboard to anon, authenticated;
