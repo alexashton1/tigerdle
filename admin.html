@@ -636,10 +636,30 @@ document.getElementById('bulk-submit').addEventListener('click', async ()=>{
   }catch(e){ document.getElementById('bulk-msg').textContent = e.message; }
 });
 
+/* Supabase silently caps a single query at 1000 rows, whatever the sort
+   order, with no error. This pages through in batches so a players table
+   larger than that doesn't quietly lose whatever falls past the cutoff. */
+async function fetchAllPlayers(orderCol, activeOnly){
+  let all = [];
+  let from = 0;
+  const pageSize = 1000;
+  while(true){
+    let query = sb.from('players').select('*').order(orderCol);
+    if(activeOnly) query = query.eq('active', true);
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if(error) throw error;
+    if(!data || !data.length) break;
+    all = all.concat(data);
+    if(data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 /* ---- Export current pool as text ---- */
 document.getElementById('p-export').addEventListener('click', async ()=>{
   try{
-    const { data } = await sb.from('players').select('*').order('last_name');
+    const data = await fetchAllPlayers('last_name');
     if(!data || !data.length){ toast('No players to export'); return; }
     const text = data.map(p => [p.first_name, p.last_name, p.position, p.nationality, p.era, p.age ?? '', p.birth_date ?? '', p.appearances ?? '', p.career_goals ?? ''].join(',')).join('\n');
     await navigator.clipboard.writeText(text);
@@ -653,8 +673,7 @@ let playerListExpanded = false;
 
 async function refreshPlayers(){
   try{
-    const { data } = await sb.from('players').select('*').order('last_name');
-    allPlayersCache = data || [];
+    allPlayersCache = await fetchAllPlayers('last_name');
     renderPlayerList();
     updateToggleLabel();
     // Player dropdowns in the matchday form are built from this same
@@ -949,7 +968,7 @@ async function refreshSchedule(){
   const el = document.getElementById('schedule-view');
   try{
     let players = FALLBACK_PLAYERS;
-    const { data } = await sb.from('players').select('*').eq('active', true).order('id');
+    const data = await fetchAllPlayers('id', true);
     if(data && data.length) players = data.map(r=>({id:r.id, first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era, age:r.age}));
     const surname5 = players.filter(p => stripAccents(p.last).replace(/[^A-Za-z]/g,"").length === 5);
     const playersById = {};

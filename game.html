@@ -463,16 +463,32 @@ const POS_LABEL = {GK:"Goalkeeper", DF:"Defender", MF:"Midfielder", FW:"Forward"
 /* Load players: Supabase first, fall back to bundled data */
 async function loadPlayers(){
   try{
-    const { data, error } = await sb.from('players').select('*').eq('active', true).order('id');
-    if(error){
-      console.warn('Tigerdle: could not load players from the database, using the old built-in fallback list instead. Error:', error);
-      return FALLBACK_PLAYERS;
+    // Supabase silently caps any single query at 1000 rows, with no
+    // error, whatever the sort order. With more players than that, a
+    // plain select misses a chunk of them, and since this is sorted by
+    // id (a random value with no relation to name), which players get
+    // cut off is essentially arbitrary, not tied to when they were added
+    // or anything else meaningful. Paging through in batches gets
+    // everything regardless of how large the table grows.
+    let all = [];
+    let from = 0;
+    const pageSize = 1000;
+    while(true){
+      const { data, error } = await sb.from('players').select('*').eq('active', true).order('id').range(from, from + pageSize - 1);
+      if(error){
+        console.warn('Tigerdle: could not load players from the database, using the old built-in fallback list instead. Error:', error);
+        return FALLBACK_PLAYERS;
+      }
+      if(!data || !data.length) break;
+      all = all.concat(data);
+      if(data.length < pageSize) break; // last page, fewer than a full batch came back
+      from += pageSize;
     }
-    if(!data || !data.length){
+    if(!all.length){
       console.warn('Tigerdle: the players query came back empty, using the old built-in fallback list instead.');
       return FALLBACK_PLAYERS;
     }
-    return data.map(r=>({
+    return all.map(r=>({
       id: r.id, first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era,
       age: computeAge(r.birth_date, r.age),
       appearances: r.appearances ?? null
