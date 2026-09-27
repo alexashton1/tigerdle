@@ -464,13 +464,23 @@ const POS_LABEL = {GK:"Goalkeeper", DF:"Defender", MF:"Midfielder", FW:"Forward"
 async function loadPlayers(){
   try{
     const { data, error } = await sb.from('players').select('*').eq('active', true).order('id');
-    if(error || !data || !data.length) return FALLBACK_PLAYERS;
+    if(error){
+      console.warn('Tigerdle: could not load players from the database, using the old built-in fallback list instead. Error:', error);
+      return FALLBACK_PLAYERS;
+    }
+    if(!data || !data.length){
+      console.warn('Tigerdle: the players query came back empty, using the old built-in fallback list instead.');
+      return FALLBACK_PLAYERS;
+    }
     return data.map(r=>({
       id: r.id, first:r.first_name, last:r.last_name, pos:r.position, nat:r.nationality, era:r.era,
       age: computeAge(r.birth_date, r.age),
       appearances: r.appearances ?? null
     }));
-  }catch(e){ return FALLBACK_PLAYERS; }
+  }catch(e){
+    console.warn('Tigerdle: loading players threw an error, using the old built-in fallback list instead.', e);
+    return FALLBACK_PLAYERS;
+  }
 }
 
 // The frozen, server-side rotation order for m1/m2/m3. Fixes the
