@@ -53,6 +53,14 @@
 </head>
 <body>
 <div id="site-header"></div>
+<div style="overflow-x:auto; white-space:nowrap; padding:10px 16px; border-bottom:1px solid var(--line);">
+  <a href="game.html?mode=m1" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Tigerdle</a>
+  <a href="game.html?mode=m2" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Guess the Tiger</a>
+  <a href="game.html?mode=m3" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Mystery Tiger</a>
+  <a href="game.html?mode=m4" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Guess the Opponent</a>
+  <a href="squadspin.html" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Squad Spin</a>
+  <a href="higherlower.html" style="font-family:var(--mono); font-size:12px; color:var(--amber); text-decoration:none;">Higher or Lower</a>
+</div>
 
 <main class="wrap" style="padding-top:20px; padding-bottom:60px;">
   <div class="eyebrow" style="text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;">Hull City AFC &middot; Higher or Lower</div>
@@ -64,7 +72,11 @@
       <button class="hl-mode-btn active" data-mode="standard">Standard</button>
       <button class="hl-mode-btn" data-mode="modern">Modern</button>
     </div>
-    <div class="hl-mode-description" id="hl-mode-description">Every player in the archive, GK to legends.</div>
+    <div style="display:flex; gap:8px; justify-content:center; margin-bottom:10px;">
+      <button class="hl-lb-tab active" data-stat="appearances" id="hl-stat-appearances">Appearances</button>
+      <button class="hl-lb-tab" data-stat="career_goals" id="hl-stat-goals">Goals</button>
+    </div>
+    <div class="hl-mode-description" id="hl-mode-description">Every player in the archive, GK to legends. Comparing career appearances.</div>
     <button class="hl-guess-btn" id="hl-mode-start-btn" style="max-width:280px; margin:0 auto;">Let's go</button>
   </div>
 
@@ -99,14 +111,14 @@
         <div class="hl-card-sub">Current player</div>
         <div class="hl-card-name" id="hl-current-name">-</div>
         <div class="hl-card-value" id="hl-current-value">0</div>
-        <div class="hl-card-sub" style="margin-top:6px; margin-bottom:0;">career appearances</div>
+        <div class="hl-card-sub" style="margin-top:6px; margin-bottom:0;" id="hl-current-stat-label">career appearances</div>
       </div>
       <div class="hl-vs">then</div>
       <div class="hl-card" id="hl-next-card">
         <div class="hl-card-sub">Next player</div>
         <div class="hl-card-name" id="hl-next-name">-</div>
         <div class="hl-card-value hidden-value" id="hl-next-value">?</div>
-        <div class="hl-card-sub" style="margin-top:6px; margin-bottom:0;">career appearances, higher or lower?</div>
+        <div class="hl-card-sub" style="margin-top:6px; margin-bottom:0;" id="hl-next-stat-label">career appearances, higher or lower?</div>
       </div>
       <div class="hl-guess-row">
         <button class="hl-guess-btn" id="hl-lower-btn">⬇ Lower</button>
@@ -197,6 +209,7 @@ async function claimGuestScoreIfAny(){
 }
 
 let gameMode = 'standard';
+let statType = 'appearances';
 let POOL = [];
 let currentPlayer = null;
 let nextPlayer = null;
@@ -209,14 +222,34 @@ const MODE_DESCRIPTIONS = {
   standard: "Every player in the archive, GK to legends.",
   modern: "Only players born from 1981 onwards.",
 };
+const STAT_LABELS = {
+  appearances: "career appearances",
+  career_goals: "career goals",
+};
+
+function updateModeDescription(){
+  document.getElementById('hl-mode-description').textContent = `${MODE_DESCRIPTIONS[gameMode]} Comparing ${STAT_LABELS[statType]}.`;
+}
 
 function initModeSelect(){
   document.querySelectorAll('.hl-mode-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       gameMode = btn.dataset.mode;
       document.querySelectorAll('.hl-mode-btn').forEach(b=>b.classList.toggle('active', b===btn));
-      document.getElementById('hl-mode-description').textContent = MODE_DESCRIPTIONS[gameMode];
+      updateModeDescription();
     });
+  });
+  document.getElementById('hl-stat-appearances').addEventListener('click', ()=>{
+    statType = 'appearances';
+    document.getElementById('hl-stat-appearances').classList.add('active');
+    document.getElementById('hl-stat-goals').classList.remove('active');
+    updateModeDescription();
+  });
+  document.getElementById('hl-stat-goals').addEventListener('click', ()=>{
+    statType = 'career_goals';
+    document.getElementById('hl-stat-goals').classList.add('active');
+    document.getElementById('hl-stat-appearances').classList.remove('active');
+    updateModeDescription();
   });
   document.getElementById('hl-mode-start-btn').addEventListener('click', ()=>{
     document.getElementById('hl-mode-select').style.display = 'none';
@@ -227,7 +260,7 @@ function initModeSelect(){
 
 async function boot(){
   if(currentUser){
-    const { data: existing } = await sb.from('higher_lower_scores').select('streak').eq('user_id', currentUser.id).eq('puzzle_date', today).eq('mode', gameMode).maybeSingle();
+    const { data: existing } = await sb.from('higher_lower_scores').select('streak').eq('user_id', currentUser.id).eq('puzzle_date', today).eq('mode', gameMode).eq('stat_type', statType).maybeSingle();
     bestStreakToday = existing ? existing.streak : null;
   } else if(localStorage.getItem('hl_played_' + gameMode + '_' + today)){
     showAlreadyPlayed(Number(localStorage.getItem('hl_played_' + gameMode + '_' + today)));
@@ -241,7 +274,7 @@ async function boot(){
   let from = 0;
   const pageSize = 1000;
   while(true){
-    const { data, error } = await sb.from('players').select('id, first_name, last_name, appearances, birth_date').eq('active', true).not('appearances', 'is', null).range(from, from + pageSize - 1);
+    const { data, error } = await sb.from('players').select('id, first_name, last_name, appearances, career_goals, birth_date').eq('active', true).not(statType, 'is', null).range(from, from + pageSize - 1);
     if(error){
       document.getElementById('hl-loading').style.display = 'none';
       document.getElementById('hl-error').style.display = 'block';
@@ -258,14 +291,17 @@ async function boot(){
   if(gameMode === 'modern'){
     all = all.filter(p => p.birth_date && p.birth_date >= '1981-01-01');
   }
+  const statLabel = STAT_LABELS[statType];
   if(all.length < 2){
     document.getElementById('hl-error').style.display = 'block';
     document.getElementById('hl-error').textContent = gameMode === 'modern'
-      ? 'Not enough players born from 1981 onwards with both appearances and a birth date on file yet. Add more in admin before this can go live.'
-      : 'Not enough players with appearances entered yet. Add more in admin before this can go live.';
+      ? `Not enough players born from 1981 onwards with both ${statLabel} and a birth date on file yet. Add more in admin before this can go live.`
+      : `Not enough players with ${statLabel} entered yet. Add more in admin before this can go live.`;
     return;
   }
   POOL = all;
+  document.getElementById('hl-current-stat-label').textContent = statLabel;
+  document.getElementById('hl-next-stat-label').textContent = `${statLabel}, higher or lower?`;
   document.getElementById('hl-game').style.display = 'block';
   document.getElementById('hl-restart-btn').style.display = currentUser ? 'inline-block' : 'none';
   startRound();
@@ -273,22 +309,30 @@ async function boot(){
 
 function playerName(p){ return `${p.first_name} ${p.last_name}`; }
 
-function pickRandomPlayer(exclude){
-  const options = POOL.filter(p => !exclude.includes(p.id));
+function pickRandomPlayer(exclude, avoidValue){
+  let options = POOL.filter(p => !exclude.includes(p.id));
+  // Avoid a tie outright, rather than just deciding how to score one:
+  // there's no meaningful "higher or lower" answer when two players
+  // share the exact same number, so the pool for the next player leaves
+  // out anyone matching the value being compared against.
+  if(avoidValue !== undefined){
+    const noTies = options.filter(p => p[statType] !== avoidValue);
+    if(noTies.length) options = noTies; // only skip this if it would leave nothing to pick from
+  }
   return options[Math.floor(Math.random() * options.length)];
 }
 
 function startRound(){
   streak = 0;
   currentPlayer = pickRandomPlayer([]);
-  nextPlayer = pickRandomPlayer([currentPlayer.id]);
+  nextPlayer = pickRandomPlayer([currentPlayer.id], currentPlayer[statType]);
   renderRound();
 }
 
 function renderRound(){
   document.getElementById('hl-streak-num').textContent = streak;
   document.getElementById('hl-current-name').textContent = playerName(currentPlayer);
-  document.getElementById('hl-current-value').textContent = currentPlayer.appearances;
+  document.getElementById('hl-current-value').textContent = currentPlayer[statType];
   document.getElementById('hl-next-name').textContent = playerName(nextPlayer);
   const nextValueEl = document.getElementById('hl-next-value');
   nextValueEl.textContent = '?';
@@ -308,26 +352,27 @@ async function makeGuess(guessHigher){
   document.getElementById('hl-lower-btn').disabled = true;
 
   const nextValueEl = document.getElementById('hl-next-value');
-  nextValueEl.textContent = nextPlayer.appearances;
+  nextValueEl.textContent = nextPlayer[statType];
   nextValueEl.className = 'hl-card-value';
 
-  // A tie counts as a correct guess either way, matching how these
-  // games are usually played.
-  const actuallyHigher = nextPlayer.appearances >= currentPlayer.appearances;
+  // Ties are ruled out at the point the next player is picked, so this
+  // is always a clean higher or lower, never an ambiguous equal case.
+  const actuallyHigher = nextPlayer[statType] > currentPlayer[statType];
   const correct = guessHigher === actuallyHigher;
+  const statLabel = STAT_LABELS[statType];
 
   const banner = document.getElementById('hl-result-banner');
   banner.style.display = 'block';
   banner.classList.add(correct ? 'correct' : 'wrong');
   banner.textContent = correct
-    ? `Correct! ${playerName(nextPlayer)}: ${nextPlayer.appearances} appearances.`
-    : `Wrong. ${playerName(nextPlayer)}: ${nextPlayer.appearances} appearances.`;
+    ? `Correct! ${playerName(nextPlayer)}: ${nextPlayer[statType]} ${statLabel}.`
+    : `Wrong. ${playerName(nextPlayer)}: ${nextPlayer[statType]} ${statLabel}.`;
 
   if(correct){
     streak++;
     setTimeout(()=>{
       currentPlayer = nextPlayer;
-      nextPlayer = pickRandomPlayer([currentPlayer.id]);
+      nextPlayer = pickRandomPlayer([currentPlayer.id], currentPlayer[statType]);
       renderRound();
     }, 1600);
   } else {
@@ -343,12 +388,12 @@ async function finishGame(){
   document.getElementById('hl-final-streak').textContent = streak;
   document.getElementById('hl-final').style.display = 'block';
 
-  const playersSeen = [currentPlayer, nextPlayer].map(p=>({ id:p.id, name: playerName(p), appearances: p.appearances }));
+  const playersSeen = [currentPlayer, nextPlayer].map(p=>({ id:p.id, name: playerName(p), value: p[statType] }));
 
   if(currentUser){
     if(bestStreakToday === null || streak > bestStreakToday){
       try{
-        const result = await callHigherLowerAction('save_score', { streak, players_seen: playersSeen, mode: gameMode });
+        const result = await callHigherLowerAction('save_score', { streak, players_seen: playersSeen, mode: gameMode, stat_type: statType });
         if(result.saved) bestStreakToday = result.bestStreakToday;
       }catch(e){ console.error('Could not save higher or lower score', e); toast('Could not save your score, try again in a moment.'); }
     }
@@ -357,7 +402,7 @@ async function finishGame(){
     localStorage.setItem('hl_played_' + gameMode + '_' + today, String(streak));
     const ctaText = document.getElementById('hl-signin-cta-text');
     try{
-      await callHigherLowerAction('save_score', { streak, players_seen: playersSeen, guest_token: getGuestToken(), guest_label: getGuestLabel(), mode: gameMode });
+      await callHigherLowerAction('save_score', { streak, players_seen: playersSeen, guest_token: getGuestToken(), guest_label: getGuestLabel(), mode: gameMode, stat_type: statType });
       if(ctaText) ctaText.textContent = `Streak saved. That's your one free attempt for today, sign in for unlimited attempts and to get this streak on the leaderboard.`;
     }catch(e){
       console.error('Could not save guest higher or lower score', e);
@@ -390,31 +435,41 @@ async function showAlreadyPlayed(streakVal){
   await renderLeaderboard('hl-already-leaderboard');
 }
 
-function leaderboardTableForMode(mode){
-  return mode === 'modern' ? 'higher_lower_modern_leaderboard' : 'higher_lower_leaderboard';
-}
-
 async function renderLeaderboard(targetId){
   const el = document.getElementById(targetId);
   el.innerHTML = `<div class="hl-lb-tabs">
-    <button class="hl-lb-tab active" data-mode="standard">Standard</button>
-    <button class="hl-lb-tab" data-mode="modern">Modern</button>
+    <button class="hl-lb-tab ${gameMode==='standard'?'active':''}" data-mode="standard">Standard</button>
+    <button class="hl-lb-tab ${gameMode==='modern'?'active':''}" data-mode="modern">Modern</button>
+  </div><div class="hl-lb-tabs">
+    <button class="hl-lb-tab ${statType==='appearances'?'active':''}" data-stat="appearances">Appearances</button>
+    <button class="hl-lb-tab ${statType==='career_goals'?'active':''}" data-stat="career_goals">Goals</button>
   </div><div class="hl-lb-content"></div>`;
-  el.querySelectorAll('.hl-lb-tab').forEach(btn=>{
+  let selectedMode = gameMode;
+  let selectedStat = statType;
+  const modeButtons = el.querySelectorAll('[data-mode]');
+  const statButtons = el.querySelectorAll('[data-stat]');
+  modeButtons.forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      el.querySelectorAll('.hl-lb-tab').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      loadLeaderboardMode(el, btn.dataset.mode);
+      selectedMode = btn.dataset.mode;
+      modeButtons.forEach(b=>b.classList.toggle('active', b===btn));
+      loadLeaderboardCombo(el, selectedMode, selectedStat);
     });
   });
-  await loadLeaderboardMode(el, 'standard');
+  statButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedStat = btn.dataset.stat;
+      statButtons.forEach(b=>b.classList.toggle('active', b===btn));
+      loadLeaderboardCombo(el, selectedMode, selectedStat);
+    });
+  });
+  await loadLeaderboardCombo(el, selectedMode, selectedStat);
 }
 
-async function loadLeaderboardMode(el, mode){
+async function loadLeaderboardCombo(el, mode, stat){
   const content = el.querySelector('.hl-lb-content');
-  const title = mode === 'modern' ? 'Modern best streaks' : 'All-time best streaks';
+  const title = `${mode === 'modern' ? 'Modern' : 'All-time'} best streaks, ${STAT_LABELS[stat]}`;
   content.innerHTML = `<div class="hl-lb-title">${title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Loading…</div>`;
-  const { data, error } = await sb.from(leaderboardTableForMode(mode)).select('*').order('streak', {ascending:false}).limit(10);
+  const { data, error } = await sb.from('higher_lower_leaderboard').select('*').eq('mode', mode).eq('stat_type', stat).order('streak', {ascending:false}).limit(10);
   if(error || !data || !data.length){
     content.innerHTML = `<div class="hl-lb-title">${title}</div><div style="text-align:center; font-family:var(--mono); font-size:12px; color:var(--paper-dim); padding:10px 0;">Nobody yet, be the first.</div>`;
     return;

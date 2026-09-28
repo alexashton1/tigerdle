@@ -1834,10 +1834,11 @@ create table if not exists higher_lower_scores (
   guest_label text,
   puzzle_date date not null default current_date,
   mode text not null default 'standard' check (mode in ('standard', 'modern')),
+  stat_type text not null default 'appearances' check (stat_type in ('appearances', 'career_goals')),
   streak int not null,
   players_seen jsonb not null,
   created_at timestamptz not null default now(),
-  unique (user_id, puzzle_date, mode),
+  unique (user_id, puzzle_date, mode, stat_type),
   constraint higher_lower_scores_identity check (
     (user_id is not null and guest_token is null) or
     (user_id is null and guest_token is not null)
@@ -1863,30 +1864,21 @@ create policy "public read higher lower scores" on higher_lower_scores
 -- guest's token isn't a stable identity across days, so including them
 -- would just scatter one-off "Guest-XXXX" rows rather than track anyone
 -- meaningfully over time.
+-- Best streak per user, broken out by mode AND stat type, so a specific
+-- "Modern goals" or "Standard appearances" leaderboard can be queried
+-- directly rather than needing a separate view per combination.
 create or replace view higher_lower_leaderboard
 with (security_invoker = true) as
 select
   s.user_id,
   coalesce(p.display_name, p.email, 'Unknown') as display_name,
+  s.mode,
+  s.stat_type,
   max(s.streak) as streak
 from higher_lower_scores s
 left join profiles p on p.user_id = s.user_id
-where s.mode = 'standard' and s.user_id is not null
-group by s.user_id, p.display_name, p.email
+where s.user_id is not null
+group by s.user_id, p.display_name, p.email, s.mode, s.stat_type
 order by streak desc;
 
 grant select on higher_lower_leaderboard to anon, authenticated;
-
-create or replace view higher_lower_modern_leaderboard
-with (security_invoker = true) as
-select
-  s.user_id,
-  coalesce(p.display_name, p.email, 'Unknown') as display_name,
-  max(s.streak) as streak
-from higher_lower_scores s
-left join profiles p on p.user_id = s.user_id
-where s.mode = 'modern' and s.user_id is not null
-group by s.user_id, p.display_name, p.email
-order by streak desc;
-
-grant select on higher_lower_modern_leaderboard to anon, authenticated;
