@@ -286,3 +286,101 @@ function toast(message){
   clearTimeout(toast._t);
   toast._t = setTimeout(()=>t.classList.remove('show'), 1800);
 }
+
+
+/* ---------- In-game navigation: the homepage tiles, in miniature ----------
+   One list drives the tile row shown at the top of every game, so adding a
+   game means adding a line here (and its tile on the homepage). Guess the
+   Tiger and Mystery Tiger sit behind "More games", same as on the homepage.
+   A page opts in with <div id="game-nav"></div> and renderGameNav('<key>'). */
+const GAME_NAV = [
+  { key:'m1',          name:'Tigerdle',           icon:'🔤', href:'game.html?mode=m1', group:'main', tick:true },
+  { key:'rc',          name:'Roll Call',          icon:'📋', href:'rollcall.html',     group:'main', tick:true },
+  { key:'m4',          name:'Guess the Opponent', icon:'⚽', href:'game.html?mode=m4', group:'main', tick:true },
+  { key:'squadspin',   name:'Squad Spin',         icon:'🎰', href:'squadspin.html',    group:'main' },
+  { key:'higherlower', name:'Higher or Lower',    icon:'📊', href:'higherlower.html',  group:'main' },
+  { key:'m2',          name:'Guess the Tiger',    icon:'🐯', href:'game.html?mode=m2', group:'more', tick:true },
+  { key:'m3',          name:'Mystery Tiger',      icon:'🔍', href:'game.html?mode=m3', group:'more', tick:true },
+];
+
+function renderGameNav(currentKey){
+  const host = document.getElementById('game-nav');
+  if(!host) return;
+
+  if(!document.getElementById('game-nav-css')){
+    const css = document.createElement('style');
+    css.id = 'game-nav-css';
+    css.textContent = `
+      .gn{ max-width:480px; margin:0 auto 6px; }
+      .gn-grid, .gn-panel{ display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; }
+      .gn-tile{ position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:4px;
+        min-height:64px; padding:9px 3px 7px; text-align:center; text-decoration:none; color:var(--paper);
+        background:var(--ink-2); border:1px solid var(--line); border-radius:10px; font:inherit; cursor:pointer;
+        -webkit-appearance:none; appearance:none; transition:border-color .15s ease, background .15s ease; }
+      .gn-tile:hover{ border-color:var(--amber-deep); background:var(--ink-3); }
+      .gn-tile.current{ border-color:var(--amber); background:rgba(245,163,0,.10); }
+      .gn-tile:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+      .gn-icon{ display:flex; align-items:center; height:20px; font-size:18px; line-height:1; }
+      .gn-name{ font-family:var(--display); font-size:10.5px; line-height:1.1; letter-spacing:.01em; color:var(--paper); }
+      .gn-tile.current .gn-name{ color:var(--amber); }
+      .gn-tick{ position:absolute; top:3px; right:3px; min-width:14px; height:14px; padding:0 3px; border-radius:7px;
+        background:var(--amber); color:var(--ink); font-size:9px; font-weight:800; line-height:14px; text-align:center; }
+      .gn-more{ border-style:dashed; }
+      .gn-more.open{ border-color:var(--amber-deep); background:var(--ink-3); }
+      .gn-plus{ width:18px; height:18px; color:var(--amber); }
+      .gn-panel{ margin-top:6px; padding:6px; border:1px dashed var(--line); border-radius:12px; }
+      .gn-panel[hidden]{ display:none; }
+      @media (min-width:520px){ .gn-name{ font-size:11.5px; } }
+    `;
+    document.head.appendChild(css);
+  }
+
+  const doneToday = key => {
+    try{
+      const raw = localStorage.getItem(`tigerdle_${key}_${dateKey()}`);
+      return !!raw && !!JSON.parse(raw).done;
+    }catch(e){ return false; }
+  };
+  const main = GAME_NAV.filter(g => g.group === 'main');
+  const more = GAME_NAV.filter(g => g.group === 'more');
+  const tile = g => `<a class="gn-tile${g.key === currentKey ? ' current' : ''}" href="${g.href}" data-key="${g.key}"${g.key === currentKey ? ' aria-current="page"' : ''}>
+      <span class="gn-icon" aria-hidden="true">${g.icon}</span><span class="gn-name">${g.name}</span>${g.tick && doneToday(g.key) ? '<span class="gn-tick" title="Done today">✓</span>' : ''}</a>`;
+
+  const left = more.filter(g => !doneToday(g.key)).length;
+  const inMore = more.some(g => g.key === currentKey);
+  host.innerHTML = `<nav class="gn" aria-label="Games">
+    <div class="gn-grid">${main.map(tile).join('')}
+      <button class="gn-tile gn-more${inMore ? ' open' : ''}" type="button" aria-expanded="${inMore}" aria-controls="gn-panel">
+        <span class="gn-icon" aria-hidden="true"><svg class="gn-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" fill="none"/></svg></span>
+        <span class="gn-name">More games</span><span class="gn-tick" title="${left ? left + ' left today' : 'All done today'}">${left || '✓'}</span>
+      </button>
+    </div>
+    <div class="gn-panel" id="gn-panel"${inMore ? '' : ' hidden'}>${more.map(tile).join('')}</div>
+  </nav>`;
+
+  const panel = host.querySelector('#gn-panel'), moreBtn = host.querySelector('.gn-more');
+  moreBtn.addEventListener('click', () => {
+    const open = panel.hidden;
+    panel.hidden = !open;
+    moreBtn.classList.toggle('open', open);
+    moreBtn.setAttribute('aria-expanded', String(open));
+  });
+
+  // On the four-puzzle page the tiles switch puzzle in place (no reload) by
+  // driving that page's own tab buttons, which stay in the page, hidden.
+  host.addEventListener('click', e => {
+    const a = e.target.closest('a.gn-tile');
+    if(!a) return;
+    const tab = /^m[1-4]$/.test(a.dataset.key) ? document.querySelector(`.tab-btn[data-mode="${a.dataset.key}"]`) : null;
+    if(!tab) return;
+    e.preventDefault();
+    tab.click();
+    host.querySelectorAll('.gn-tile[data-key]').forEach(t => {
+      const cur = t.dataset.key === a.dataset.key;
+      t.classList.toggle('current', cur);
+      cur ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current');
+    });
+    if(more.some(g => g.key === a.dataset.key) && panel.hidden){ moreBtn.click(); }
+    try{ history.replaceState(null, '', 'game.html?mode=' + a.dataset.key); }catch(_){}
+  });
+}

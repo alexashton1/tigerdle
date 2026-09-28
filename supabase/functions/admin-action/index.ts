@@ -681,6 +681,54 @@ Deno.serve(async (req) => {
         return json({ ok: true, data: { deleted: true, appearancesRemoved: counted.length } });
       }
 
+      // ---------- Roll Call clues ----------
+      case "list_clues": {
+        const { data, error } = await supabase
+          .from("daily_clues")
+          .select("clue_date, clue_text, stat, rule, answer_ids")
+          .order("clue_date", { ascending: false })
+          .limit(90);
+        if (error) throw error;
+        return json({ ok: true, data });
+      }
+
+      case "save_clue": {
+        const p = payload || {};
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(p.clue_date || "")) {
+          return json({ ok: false, error: "clue_date must be YYYY-MM-DD" }, 400);
+        }
+        if (!p.clue_text || !["appearances", "career_goals"].includes(p.stat) || !Array.isArray(p.answer_ids)) {
+          return json({ ok: false, error: "clue_text, stat and answer_ids are required" }, 400);
+        }
+        const ids: string[] = Array.from(new Set(p.answer_ids));
+        // Re-check on the server that every id is a real, active player,
+        // rather than trusting whatever list the browser sent.
+        const { data: real, error: checkErr } = await supabase
+          .from("players").select("id").in("id", ids).eq("active", true);
+        if (checkErr) throw checkErr;
+        if ((real || []).length !== ids.length) {
+          return json({ ok: false, error: "Some answers are no longer active players. Preview the clue again." }, 400);
+        }
+        if (ids.length < 10) {
+          return json({ ok: false, error: "A clue needs at least 10 possible answers." }, 400);
+        }
+        const { data, error } = await supabase
+          .from("daily_clues")
+          .upsert({ clue_date: p.clue_date, clue_text: p.clue_text, stat: p.stat, rule: p.rule || {}, answer_ids: ids }, { onConflict: "clue_date" })
+          .select()
+          .single();
+        if (error) throw error;
+        return json({ ok: true, data });
+      }
+
+      case "delete_clue": {
+        const p = payload || {};
+        if (!p.clue_date) return json({ ok: false, error: "clue_date is required" }, 400);
+        const { error } = await supabase.from("daily_clues").delete().eq("clue_date", p.clue_date);
+        if (error) throw error;
+        return json({ ok: true, data: { deleted: true } });
+      }
+
       default:
         return json({ ok: false, error: `Unknown action: ${action}` }, 400);
     }

@@ -1594,7 +1594,7 @@ create policy "public read rotation pools" on rotation_pools
 -- ---------- daily_completions (server-authoritative per-account state) ----------
 create table if not exists daily_completions (
   user_id uuid not null references auth.users(id) on delete cascade,
-  mode text not null check (mode in ('m1','m2','m3','m4')),
+  mode text not null check (mode in ('m1','m2','m3','m4','rc')),
   date_key text not null,
   state jsonb not null,
   updated_at timestamptz not null default now(),
@@ -1867,7 +1867,8 @@ create policy "public read higher lower scores" on higher_lower_scores
 -- Best streak per user, broken out by mode AND stat type, so a specific
 -- "Modern goals" or "Standard appearances" leaderboard can be queried
 -- directly rather than needing a separate view per combination.
-create or replace view higher_lower_leaderboard
+drop view if exists higher_lower_leaderboard;
+create view higher_lower_leaderboard
 with (security_invoker = true) as
 select
   s.user_id,
@@ -1882,3 +1883,22 @@ group by s.user_id, p.display_name, p.email, s.mode, s.stat_type
 order by streak desc;
 
 grant select on higher_lower_leaderboard to anon, authenticated;
+
+-- ---------- Roll Call: daily clues ----------
+-- One clue per day. answer_ids is frozen when the clue is approved so
+-- later edits to a player can't quietly change a clue already set.
+create table if not exists daily_clues (
+  clue_date date primary key,
+  clue_text text not null,
+  stat text not null check (stat in ('appearances', 'career_goals')),
+  rule jsonb not null default '{}'::jsonb,
+  answer_ids uuid[] not null,
+  created_at timestamptz not null default now(),
+  constraint daily_clues_enough_answers check (coalesce(array_length(answer_ids, 1), 0) >= 10)
+);
+
+alter table daily_clues enable row level security;
+
+drop policy if exists "public read clues up to today" on daily_clues;
+create policy "public read clues up to today" on daily_clues
+  for select using (clue_date <= (now() at time zone 'Europe/London')::date);

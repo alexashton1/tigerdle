@@ -42,6 +42,23 @@
   .winner-card .winner-tag{ font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--amber-soft); text-transform:uppercase; }
   .winner-card .winner-name{ font-family:var(--display); font-weight:400; font-size:24px; color:var(--amber); margin:4px 0; }
   .winner-card .winner-meta{ font-family:var(--mono); font-size:12px; color:var(--paper-dim); margin-bottom:14px; }
+  /* Roll Call clue builder */
+  .rc-note{ font-family:var(--mono); font-size:12px; color:var(--paper-dim); line-height:1.55; margin:0 0 14px; }
+  .rc-status{ font-family:var(--mono); font-size:12px; line-height:1.5; padding:9px 11px; border-radius:8px; margin:14px 0 10px; border:1px solid var(--line); }
+  .rc-status.good{ border-color:var(--amber-deep); color:var(--amber); }
+  .rc-status.warn{ border-color:#b8873a; color:#e0a34a; }
+  .rc-status.bad{ border-color:#c65252; color:#e08b82; }
+  .rc-answers{ max-height:320px; overflow:auto; border:1px solid var(--line); border-radius:8px; margin-bottom:14px; }
+  .rc-answer{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:8px 11px; border-bottom:1px solid var(--line); font-size:13px; }
+  .rc-answer:last-child{ border-bottom:0; }
+  .rc-answer .rc-meta{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-left:6px; }
+  .rc-answer .rc-val{ font-family:var(--mono); color:var(--amber); white-space:nowrap; }
+  .rc-answer .rc-warn{ display:block; font-family:var(--mono); font-size:11px; color:#e0a34a; margin-top:2px; }
+  .rc-clue-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .rc-clue-row .rc-when{ font-family:var(--mono); color:var(--amber); min-width:96px; }
+  .rc-clue-row .rc-count{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); }
+  .rc-clue-row.past{ opacity:.55; }
+  #rc-save:disabled{ opacity:.4; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -66,6 +83,7 @@
       <button class="admin-tab" data-tab="players">Players</button>
       <button class="admin-tab" data-tab="content">Content</button>
       <button class="admin-tab" data-tab="puzzles">Daily puzzles</button>
+      <button class="admin-tab" data-tab="rollcall">Roll Call</button>
       <button class="admin-tab" data-tab="fixtures">Fixtures &amp; matchdays</button>
       <button class="admin-tab" data-tab="predictor">Predictor</button>
     </div>
@@ -254,6 +272,49 @@
 
     <!-- Fixtures: Phase 1 of the predictor roadmap -->
 </div>
+<div class="admin-category" data-category="rollcall" style="display:none;">
+    <div class="formcard">
+      <h3>Roll Call clue builder</h3>
+      <p class="rc-note">Build a rule, preview who qualifies, then pick a date. The list of possible answers is frozen when you save, so later edits to a player won't change a clue that's already set. A clue needs at least 10 possible answers.</p>
+      <div class="field-row">
+        <div class="field"><label>Stat</label>
+          <select id="rc-stat"><option value="appearances">Appearances</option><option value="career_goals">Goals</option></select>
+        </div>
+        <div class="field"><label>At least</label><input type="number" id="rc-min" min="1" value="100"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Position</label>
+          <select id="rc-pos"><option value="">Any</option><option value="GK">Goalkeepers</option><option value="DF">Defenders</option><option value="MF">Midfielders</option><option value="FW">Forwards</option></select>
+        </div>
+        <div class="field"><label>Nationality</label><select id="rc-nat"><option value="">Any</option></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Era</label><select id="rc-era"><option value="">Any</option></select></div>
+        <div class="field"><label>Born from year <span style="text-transform:none; opacity:.7;">(optional)</span></label><input type="number" id="rc-born-from" placeholder="e.g. 1990"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Born up to year <span style="text-transform:none; opacity:.7;">(optional)</span></label><input type="number" id="rc-born-to" placeholder="e.g. 2005"></div>
+        <div class="field"></div>
+      </div>
+      <button class="ghost-btn" id="rc-preview" type="button">Preview answers</button>
+
+      <div id="rc-preview-box" style="display:none;">
+        <div class="rc-status" id="rc-status"></div>
+        <div class="rc-answers" id="rc-answers"></div>
+        <div class="field"><label>Clue text <span style="text-transform:none; opacity:.7;">(written from your rule, edit it if you like)</span></label><input type="text" id="rc-text"></div>
+        <div class="field"><label>Date</label><input type="date" id="rc-date"></div>
+        <button class="primary-btn" id="rc-save" type="button" disabled>Save clue</button>
+        <div class="rc-note" id="rc-msg" style="margin:10px 0 0;"></div>
+      </div>
+    </div>
+
+    <div class="formcard">
+      <h3>Scheduled clues</h3>
+      <div class="rc-status" id="rc-gaps">Loading…</div>
+      <div id="rc-list"></div>
+    </div>
+  </div>
+
 <div class="admin-category" data-category="fixtures" style="display:none;">
     <div class="formcard">
       <h3>Bulk add fixtures</h3>
@@ -413,6 +474,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script src="assets/chrome.js"></script>
+<script src="assets/rollcall-rules.js"></script>
 <script>
 renderChrome('home');
 OPPONENT_CLUBS.forEach(c=>{ const opt=document.createElement("option"); opt.value=c; document.getElementById('opponent-list-admin').appendChild(opt); });
@@ -1683,6 +1745,146 @@ document.querySelectorAll('.admin-tab').forEach(tab=>{
   </div>
 </div>
 
+<script>
+/* Roll Call clue builder. Uses callAdmin, fetchAllPlayers and toast from the
+   main script and chrome.js, and the shared rules from rollcall-rules.js. */
+(function rollCallAdmin(){
+  const R = window.RollCallRules;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let players = null, preview = null, clues = [], started = false;
+
+  const decade = e => /^\d{4}s$/.test(e) ? parseInt(e, 10) : Infinity;
+  const uniq = a => [...new Set(a.filter(Boolean))];
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const addDays = (key, n) => { const [y,m,d] = key.split('-').map(Number); return fmt(new Date(y, m-1, d+n)); };
+  const nice = key => { const [y,m,d] = key.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'}); };
+  const setMsg = t => { $('rc-msg').textContent = t || ''; };
+
+  function fill(id, values){
+    $(id).innerHTML = '<option value="">Any</option>' + values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  }
+
+  async function loadPlayers(){
+    if(players) return players;
+    players = await fetchAllPlayers('last_name', true);
+    fill('rc-nat', uniq(players.map(p => p.nationality)).sort());
+    fill('rc-era', uniq(players.map(p => p.era)).sort((a, b) => decade(a) === decade(b) ? a.localeCompare(b) : (decade(a) < decade(b) ? -1 : 1)));
+    return players;
+  }
+
+  // Records that look wrong get flagged in the preview, because a clue is
+  // only as trustworthy as the data behind it.
+  function suspectFlags(p){
+    const flags = [];
+    const dec = decade(p.era), by = p.birth_date ? Number(String(p.birth_date).slice(0, 4)) : null;
+    if(Number.isFinite(dec) && by && dec + 9 < by + 15) flags.push(`listed as ${p.era} but born ${by}`);
+    if(p.career_goals != null && p.appearances != null && p.career_goals > p.appearances) flags.push('more goals than appearances');
+    return flags;
+  }
+
+  function readRule(){
+    return R.normalizeRule({
+      stat: $('rc-stat').value, min: $('rc-min').value, position: $('rc-pos').value,
+      nationality: $('rc-nat').value, era: $('rc-era').value,
+      bornFrom: $('rc-born-from').value, bornTo: $('rc-born-to').value,
+    });
+  }
+
+  async function runPreview(){
+    setMsg('');
+    try{ await loadPlayers(); }catch(e){ setMsg('Could not load players.'); return; }
+    const rule = readRule();
+    const answers = players.filter(p => R.qualifies(p, rule))
+      .sort((a, b) => (b[rule.stat] ?? 0) - (a[rule.stat] ?? 0) || a.last_name.localeCompare(b.last_name));
+    preview = { rule, answers };
+    if(!$('rc-text').dataset.custom) $('rc-text').value = R.clueText(rule);
+
+    const n = answers.length, flagged = answers.filter(p => suspectFlags(p).length).length;
+    let cls = 'good', msg = `${n} possible answers. A good size.`;
+    if(n < 10){ cls = 'bad'; msg = `Only ${n} qualify. Roll Call needs at least 10 possible answers, so loosen the rule.`; }
+    else if(n > 25){ cls = 'warn'; msg = `${n} possible answers. That's on the large side and may be easy, a higher threshold would tighten it.`; }
+    if(flagged) msg += ` ${flagged} of these look like data errors, check them in Players before publishing.`;
+    const status = $('rc-status'); status.className = 'rc-status ' + (flagged && cls === 'good' ? 'warn' : cls); status.textContent = msg;
+
+    const unit = R.STAT_UNIT[rule.stat];
+    $('rc-answers').innerHTML = answers.map(p => {
+      const f = suspectFlags(p);
+      return `<div class="rc-answer"><span>${esc(R.fullName(p))}<span class="rc-meta">${esc(p.era)}</span>${f.length ? `<span class="rc-warn">Check: ${esc(f.join(', '))}</span>` : ''}</span><span class="rc-val">${p[rule.stat] ?? 0} ${unit}</span></div>`;
+    }).join('') || '<div class="rc-answer">Nobody qualifies.</div>';
+
+    $('rc-preview-box').style.display = 'block';
+    $('rc-save').disabled = n < 10;
+    if(!$('rc-date').value) $('rc-date').value = nextFreeDate();
+  }
+
+  function nextFreeDate(){
+    const taken = new Set(clues.map(c => c.clue_date));
+    let d = dateKey();
+    for(let i = 0; i < 120 && taken.has(d); i++) d = addDays(d, 1);
+    return d;
+  }
+
+  async function save(){
+    if(!preview){ setMsg('Preview the answers first.'); return; }
+    const rule = preview.rule;
+    if(JSON.stringify(readRule()) !== JSON.stringify(rule)){ setMsg('The rule changed since the preview. Preview again before saving.'); return; }
+    const date = $('rc-date').value, text = $('rc-text').value.trim();
+    if(!date){ setMsg('Pick a date.'); return; }
+    if(!text){ setMsg('The clue needs some text.'); return; }
+    if(preview.answers.length < 10){ setMsg('A clue needs at least 10 possible answers.'); return; }
+    const existing = clues.find(c => c.clue_date === date);
+    if(existing && !confirm(`There is already a clue for ${nice(date)}: "${existing.clue_text}". Replace it?`)) return;
+    $('rc-save').disabled = true;
+    try{
+      await callAdmin('save_clue', { clue_date: date, clue_text: text, stat: rule.stat, rule, answer_ids: preview.answers.map(p => p.id) });
+      toast('Clue saved for ' + nice(date));
+      setMsg('Saved for ' + nice(date) + '.');
+      $('rc-date').value = '';
+      await refreshList();
+      $('rc-date').value = nextFreeDate();
+    }catch(e){ setMsg(e.message || 'Could not save.'); }
+    $('rc-save').disabled = preview.answers.length < 10;
+  }
+
+  async function refreshList(){
+    try{ clues = (await callAdmin('list_clues')) || []; }
+    catch(e){ $('rc-gaps').className = 'rc-status bad'; $('rc-gaps').textContent = 'Could not load scheduled clues.'; return; }
+    const today = dateKey(), have = new Set(clues.map(c => c.clue_date));
+    const missing = [];
+    for(let i = 0; i < 10; i++){ const k = addDays(today, i); if(!have.has(k)) missing.push(k); }
+    const gaps = $('rc-gaps');
+    if(missing.length){ gaps.className = 'rc-status ' + (missing.includes(today) ? 'bad' : 'warn'); gaps.textContent = 'No clue set for: ' + missing.map(nice).join(', ') + '.'; }
+    else { gaps.className = 'rc-status good'; gaps.textContent = 'The next 10 days are all covered.'; }
+    $('rc-list').innerHTML = clues.map(c => {
+      const past = c.clue_date < today;
+      return `<div class="rc-clue-row ${past ? 'past' : ''}"><span class="rc-when">${esc(nice(c.clue_date))}</span><span style="flex:1;">${esc(c.clue_text)}</span><span class="rc-count">${(c.answer_ids || []).length} answers</span><button class="ghost-btn" type="button" data-del="${esc(c.clue_date)}">Delete</button></div>`;
+    }).join('') || '<div class="rc-note">No clues yet. Build one above.</div>';
+  }
+
+  async function start(){
+    if(started) return; started = true;
+    await refreshList();
+    try{ await loadPlayers(); }catch(e){}
+  }
+
+  document.querySelector('.admin-tab[data-tab="rollcall"]').addEventListener('click', start);
+  $('rc-preview').addEventListener('click', runPreview);
+  $('rc-save').addEventListener('click', save);
+  $('rc-text').addEventListener('input', e => { e.target.dataset.custom = e.target.value.trim() ? '1' : ''; });
+  ['rc-stat','rc-min','rc-pos','rc-nat','rc-era','rc-born-from','rc-born-to'].forEach(id => {
+    $(id).addEventListener('input', () => { if(preview){ preview = null; $('rc-save').disabled = true; setMsg('The rule changed. Preview again to update the answers.'); } });
+  });
+  $('rc-list').addEventListener('click', async e => {
+    const btn = e.target.closest('[data-del]'); if(!btn) return;
+    const date = btn.dataset.del, c = clues.find(x => x.clue_date === date);
+    if(!confirm(`Delete the clue for ${nice(date)}${c ? ': "' + c.clue_text + '"' : ''}?`)) return;
+    try{ await callAdmin('delete_clue', { clue_date: date }); toast('Clue deleted'); await refreshList(); }
+    catch(err){ toast(err.message || 'Could not delete'); }
+  });
+})();
+</script>
 <script src="assets/html2canvas-lib.js"></script>
 <script>
 /* ==================== Sharing another user's prediction ====================

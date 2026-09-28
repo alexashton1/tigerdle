@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roll Call: Tigerdle</title>
+<link rel="canonical" href="https://tigerdle.com/rollcall.html">
+<meta name="description" content="Roll Call is a daily Hull City quiz. Name ten players who fit the clue, from a longer list of possible answers.">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .rc{ max-width:480px; margin:0 auto; padding-bottom:8px; }
+  .rc-clue{ margin:18px 0 16px; }
+  .rc-clue small{ color:var(--paper-dim); font-size:13px; }
+  .rc-clue h1{ font-family:var(--display); font-weight:400; font-size:36px; line-height:1.06; margin:6px 0 12px; color:var(--paper); text-align:left; letter-spacing:.005em; }
+  .rc-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--paper-dim); font-size:13.5px; }
+  .rc-count{ color:var(--paper); font-weight:500; }
+  .rc-lives{ display:flex; align-items:center; gap:6px; }
+  .rc-lives-label{ margin-right:4px; }
+  .rc-pip{ width:14px; height:14px; border-radius:50%; background:var(--amber); border:2px solid var(--amber); transition:background .25s, border-color .25s; }
+  .rc-pip.lost{ background:transparent; border-color:var(--line); }
+  .rc-how{ margin:10px 0 0; font-size:13px; color:var(--paper-dim); line-height:1.5; }
+
+  .rc-board{ list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .rc-tile{ scroll-margin-bottom:150px; display:grid; grid-template-columns:30px 1fr auto; align-items:center; gap:10px; min-height:52px; padding:6px 12px; border-radius:10px; background:var(--ink-2); border:1px solid var(--line); }
+  .rc-rank{ font-family:var(--display); font-size:18px; color:var(--paper-dim); }
+  .rc-slot{ height:10px; border-radius:5px; background:var(--ink-3); max-width:220px; }
+  .rc-name{ font-family:var(--display); font-size:20px; letter-spacing:.01em; line-height:1.1; color:var(--paper); }
+  .rc-meta{ font-size:12px; color:var(--paper-dim); margin-top:2px; }
+  .rc-stat{ font-family:var(--display); font-size:22px; color:var(--amber); text-align:right; line-height:1; }
+  .rc-stat small{ font-family:var(--body, inherit); font-size:11px; color:var(--paper-dim); display:block; margin-top:3px; }
+  .rc-tile.found{ background:rgba(245,163,0,.10); border-color:var(--amber-deep); }
+  .rc-tile.empty.over{ border-style:dashed; opacity:.55; }
+  @keyframes rc-pop{ 0%{ background:rgba(245,163,0,.45); } 100%{ background:rgba(245,163,0,.10); } }
+  .rc-tile.flash{ animation:rc-pop .7s ease-out; }
+  @media (prefers-reduced-motion:reduce){ .rc-tile.flash{ animation:none; } .rc-pip{ transition:none; } }
+
+  .rc-dock{ position:sticky; bottom:0; padding-top:16px; background:linear-gradient(to bottom, rgba(20,17,13,0), var(--ink) 26%); }
+  .rc-feedback{ min-height:42px; margin:0 2px 8px; font-size:14px; color:var(--paper-dim); display:flex; align-items:flex-end; }
+  .rc-feedback.good{ color:#8fbf72; } .rc-feedback.bad{ color:#d9756a; } .rc-feedback.info{ color:var(--amber); }
+  .rc-entry{ padding:0 0 14px; }
+  .rc-entry-row{ position:relative; display:flex; gap:8px; }
+  .rc-entry input{ flex:1; min-width:0; font:inherit; font-size:16px; color:var(--paper); background:var(--ink-2); border:2px solid var(--line); border-radius:10px; padding:13px 14px; }
+  .rc-entry input:focus{ outline:none; border-color:var(--amber); }
+  .rc-entry input:disabled{ opacity:.5; }
+  .rc-entry button{ font-family:var(--display); font-size:16px; letter-spacing:.03em; color:var(--ink); background:var(--amber); border:0; border-radius:10px; padding:0 22px; cursor:pointer; }
+  .rc-entry button:disabled{ background:var(--line); color:var(--paper-dim); cursor:not-allowed; }
+  .rc-suggest{ position:absolute; left:0; right:0; bottom:calc(100% + 8px); margin:0; padding:6px; list-style:none; background:var(--ink-2); border:1px solid var(--amber-deep); border-radius:12px; display:none; z-index:5; }
+  .rc-suggest.open{ display:block; }
+  .rc-opt{ display:flex; align-items:center; min-height:46px; padding:8px 12px; border-radius:8px; font-family:var(--display); font-size:19px; letter-spacing:.01em; color:var(--paper); cursor:pointer; }
+  .rc-opt[aria-selected="true"], .rc-opt:hover{ background:rgba(245,163,0,.14); color:var(--amber); }
+  .rc-giveup{ display:block; margin:12px auto 4px; background:none; border:0; color:var(--paper-dim); font:inherit; font-size:13px; text-decoration:underline; cursor:pointer; padding:6px; }
+
+  .rc-result{ margin:16px 0 22px; padding:18px; border:1px solid var(--amber-deep); border-radius:14px; background:var(--ink-2); }
+  .rc-result[hidden], .rc-others[hidden], .rc-msgbox[hidden], .rc-game[hidden]{ display:none; }
+  .rc-score{ font-family:var(--display); font-size:60px; line-height:1; color:var(--amber); }
+  .rc-result p{ margin:8px 0 14px; color:var(--paper-dim); }
+  .rc-streak{ font-size:13px; color:var(--paper-dim); margin:0 0 14px; }
+  pre.rc-share{ white-space:pre-wrap; margin:0 0 12px; padding:12px; border-radius:10px; background:var(--ink); border:1px solid var(--line); font:13px/1.55 ui-monospace, Menlo, Consolas, monospace; color:var(--paper); }
+  .rc-sharebtn{ font-family:var(--display); font-size:16px; letter-spacing:.03em; color:var(--ink); background:var(--amber); border:0; border-radius:10px; padding:12px 22px; cursor:pointer; }
+  .rc-nudge{ margin:14px 0 0; font-size:12.5px; color:var(--paper-dim); }
+  .rc-nudge a{ color:var(--amber); }
+
+  .rc-others{ margin:0 0 28px; }
+  .rc-others h2{ font-family:var(--display); font-weight:400; font-size:24px; margin:0 0 4px; color:var(--paper); text-align:left; }
+  .rc-others p{ margin:0 0 12px; color:var(--paper-dim); font-size:13.5px; }
+  .rc-others ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .rc-orow{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 12px; border:1px dashed var(--line); border-radius:10px; background:var(--ink-2); }
+  .rc-oname{ font-family:var(--display); font-size:18px; color:var(--paper); line-height:1.15; }
+  .rc-ometa{ display:block; font-size:12px; color:var(--paper-dim); margin-top:2px; }
+  .rc-ostat{ font-family:var(--display); font-size:18px; color:var(--paper-dim); white-space:nowrap; }
+
+  .rc-msgbox{ margin:30px 0; padding:22px 18px; text-align:center; background:var(--ink-2); border:1px solid var(--line); border-radius:12px; color:var(--paper-dim); font-size:14px; line-height:1.55; }
+  .rc-msgbox a{ color:var(--amber); }
+  .rc-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap" style="padding-top:8px; padding-bottom:60px;">
+  <div id="game-nav"></div>
+
+  <div class="rc">
+    <div class="rc-msgbox" id="rc-loading">Loading today's clue…</div>
+    <div class="rc-msgbox" id="rc-error" hidden></div>
+
+    <div class="rc-game" id="rc-game" hidden>
+      <section class="rc-clue">
+        <small id="rc-kicker">Today's clue. Fill all 10 tiles.</small>
+        <h1 id="rc-clue-text"></h1>
+        <div class="rc-row">
+          <span class="rc-count" id="rc-count"></span>
+          <span class="rc-lives"><span class="rc-lives-label">Wrong guesses left</span><span id="rc-lives" style="display:flex; gap:6px;"></span></span>
+        </div>
+        <p class="rc-how" id="rc-how"></p>
+      </section>
+
+      <ol class="rc-board" id="rc-board" aria-label="Your ten tiles"></ol>
+
+      <button class="rc-giveup" id="rc-giveup" type="button">Give up and show the answers</button>
+
+      <section class="rc-result" id="rc-result" hidden>
+        <div class="rc-score" id="rc-score"></div>
+        <p id="rc-result-line"></p>
+        <p class="rc-streak" id="rc-streak"></p>
+        <pre class="rc-share" id="rc-share"></pre>
+        <button class="rc-sharebtn" id="rc-share-btn" type="button">Share result</button>
+        <p class="rc-nudge" id="rc-nudge" hidden><a href="account.html">Sign in</a> to keep today's result across your devices.</p>
+      </section>
+
+      <section class="rc-others" id="rc-others" hidden>
+        <h2 id="rc-others-title"></h2>
+        <p>Any of these would have filled a tile.</p>
+        <ul id="rc-others-list"></ul>
+      </section>
+
+      <div class="rc-dock" id="rc-dock">
+        <div class="rc-feedback" id="rc-feedback" role="status" aria-live="polite"></div>
+        <form class="rc-entry" id="rc-entry" autocomplete="off">
+          <div class="rc-entry-row">
+            <ul class="rc-suggest" id="rc-suggest" role="listbox" aria-label="Player suggestions"></ul>
+            <label class="rc-sr" for="rc-guess">Name a player</label>
+            <input id="rc-guess" type="text" placeholder="Start typing a name" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="go" role="combobox" aria-expanded="false" aria-controls="rc-suggest" aria-autocomplete="list">
+            <button type="submit" id="rc-go">Guess</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/chrome.js"></script>
+<script src="assets/rollcall-rules.js"></script>
+<script>
+renderChrome('play');
+if(typeof renderGameNav === 'function') renderGameNav('rc');
+
+const R = window.RollCallRules;
+const TILES = 10;
+const $ = id => document.getElementById(id);
+
+// ---------- small helpers ----------
+function norm(s){
+  return s.toLowerCase()
+    .replace(/[øö]/g,'o').replace(/æ/g,'ae').replace(/ß/g,'ss').replace(/đ/g,'d').replace(/ł/g,'l')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function lev(a,b){
+  if(Math.abs(a.length-b.length)>1) return 2;
+  const m=a.length, n=b.length; let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1)); }
+    prev=cur;
+  }
+  return prev[n];
+}
+const ord = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+function addDays(key, n){
+  const [y,m,d] = key.split('-').map(Number), dt = new Date(y, m-1, d+n);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+const stateKey = date => 'tigerdle_rc_' + date;
+const STATS_KEY = 'tigerdle_rc_stats';
+
+// ---------- data ----------
+let PLAYERS = [], BY_ID = new Map();
+let clue = null, answers = [], answerIds = new Set();
+let state = null, found = new Set(), currentUser = null;
+
+async function fetchAllPlayers(){
+  // Supabase silently caps one query at 1000 rows, so page through in
+  // batches, ordered by id so pages never overlap or skip.
+  let all = [], from = 0; const size = 1000;
+  while(true){
+    const { data, error } = await sb.from('players')
+      .select('id, first_name, last_name, position, nationality, era, birth_date, appearances, career_goals')
+      .eq('active', true).order('id').range(from, from + size - 1);
+    if(error) throw error;
+    if(!data || !data.length) break;
+    all = all.concat(data);
+    if(data.length < size) break;
+    from += size;
+  }
+  return all;
+}
+
+async function fetchTodaysClue(){
+  const today = dateKey();
+  const { data, error } = await sb.from('daily_clues')
+    .select('clue_date, clue_text, stat, rule, answer_ids')
+    .lte('clue_date', today).order('clue_date', {ascending:false}).limit(2);
+  if(error) throw error;
+  const rows = data || [];
+  // Today's clue if there is one. Otherwise yesterday's counts as today for
+  // anyone whose clock is ahead of the UK, so they aren't left with nothing.
+  return rows.find(r => r.clue_date === today) || rows.find(r => r.clue_date === addDays(today, -1)) || null;
+}
+
+function buildPlayers(rows){
+  PLAYERS = rows.map(r => {
+    const tokens = norm(r.first_name + ' ' + r.last_name).split(' ').filter(Boolean);
+    const keys = new Set(tokens);
+    keys.add(norm(r.last_name).replace(/ /g,''));
+    keys.add(tokens.join(''));
+    return Object.assign({}, r, { keys: [...keys] });
+  });
+  BY_ID = new Map(PLAYERS.map(p => [p.id, p]));
+}
+
+// ---------- saved progress ----------
+function freshState(){ return { order: [], lives: 3, done: false, won: false, reason: '' }; }
+function cleanState(raw){
+  if(!raw || typeof raw !== 'object') return null;
+  const order = Array.isArray(raw.order) ? [...new Set(raw.order)].filter(id => answerIds.has(id)).slice(0, TILES) : [];
+  const lives = Math.max(0, Math.min(3, Number.isFinite(raw.lives) ? raw.lives : 3));
+  const done = !!raw.done || order.length >= TILES || lives <= 0;
+  return { order, lives, done, won: order.length >= TILES, reason: raw.reason || (order.length >= TILES ? 'all' : lives <= 0 ? 'out' : '') };
+}
+async function loadProgress(date){
+  // Signed in: the account's own record is the truth, never whatever another
+  // account left behind in this browser.
+  if(currentUser){
+    try{
+      const { data } = await sb.from('daily_completions').select('state').eq('mode','rc').eq('date_key', date).maybeSingle();
+      const s = data && cleanState(data.state);
+      if(s) return s;
+    }catch(e){ /* fall through to a fresh game */ }
+    return freshState();
+  }
+  return cleanState(loadState(stateKey(date), null)) || freshState();
+}
+function persist(){
+  const snapshot = { order: state.order, lives: state.lives, done: state.done, won: state.won, reason: state.reason };
+  try{ saveState(stateKey(clue.clue_date), snapshot); }catch(e){}
+  if(currentUser){
+    sb.from('daily_completions').upsert({ user_id: currentUser.id, mode: 'rc', date_key: clue.clue_date, state: snapshot, updated_at: new Date().toISOString() })
+      .then(() => {}, () => {});   // never let a sync hiccup interrupt play
+  }
+}
+function recordFinish(){
+  const st = loadState(STATS_KEY, { played:0, fullBoards:0, streak:0, maxStreak:0, last:null });
+  if(st.last !== clue.clue_date){
+    st.streak = st.last === addDays(clue.clue_date, -1) ? (st.streak || 0) + 1 : 1;
+    st.maxStreak = Math.max(st.maxStreak || 0, st.streak);
+    st.played = (st.played || 0) + 1;
+    if(state.won) st.fullBoards = (st.fullBoards || 0) + 1;
+    st.last = clue.clue_date;
+    saveState(STATS_KEY, st);
+  }
+  return st;
+}
+
+// ---------- rendering ----------
+const statOf = p => p[clue.stat] ?? 0;
+function renderLives(){
+  $('rc-lives').innerHTML = [0,1,2].map(i => `<span class="rc-pip ${i >= state.lives ? 'lost' : ''}"></span>`).join('');
+}
+function renderBoard(flashId){
+  let html = '';
+  for(let t = 0; t < TILES; t++){
+    const id = state.order[t];
+    if(id !== undefined){
+      const p = BY_ID.get(id);
+      html += `<li class="rc-tile found ${flashId === id ? 'flash' : ''}"><span class="rc-rank">${t+1}</span>
+        <span><div class="rc-name">${R.fullName(p)}</div><div class="rc-meta">${p.era}</div></span>
+        <span class="rc-stat">${statOf(p)}<small>${R.STAT_UNIT[clue.stat]}</small></span></li>`;
+    } else {
+      html += `<li class="rc-tile empty ${state.done ? 'over' : ''}"><span class="rc-rank">${t+1}</span><span class="rc-slot"></span><span></span></li>`;
+    }
+  }
+  $('rc-board').innerHTML = html;
+  if(flashId !== undefined){
+    const el = $('rc-board').children[state.order.indexOf(flashId)];
+    if(el) el.scrollIntoView({block:'nearest', behavior:'smooth'});
+  }
+}
+function say(msg, kind){ const f = $('rc-feedback'); f.textContent = msg; f.className = 'rc-feedback ' + (kind || ''); }
+function showBox(id, html){ $('rc-loading').hidden = true; const b = $(id); b.innerHTML = html; b.hidden = false; }
+
+// ---------- guessing ----------
+function findCandidates(tokens){
+  const matches = (p,t,fuzzy) => p.keys.some(k => k === t || (t.length >= 4 && k.startsWith(t)) || (fuzzy && t.length >= 5 && k.length >= 4 && lev(t,k) <= 1));
+  const list = PLAYERS.filter(p => tokens.every(t => matches(p,t,false)));
+  return list.length ? list : PLAYERS.filter(p => tokens.every(t => matches(p,t,true)));
+}
+function submitGuess(raw){
+  if(state.done) return;
+  const tokens = norm(raw).split(' ').filter(Boolean);
+  if(!tokens.length){ say('Type a name first.', 'info'); return; }
+  const list = findCandidates(tokens);
+  if(!list.length){ say("Couldn't find that player, so no life lost. Check the spelling.", 'info'); return; }
+  judge(list, tokens.length);
+}
+function pickPlayer(p){ if(!state.done) judge([p], 2); }   // a tapped suggestion is one exact player
+
+function judge(list, tokenCount){
+  const hits = list.filter(p => answerIds.has(p.id));
+  const remaining = hits.filter(p => !found.has(p.id));
+  const already = hits.filter(p => found.has(p.id));
+
+  if(remaining.length === 1){
+    const p = remaining[0];
+    found.add(p.id); state.order.push(p.id);
+    say(`${R.fullName(p)}: ${statOf(p)} ${R.STAT_UNIT[clue.stat]}. ${ord(answers.indexOf(p)+1)} of ${answers.length} possible.`, 'good');
+    renderBoard(p.id);
+    if(state.order.length >= TILES){ finish('all'); } else { persist(); }
+  } else if(remaining.length > 1){
+    say(`${remaining.length} answers fit that. Add a first name.`, 'info');
+  } else if(already.length){
+    say('Already on the board.', 'info');
+  } else if(tokenCount === 1 && list.length > 3){
+    say('Too many players match that. Try a surname.', 'info');
+  } else {
+    const rule = clue.rule && clue.rule.stat ? clue.rule : null;
+    const reasons = rule ? list.map(p => R.failReason(p, rule)) : list.map(() => null);
+    // A player who fits the rule but isn't on the frozen list (added or
+    // reactivated after the clue was set) isn't penalised, just not counted.
+    if(list.length === 1 && rule && reasons[0] === null){
+      say(`${R.fullName(list[0])} fits the clue but isn't on today's list, so it doesn't count. No life lost.`, 'info');
+      return;
+    }
+    state.lives--; renderLives();
+    say(list.length <= 3 && reasons.every(Boolean) ? reasons.join(' ')
+        : list.length === 1 ? `${R.fullName(list[0])} isn't on today's list.`
+        : `None of the ${list.length} players matching that make the list.`, 'bad');
+    if(state.lives <= 0){ finish('out'); } else { persist(); }
+  }
+}
+
+// ---------- suggestions ----------
+let sugg = [], hi = -1;
+const lastKey = p => norm(p.last_name).replace(/ /g,'');
+function closeSuggest(){
+  sugg = []; hi = -1;
+  const s = $('rc-suggest'); s.classList.remove('open'); s.innerHTML = '';
+  const g = $('rc-guess'); g.setAttribute('aria-expanded','false'); g.removeAttribute('aria-activedescendant');
+}
+function renderSuggest(){
+  const s = $('rc-suggest');
+  s.innerHTML = sugg.map((p,i) => `<li class="rc-opt" role="option" id="rc-opt-${i}" data-id="${p.id}" aria-selected="${i === hi}">${R.fullName(p)}</li>`).join('');
+  s.classList.add('open');
+  const g = $('rc-guess'); g.setAttribute('aria-expanded','true');
+  if(hi >= 0) g.setAttribute('aria-activedescendant', 'rc-opt-' + hi); else g.removeAttribute('aria-activedescendant');
+}
+// Names only, from everyone in the database, alphabetical: nothing here can
+// hint at which players are answers, and anyone already placed drops out.
+function updateSuggest(){
+  const words = norm($('rc-guess').value).split(' ').filter(Boolean);
+  if(state.done || words.join('').length < 2){ closeSuggest(); return; }
+  const first = words[0], last = words[words.length-1];
+  const list = PLAYERS.filter(p => !found.has(p.id) && words.every(w => p.keys.some(k => k.startsWith(w))));
+  const surnameFirst = p => (lastKey(p).startsWith(first) || lastKey(p).startsWith(last)) ? 0 : 1;
+  list.sort((a,b) => surnameFirst(a) - surnameFirst(b) || a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name));
+  sugg = list.slice(0,5); hi = -1;
+  if(!sugg.length){ closeSuggest(); return; }
+  renderSuggest();
+}
+function chooseSuggest(id){
+  $('rc-guess').value = ''; closeSuggest(); pickPlayer(BY_ID.get(id)); $('rc-guess').focus();
+}
+
+// ---------- finishing ----------
+function finish(reason){
+  state.done = true; state.won = state.order.length >= TILES; state.reason = reason;
+  persist();
+  showFinished();
+}
+function showFinished(){
+  $('rc-guess').disabled = true; $('rc-go').disabled = true;
+  $('rc-giveup').style.display = 'none'; $('rc-dock').style.display = 'none'; closeSuggest();
+  renderLives(); renderBoard();
+
+  const st = recordFinish();
+  const n = state.order.length, N = answers.length, empty = TILES - n;
+  $('rc-score').textContent = `${n}/${TILES}`;
+  $('rc-result-line').textContent =
+    state.reason === 'all' ? 'All ten tiles filled.' :
+    state.reason === 'out' ? `Out of guesses with ${empty} tile${empty === 1 ? '' : 's'} empty.` :
+                             `You gave up with ${empty} tile${empty === 1 ? '' : 's'} empty.`;
+  $('rc-streak').textContent = `Day streak ${st.streak}, best ${st.maxStreak}.`;
+
+  const rest = answers.filter(p => !found.has(p.id));
+  if(rest.length){
+    $('rc-others-title').textContent = state.reason === 'all'
+      ? `${rest.length} more you could have used`
+      : `${rest.length} answer${rest.length === 1 ? '' : 's'} you could have used`;
+    $('rc-others-list').innerHTML = rest.map(p => `<li class="rc-orow"><span class="rc-oname">${R.fullName(p)}<span class="rc-ometa">${p.era}</span></span><span class="rc-ostat">${statOf(p)} ${R.STAT_UNIT[clue.stat]}</span></li>`).join('');
+    $('rc-others').hidden = false;
+  }
+  const [y,m,d] = clue.clue_date.split('-').map(Number);
+  const when = new Date(y, m-1, d).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+  const grid = Array.from({length: TILES}, (_,t) => t < n ? '🟩' : '⬛').join('');
+  const hearts = [0,1,2].map(i => i < state.lives ? '❤️' : '🖤').join('');
+  $('rc-share').textContent = `Roll Call, ${when}\n${clue.clue_text} (${N} possible)\n${n}/${TILES} ${hearts}\n${grid}\ntigerdle.com/rollcall.html`;
+  $('rc-nudge').hidden = !!currentUser;
+  $('rc-result').hidden = false;
+}
+
+// ---------- wiring ----------
+$('rc-entry').addEventListener('submit', e => {
+  e.preventDefault();
+  if(sugg.length === 1 && hi < 0){ chooseSuggest(sugg[0].id); return; }   // one match showing: take it
+  const v = $('rc-guess').value; $('rc-guess').value = ''; closeSuggest(); submitGuess(v); $('rc-guess').focus();
+});
+$('rc-guess').addEventListener('input', updateSuggest);
+$('rc-guess').addEventListener('keydown', e => {
+  if(!sugg.length) return;
+  if(e.key === 'ArrowDown'){ e.preventDefault(); hi = (hi + 1) % sugg.length; renderSuggest(); }
+  else if(e.key === 'ArrowUp'){ e.preventDefault(); hi = (hi <= 0 ? sugg.length : hi) - 1; renderSuggest(); }
+  else if(e.key === 'Escape'){ closeSuggest(); }
+  else if(e.key === 'Enter' && hi >= 0){ e.preventDefault(); chooseSuggest(sugg[hi].id); }
+});
+$('rc-guess').addEventListener('blur', () => setTimeout(closeSuggest, 120));
+$('rc-suggest').addEventListener('mousedown', e => e.preventDefault());   // keep the phone keyboard up while tapping
+$('rc-suggest').addEventListener('click', e => { const li = e.target.closest('.rc-opt'); if(li) chooseSuggest(li.dataset.id); });
+$('rc-giveup').addEventListener('click', () => { if(!state.done) finish('gaveup'); });
+$('rc-share-btn').addEventListener('click', async () => {
+  const text = $('rc-share').textContent;
+  if(navigator.share){
+    try{ await navigator.share({ text }); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  try{ await navigator.clipboard.writeText(text); toast('Result copied'); }
+  catch(e){
+    const r = document.createRange(); r.selectNodeContents($('rc-share'));
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    toast('Selected, press copy on your device');
+  }
+});
+
+// ---------- start ----------
+async function boot(){
+  try{
+    const { data: sess } = await sb.auth.getSession();
+    currentUser = sess && sess.session ? sess.session.user : null;
+    const [rows, clueRow] = await Promise.all([fetchAllPlayers(), fetchTodaysClue()]);
+    if(!clueRow){
+      showBox('rc-error', `There's no Roll Call today yet. Check back soon, or try <a href="squadspin.html">Squad Spin</a> or <a href="higherlower.html">Higher or Lower</a> in the meantime.`);
+      return;
+    }
+    clue = clueRow;
+    buildPlayers(rows);
+    answers = (clue.answer_ids || []).map(id => BY_ID.get(id)).filter(Boolean)
+      .sort((a,b) => statOf(b) - statOf(a) || a.last_name.localeCompare(b.last_name));
+    answerIds = new Set(answers.map(p => p.id));
+    if(answers.length < TILES){
+      console.warn('Roll Call clue has fewer than 10 usable answers:', answers.length);
+      showBox('rc-error', `Today's clue isn't quite ready. Check back a little later.`);
+      return;
+    }
+    state = await loadProgress(clue.clue_date);
+    found = new Set(state.order);
+
+    $('rc-clue-text').textContent = clue.clue_text;
+    $('rc-count').textContent = `${answers.length} possible answers`;
+    $('rc-how').textContent = `Name players who fit. Any of the ${answers.length} fills a tile, in any order. Three wrong guesses and it's over.`;
+    document.title = `Roll Call: ${clue.clue_text} | Tigerdle`;
+    $('rc-loading').hidden = true;
+    $('rc-game').hidden = false;
+    renderLives(); renderBoard();
+    if(state.done){ showFinished(); }
+    else {
+      say(state.order.length ? `Welcome back. ${state.order.length} of ${TILES} tiles filled.` : 'Start typing a name and tap it. Any valid answer fills a tile.', '');
+    }
+  }catch(e){
+    console.error('Roll Call could not load', e);
+    showBox('rc-error', `Couldn't load today's Roll Call just now. Try again in a moment.`);
+  }
+}
+boot();
+</script>
+</body>
+</html>

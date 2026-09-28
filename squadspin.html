@@ -65,16 +65,9 @@
 </head>
 <body>
 <div id="site-header"></div>
-<div style="overflow-x:auto; white-space:nowrap; padding:10px 16px; border-bottom:1px solid var(--line);">
-  <a href="game.html?mode=m1" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Tigerdle</a>
-  <a href="game.html?mode=m2" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Guess the Tiger</a>
-  <a href="game.html?mode=m3" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Mystery Tiger</a>
-  <a href="game.html?mode=m4" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-right:16px;">Guess the Opponent</a>
-  <a href="squadspin.html" style="font-family:var(--mono); font-size:12px; color:var(--amber); text-decoration:none; margin-right:16px;">Squad Spin</a>
-  <a href="higherlower.html" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); text-decoration:none;">Higher or Lower</a>
-</div>
 
 <main class="wrap" style="padding-top:20px; padding-bottom:60px;">
+  <div id="game-nav"></div>
   <div class="eyebrow" style="text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;">Hull City AFC &middot; Squad Spin</div>
   <h1 style="font-family:var(--display); font-weight:400; font-size:32px; color:var(--paper); text-align:center; margin:4px 0 2px;">SPIN YOUR XI</h1>
   <div class="ss-intro" id="ss-intro">Spin all three, see who you get, then pick the one you want for that shirt. Real club appearances and goals build your score. Land exactly on <span style="color:var(--amber); font-weight:bold;">1904</span>, Hull City's founding year, for something special. <span style="color:var(--amber); font-weight:bold;">One attempt a day, unlimited if you're signed in.</span></div>
@@ -214,6 +207,7 @@
 <script src="assets/chrome.js"></script>
 <script>
 renderChrome('play');
+if(typeof renderGameNav === 'function') renderGameNav('squadspin');
 
 let currentUser = null;
 let wasLoggedIn = false;

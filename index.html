@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tigerdle: The Hull City Wordle | Daily Puzzles for Tigers Fans</title>
-<meta name="description" content="Tigerdle is the Hull City Wordle, a free daily word puzzle plus three more Hull City guessing games. New surname, new player, new goal every day.">
+<meta name="description" content="Tigerdle is the Hull City Wordle, a free daily word puzzle plus six more Hull City games. A new surname, a new clue and a new goal every day.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tigerdle">
 <meta property="og:title" content="Tigerdle: The Hull City Wordle">
-<meta property="og:description" content="Tigerdle is the Hull City Wordle, a free daily word puzzle plus three more Hull City guessing games.">
+<meta property="og:description" content="Tigerdle is the Hull City Wordle, a free daily word puzzle plus six more Hull City games.">
 <meta property="og:image" content="https://tigerdle.com/social-card.png">
 <meta property="og:url" content="https://tigerdle.com/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Tigerdle: The Hull City Wordle">
-<meta name="twitter:description" content="Tigerdle is the Hull City Wordle, a free daily word puzzle plus three more Hull City guessing games.">
+<meta name="twitter:description" content="Tigerdle is the Hull City Wordle, a free daily word puzzle plus six more Hull City games.">
 <meta name="twitter:image" content="https://tigerdle.com/social-card.png">
 <link rel="canonical" href="https://tigerdle.com/">
 <script type="application/ld+json">
@@ -51,7 +51,7 @@
     {
       "@type": "Question",
       "name": "When does a new puzzle come out?",
-      "acceptedAnswer": { "@type": "Answer", "text": "A new Tigerdle puzzle is released every day. All four daily games refresh together, so there's a fresh challenge in each one, every single day." }
+      "acceptedAnswer": { "@type": "Answer", "text": "A new Tigerdle puzzle is released every day. All five daily puzzles refresh together, so there's a fresh challenge in each one, every single day." }
     },
     {
       "@type": "Question",
@@ -221,7 +221,7 @@
   <div class="stripe-hero">
     <div class="kicker">Hull City AFC · Fan-made · Unofficial</div>
     <h1 class="title">TIGERDLE</h1>
-    <p class="tagline">The Hull City Wordle, plus three more daily Hull City guessing games. Match memories and the odd rant, for Tigers who bleed amber &amp; black.</p>
+    <p class="tagline">The Hull City Wordle, plus six more Hull City games. Match memories and the odd rant, for Tigers who bleed amber &amp; black.</p>
     <div class="flipboard-wrap">
       <div class="flipboard-label">Puzzles solved since launch</div>
       <div class="flipboard" id="flipboard"></div>
@@ -237,31 +237,47 @@
       <div class="ct">Tigerdle</div>
       <div class="cd">5-letter surname</div>
     </a>
-    <a class="card game-card" href="game.html?mode=m2" id="card-m2">
-      <div class="icon">🐯</div>
-      <div class="ct">Guess the Tiger</div>
-      <div class="cd">Squad &amp; legends</div>
-    </a>
-    <a class="card game-card" href="game.html?mode=m3" id="card-m3">
-      <div class="icon">🔍</div>
-      <div class="ct">Mystery Tiger</div>
-      <div class="cd">Clue by clue</div>
+    <a class="card game-card" href="rollcall.html" id="card-rc" data-new-until="2026-10-26">
+      <div class="icon">📋</div>
+      <div class="ct">Roll Call</div>
+      <div class="cd">Fill ten tiles</div>
     </a>
     <a class="card game-card" href="game.html?mode=m4" id="card-m4">
       <div class="icon">⚽</div>
       <div class="ct">Guess the Opponent</div>
       <div class="cd">Reveal the goal</div>
     </a>
-    <a class="card game-card" href="squadspin.html" id="card-squadspin">
+    <a class="card game-card" href="squadspin.html" id="card-squadspin" data-new-until="2026-10-26">
       <div class="icon">🎰</div>
       <div class="ct">Squad Spin</div>
       <div class="cd">Spin your XI</div>
     </a>
-    <a class="card game-card" href="higherlower.html" id="card-higherlower">
+    <a class="card game-card" href="higherlower.html" id="card-higherlower" data-new-until="2026-10-26">
       <div class="icon">📊</div>
       <div class="ct">Higher or Lower</div>
       <div class="cd">Build your streak</div>
     </a>
+    <button class="card game-card more-card" id="card-more" type="button" aria-expanded="false" aria-controls="more-panel">
+      <svg class="plus" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" fill="none"/></svg>
+      <div class="ct">More games</div>
+      <div class="cd">2 puzzles inside</div>
+    </button>
+  </div>
+
+  <div class="more-panel" id="more-panel" role="region" aria-label="More puzzles" hidden>
+    <p class="more-label">More daily puzzles</p>
+    <div class="cardgrid">
+      <a class="card game-card" href="game.html?mode=m2" id="card-m2">
+        <div class="icon">🐯</div>
+        <div class="ct">Guess the Tiger</div>
+        <div class="cd">Squad &amp; legends</div>
+      </a>
+      <a class="card game-card" href="game.html?mode=m3" id="card-m3">
+        <div class="icon">🔍</div>
+        <div class="ct">Mystery Tiger</div>
+        <div class="cd">Clue by clue</div>
+      </a>
+    </div>
   </div>
 
   <div class="section-head" id="team-news-heading" style="display:none;"><h2>Team News</h2></div>
@@ -303,7 +319,7 @@
     </div>
     <div class="faq-item">
       <h3>When does a new puzzle come out?</h3>
-      <p>A new Tigerdle puzzle is released every day. All four daily games refresh together, so there's a fresh challenge in each one, every single day.</p>
+      <p>A new Tigerdle puzzle is released every day. All five daily puzzles refresh together, so there's a fresh challenge in each one, every single day.</p>
     </div>
     <div class="faq-item">
       <h3>Are the answers only Hull City players?</h3>
@@ -404,7 +420,7 @@ document.getElementById('signup-send-btn').addEventListener('click', async ()=>{
 // Highlight any of today's puzzles already completed, using the same
 // localStorage state game.html writes when a puzzle finishes.
 (function markCompletedPuzzles(){
-  ['m1','m2','m3','m4'].forEach(mode=>{
+  ['m1','m2','m3','m4','rc'].forEach(mode=>{
     try{
       const raw = localStorage.getItem(`tigerdle_${mode}_${dateKey()}`);
       if(!raw) return;
@@ -419,6 +435,38 @@ document.getElementById('signup-send-btn').addEventListener('click', async ()=>{
       badge.title = state.won ? "Solved today" : "Completed today";
       card.appendChild(badge);
     }catch(e){ /* corrupted state, ignore */ }
+  });
+})();
+
+// "New" pills fade out on their own after the date on each tile, and never
+// sit on a puzzle already done today (its tick takes that corner).
+(function markNewGames(){
+  const today = dateKey();
+  document.querySelectorAll('.game-card[data-new-until]').forEach(card=>{
+    if(today > card.dataset.newUntil || card.classList.contains('completed')) return;
+    const pill = document.createElement('span');
+    pill.className = 'new-pill'; pill.textContent = 'New';
+    card.appendChild(pill);
+  });
+})();
+
+// More games: a count of the puzzles inside still to play today, and the
+// panel toggle. The two puzzles keep their ids, so ticks above still apply.
+(function moreGames(){
+  const more = document.getElementById('card-more'), panel = document.getElementById('more-panel');
+  if(!more || !panel) return;
+  const left = [...panel.querySelectorAll('.game-card')].filter(c=>!c.classList.contains('completed')).length;
+  const badge = document.createElement('div');
+  badge.className = 'check-badge';
+  badge.textContent = left > 0 ? String(left) : '✓';
+  badge.title = left > 0 ? `${left} puzzle${left === 1 ? '' : 's'} left today` : 'All done today';
+  more.appendChild(badge);
+  more.addEventListener('click', ()=>{
+    const open = panel.hidden;
+    panel.hidden = !open;
+    more.classList.toggle('open', open);
+    more.setAttribute('aria-expanded', String(open));
+    if(open){ panel.classList.remove('opening'); void panel.offsetWidth; panel.classList.add('opening'); }
   });
 })();
 </script>
