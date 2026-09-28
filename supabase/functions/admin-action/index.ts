@@ -685,7 +685,7 @@ Deno.serve(async (req) => {
       case "list_clues": {
         const { data, error } = await supabase
           .from("daily_clues")
-          .select("clue_date, clue_text, stat, rule, answer_ids")
+          .select("clue_date, clue_text, stat, rule, answer_ids, source")
           .order("clue_date", { ascending: false })
           .limit(90);
         if (error) throw error;
@@ -714,11 +714,18 @@ Deno.serve(async (req) => {
         }
         const { data, error } = await supabase
           .from("daily_clues")
-          .upsert({ clue_date: p.clue_date, clue_text: p.clue_text, stat: p.stat, rule: p.rule || {}, answer_ids: ids }, { onConflict: "clue_date" })
+          .upsert({ clue_date: p.clue_date, clue_text: p.clue_text, stat: p.stat, rule: p.rule || {}, answer_ids: ids, source: "manual" }, { onConflict: "clue_date" })
           .select()
           .single();
         if (error) throw error;
         return json({ ok: true, data });
+      }
+
+      // Fills any empty day in the next two weeks using the automatic generator.
+      case "fill_clues": {
+        const { data, error } = await supabase.rpc("roll_call_fill_clues", { days_ahead: 14 });
+        if (error) throw error;
+        return json({ ok: true, data: { made: data } });
       }
 
       case "delete_clue": {

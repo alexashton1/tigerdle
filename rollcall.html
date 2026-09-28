@@ -197,16 +197,26 @@ async function fetchAllPlayers(){
   return all;
 }
 
-async function fetchTodaysClue(){
-  const today = dateKey();
+async function queryRecentClues(){
   const { data, error } = await sb.from('daily_clues')
     .select('clue_date, clue_text, stat, rule, answer_ids')
-    .lte('clue_date', today).order('clue_date', {ascending:false}).limit(2);
+    .lte('clue_date', dateKey()).order('clue_date', {ascending:false}).limit(2);
   if(error) throw error;
-  const rows = data || [];
-  // Today's clue if there is one. Otherwise yesterday's counts as today for
-  // anyone whose clock is ahead of the UK, so they aren't left with nothing.
-  return rows.find(r => r.clue_date === today) || rows.find(r => r.clue_date === addDays(today, -1)) || null;
+  return data || [];
+}
+async function fetchTodaysClue(){
+  const today = dateKey();
+  let rows = await queryRecentClues();
+  let exact = rows.find(r => r.clue_date === today);
+  if(!exact){
+    // Nothing scheduled for today. Ask the database to make one (it does
+    // nothing if a clue already exists), so an empty day can't happen.
+    try{ await sb.rpc('roll_call_ensure_today'); rows = await queryRecentClues(); exact = rows.find(r => r.clue_date === today); }
+    catch(e){ /* fall through to whatever we have */ }
+  }
+  // Otherwise yesterday's counts as today for anyone whose clock is ahead of
+  // the UK, so they aren't left with nothing.
+  return exact || rows.find(r => r.clue_date === addDays(today, -1)) || null;
 }
 
 function buildPlayers(rows){

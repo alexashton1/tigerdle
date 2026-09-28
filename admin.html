@@ -310,7 +310,9 @@
 
     <div class="formcard">
       <h3>Scheduled clues</h3>
+      <p class="rc-note">Any empty day is filled automatically every night, and a clue you set by hand always wins. Delete one you don't like and it's replaced with a different clue.</p>
       <div class="rc-status" id="rc-gaps">Loading…</div>
+      <button class="ghost-btn" id="rc-fill" type="button" style="margin-bottom:10px;">Fill the next 14 days now</button>
       <div id="rc-list"></div>
     </div>
   </div>
@@ -1859,7 +1861,7 @@ document.querySelectorAll('.admin-tab').forEach(tab=>{
     else { gaps.className = 'rc-status good'; gaps.textContent = 'The next 10 days are all covered.'; }
     $('rc-list').innerHTML = clues.map(c => {
       const past = c.clue_date < today;
-      return `<div class="rc-clue-row ${past ? 'past' : ''}"><span class="rc-when">${esc(nice(c.clue_date))}</span><span style="flex:1;">${esc(c.clue_text)}</span><span class="rc-count">${(c.answer_ids || []).length} answers</span><button class="ghost-btn" type="button" data-del="${esc(c.clue_date)}">Delete</button></div>`;
+      return `<div class="rc-clue-row ${past ? 'past' : ''}"><span class="rc-when">${esc(nice(c.clue_date))}</span><span style="flex:1;">${esc(c.clue_text)}</span><span class="rc-count">${c.source === 'auto' ? 'auto, ' : ''}${(c.answer_ids || []).length} answers</span><button class="ghost-btn" type="button" data-del="${esc(c.clue_date)}">Delete</button></div>`;
     }).join('') || '<div class="rc-note">No clues yet. Build one above.</div>';
   }
 
@@ -1875,6 +1877,15 @@ document.querySelectorAll('.admin-tab').forEach(tab=>{
   $('rc-text').addEventListener('input', e => { e.target.dataset.custom = e.target.value.trim() ? '1' : ''; });
   ['rc-stat','rc-min','rc-pos','rc-nat','rc-era','rc-born-from','rc-born-to'].forEach(id => {
     $(id).addEventListener('input', () => { if(preview){ preview = null; $('rc-save').disabled = true; setMsg('The rule changed. Preview again to update the answers.'); } });
+  });
+  $('rc-fill').addEventListener('click', async () => {
+    const btn = $('rc-fill'); btn.disabled = true;
+    try{
+      const r = await callAdmin('fill_clues');
+      toast(r && r.made ? `${r.made} clue${r.made === 1 ? '' : 's'} created` : 'Nothing to fill, the next 14 days are covered');
+      await refreshList();
+    }catch(err){ toast(err.message || 'Could not fill'); }
+    btn.disabled = false;
   });
   $('rc-list').addEventListener('click', async e => {
     const btn = e.target.closest('[data-del]'); if(!btn) return;
